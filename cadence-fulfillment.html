@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cadence Creatures — Fulfillment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<style>
+:root{
+  --ink:#1C1612;--ink-mid:#252018;--gold:#C9A84C;--goldl:#E8D08A;
+  --teal:#5BBFD4;--cream:#FAF6F0;--dim:#8A7D6E;--faded:#5A4F42;
+  --green:#5A9E6F;--red:#A85252;
+  --fl:'Lora',Georgia,serif;--fc:'Caveat',cursive;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{background:var(--ink);color:var(--cream);font-family:var(--fl);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:180px;opacity:.04;pointer-events:none;z-index:0;}
+
+/* LOGIN */
+#login-screen{position:fixed;inset:0;background:var(--ink);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;}
+#login-screen.hidden{display:none;}
+.login-box{width:100%;max-width:360px;text-align:center;}
+.login-crown{margin:0 auto 28px;filter:drop-shadow(0 0 18px rgba(201,168,76,0.45));}
+.login-title{font-size:13px;font-weight:500;letter-spacing:0.28em;text-transform:uppercase;color:var(--goldl);margin-bottom:4px;}
+.login-sub{font-size:11px;color:var(--dim);letter-spacing:0.1em;margin-bottom:32px;}
+.login-field input{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.18);color:var(--cream);font-family:var(--fl);font-size:15px;padding:13px 16px;outline:none;text-align:center;letter-spacing:0.06em;transition:border-color 0.2s;}
+.login-field input:focus{border-color:rgba(201,168,76,0.45);}
+.login-btn{width:100%;font-family:var(--fl);font-size:11px;letter-spacing:0.22em;text-transform:uppercase;padding:13px;border:1px solid var(--gold);background:rgba(201,168,76,0.1);color:var(--goldl);cursor:pointer;transition:all 0.2s;margin-top:8px;}
+.login-btn:hover{background:rgba(201,168,76,0.2);}
+.login-err{font-size:11px;color:rgba(168,82,82,0.8);letter-spacing:0.1em;margin-top:10px;min-height:16px;}
+
+#app{display:none;position:relative;z-index:1;min-height:100vh;display:none;flex-direction:column;}
+#app.visible{display:flex;}
+
+.topbar{border-bottom:1px solid rgba(201,168,76,0.12);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;}
+.topbar-brand{display:flex;align-items:center;gap:12px;}
+.topbar-name{font-size:13px;font-weight:500;color:var(--goldl);letter-spacing:0.04em;}
+.topbar-sub{font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(201,168,76,0.35);margin-top:1px;}
+.topbar-right{display:flex;align-items:center;gap:16px;}
+.topbar-link{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--dim);text-decoration:none;transition:color 0.2s;cursor:pointer;}
+.topbar-link:hover{color:var(--goldl);}
+.dash-nav{display:flex;align-items:center;gap:0;border-bottom:1px solid rgba(201,168,76,0.1);background:rgba(0,0,0,0.18);padding:0 16px;overflow-x:auto;}
+.dash-nav a{font-family:'Lora',Georgia,serif;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(196,188,178,0.5);text-decoration:none;padding:10px 14px;white-space:nowrap;border-bottom:2px solid transparent;transition:color 0.2s,border-color 0.2s;}
+.dash-nav a:hover{color:#E8D08A;}
+.dash-nav a.active{color:#E8D08A;border-bottom-color:#C9A84C;}
+
+.main{flex:1;display:flex;flex-direction:column;padding:24px;overflow:hidden;}
+.header{margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-end;}
+.title{font-size:22px;color:var(--goldl);font-weight:500;letter-spacing:0.05em;}
+.subtitle{font-size:12px;color:var(--dim);margin-top:4px;letter-spacing:0.1em;}
+
+/* BOARD */
+.board{flex:1;display:flex;gap:20px;overflow-x:auto;padding-bottom:20px;}
+.col{flex:1;min-width:300px;display:flex;flex-direction:column;background:rgba(255,255,255,0.02);border:1px solid rgba(201,168,76,0.1);border-radius:6px;overflow:hidden;}
+.col-header{padding:14px 16px;background:rgba(0,0,0,0.2);border-bottom:1px solid rgba(201,168,76,0.1);font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--goldl);display:flex;justify-content:space-between;align-items:center;}
+.col-count{background:rgba(201,168,76,0.15);color:var(--goldl);font-size:10px;padding:2px 8px;border-radius:12px;}
+.col-body{padding:16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px;}
+
+.card{background:rgba(20,18,15,0.8);border:1px solid rgba(201,168,76,0.2);border-radius:4px;padding:14px;display:flex;flex-direction:column;gap:12px;}
+.dragging-ghost{opacity:0.4;background:rgba(201,168,76,0.1);}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;}
+.card-id{font-size:14px;font-weight:600;color:var(--goldl);}
+.card-buyer{font-size:12px;color:var(--cream-dim);margin-top:2px;}
+.card-date{font-size:10px;color:var(--faded);}
+
+.checklist{display:flex;flex-direction:column;gap:6px;}
+.chk-item{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--cream);cursor:pointer;}
+.chk-box{width:16px;height:16px;border:1px solid rgba(201,168,76,0.4);border-radius:3px;display:flex;align-items:center;justify-content:center;margin-top:2px;flex-shrink:0;}
+.chk-item.done .chk-box{background:var(--goldl);border-color:var(--goldl);}
+.chk-item.done .chk-box::after{content:'✓';color:var(--ink);font-size:12px;font-weight:bold;}
+.chk-item.done span{text-decoration:line-through;opacity:0.5;}
+
+.card-act{display:flex;justify-content:flex-end;}
+.btn{font-family:inherit;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:6px 12px;cursor:pointer;border:1px solid rgba(201,168,76,0.3);background:transparent;color:var(--goldl);transition:all .2s;border-radius:2px;}
+.btn:hover{background:rgba(201,168,76,0.1);border-color:var(--gold);}
+.btn.pri{background:rgba(201,168,76,0.14);border-color:var(--gold);}
+.btn.pri:hover{background:rgba(201,168,76,.22);}
+
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;}
+.overlay.open{display:flex;}
+.modal{background:#1e1a15;border:1px solid rgba(201,168,76,.2);max-width:400px;width:100%;padding:26px;max-height:90vh;overflow-y:auto;border-radius:3px;}
+.modal-t{font-size:14px;font-weight:500;color:var(--goldl);margin-bottom:18px;}
+.modal-act{display:flex;gap:10px;margin-top:18px;justify-content:flex-end;}
+.fg{display:grid;gap:11px;}
+.fl{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:rgba(196,188,178,0.7);margin-bottom:5px;}
+input,select{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,0.12);color:var(--cream);font-family:inherit;font-size:13px;padding:8px 11px;outline:none;border-radius:2px;}
+input:focus,select:focus{border-color:rgba(201,168,76,.38);}
+
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(14px);background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);color:var(--goldl);font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:9px 22px;opacity:0;transition:all .25s;pointer-events:none;z-index:9999;border-radius:2px;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.ok{border-color:rgba(74,140,92,.4);color:#7dc994;}
+.toast.err{border-color:rgba(168,68,68,.4);color:#e09090;}
+
+@media (max-width: 768px) {
+  .topbar { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .topbar-right { width: 100%; justify-content: flex-end; }
+  .header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .col { min-width: 85vw; }
+}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-title">Cadence Creatures</div>
+    <div class="login-sub">Fulfillment</div>
+    <div class="login-field" style="margin-bottom:8px;">
+      <input type="email" id="em-input" placeholder="Email Address"/>
+    </div>
+    <div class="login-field">
+      <input type="password" id="pw-input" placeholder="Password" onkeydown="if(event.key==='Enter')tryLogin()"/>
+    </div>
+    <button class="login-btn" onclick="tryLogin()">Enter</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))">
+        <path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round"/>
+        <rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C"/>
+        <circle cx="36" cy="4" r="5.5" fill="#E8D08A"/>
+        <circle cx="6" cy="18" r="4" fill="#5BBFD4"/>
+        <circle cx="66" cy="18" r="4" fill="#5BBFD4"/>
+      </svg>
+      <div>
+        <div class="topbar-name">Cadence Creatures</div>
+        <div class="topbar-sub">Back Office</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <a class="topbar-link" onclick="signOut()">Sign Out</a>
+    </div>
+  </div>
+  
+  <div class="dash-nav">
+    <a href="index.html">Hub</a>
+    <a href="cadence-queue.html">Queue</a>
+    <a href="cadence-fulfillment.html" class="active">Fulfillment</a>
+    <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
+    <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
+    <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
+  </div>
+
+  <div class="main">
+    <div class="header" style="justify-content:space-between; flex-direction:row; align-items:flex-end;">
+      <div>
+        <div class="title">Fulfillment Board</div>
+        <div class="subtitle">Check off items as they print and move orders through the pipeline.</div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;">
+        <button class="btn" onclick="toggleBulkMode()">⚡ Batch Actions</button>
+        <button class="btn" onclick="printPullList()">🖨 Print Packing Slip</button>
+      </div>
+    </div>
+
+    <div class="board">
+      <div class="col" id="col-queued">
+        <div class="col-header"><span>Queued</span><span class="col-count" id="cnt-queued">0</span></div>
+        <div class="col-body" id="list-queued"></div>
+      </div>
+      <div class="col" id="col-printing">
+        <div class="col-header"><span>Printing</span><span class="col-count" id="cnt-printing">0</span></div>
+        <div class="col-body" id="list-printing"></div>
+      </div>
+      <div class="col" id="col-printed">
+        <div class="col-header"><span>Printed</span><span class="col-count" id="cnt-printed">0</span></div>
+        <div class="col-body" id="list-printed"></div>
+      </div>
+      <div class="col" id="col-packaging">
+        <div class="col-header"><span>Packaging</span><span class="col-count" id="cnt-packaging">0</span></div>
+        <div class="col-body" id="list-packaging"></div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Bulk Action Bar -->
+  <div id="bulk-bar" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(201,168,76,0.15);border:1px solid var(--gold);padding:14px 24px;border-radius:8px;backdrop-filter:blur(8px);z-index:100;align-items:center;gap:16px;">
+    <div style="color:var(--goldl);font-weight:500;"><span id="bulk-count">0</span> Selected</div>
+    <select id="bulk-status" class="login-field" style="width:160px;margin:0;padding:8px;font-size:12px;">
+      <option value="printing">Move to Printing</option>
+      <option value="printed">Move to Printed</option>
+      <option value="packaging">Move to Packaging</option>
+    </select>
+    <button class="btn pri" onclick="bulkMoveOrders()">Apply</button>
+    <button class="btn" onclick="toggleBulkMode()">Cancel</button>
+  </div>
+</div>
+
+<!-- SHIPPING MODAL -->
+<div class="overlay" id="m-ship"><div class="modal">
+  <div class="modal-t">📦 Ship Order</div>
+  <input type="hidden" id="s-id"/>
+  <div class="fg">
+    <div><label class="fl">Tracking Number</label><input id="s-track" placeholder="e.g. 9400111899223397"/></div>
+    <div><label class="fl">Carrier</label><select id="s-carrier"><option value="">Auto-detect</option><option value="usps">USPS</option><option value="ups">UPS</option><option value="fedex">FedEx</option></select></div>
+    <div><label class="fl">Shipping Note</label><input id="s-note"/></div>
+  </div>
+  <div class="modal-act"><button class="btn" onclick="document.getElementById('m-ship').classList.remove('open')">Cancel</button><button class="btn pri" onclick="saveShipping()">Mark Shipped</button></div>
+</div></div>
+
+<div class="toast" id="tst"></div>
+
+<script src="shared.js"></script>
+<script>
+function showApp(){
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').classList.add('visible');
+  loadData();
+}
+
+let orders = [];
+
+async function loadData(){
+  try{
+    const {data, error} = await db.from('orders').select('*').in('status', ['queued','printing','printed','packaging']).order('created_at',{ascending:true});
+    if(error) return console.error(error);
+    orders = data || [];
+    renderBoard();
+    initSortable();
+  }catch(e){console.error(e);}
+}
+
+let sortables = [];
+function initSortable() {
+  sortables.forEach(s => s.destroy());
+  sortables = [];
+  if(bulkMode) return; 
+  
+  ['queued','printing','printed','packaging'].forEach(col => {
+    const el = document.getElementById('list-'+col);
+    if(!el) return;
+    sortables.push(new Sortable(el, {
+      group: 'shared',
+      animation: 150,
+      ghostClass: 'dragging-ghost',
+      onEnd: async function (evt) {
+        if(evt.from !== evt.to) {
+          const newStatus = evt.to.parentElement.id.replace('col-','');
+          const orderId = evt.item.dataset.id;
+          await moveOrder(orderId, newStatus, true);
+        }
+        savePriority();
+      }
+    }));
+  });
+}
+
+function savePriority() {
+  const customOrder = [];
+  document.querySelectorAll('.card').forEach(c => {
+    if(c.dataset.id) customOrder.push(c.dataset.id);
+  });
+  localStorage.setItem('cc_board_priority', JSON.stringify(customOrder));
+}
+
+function renderBoard(){
+  ['queued','printing','printed','packaging'].forEach(st=>{
+    let colOrders = orders.filter(o=>o.status===st);
+    
+    try {
+      const p = JSON.parse(localStorage.getItem('cc_board_priority')||'[]');
+      if(p.length) {
+        colOrders.sort((a,b) => {
+          let ia = p.indexOf(a.id);
+          let ib = p.indexOf(b.id);
+          if(ia===-1) ia=9999;
+          if(ib===-1) ib=9999;
+          return ia - ib;
+        });
+      }
+    }catch(e){}
+    
+    const div = document.getElementById('list-'+st);
+    div.innerHTML = colOrders.map(createCard).join('');
+    document.getElementById('cnt-'+st).textContent = colOrders.length;
+  });
+  if(!bulkMode) initSortable();
+}
+
+function createCard(o){
+  const items = Array.isArray(o.items) ? o.items : [];
+  const itemsHtml = items.map((itm, i) => {
+    const isDone = itm.startsWith('[x] ');
+    const rawText = isDone ? itm.slice(4) : itm;
+    return `<div class="chk-item ${isDone?'done':''}" onclick="if(!bulkMode) toggleItem('${o.id}', ${i})">
+      <div class="chk-box"></div>
+      <span>${rawText}</span>
+    </div>`;
+  }).join('');
+  
+  let actBtn = '';
+  if(o.status==='queued') actBtn = `<button class="btn" onclick="moveOrder('${o.id}','printing')">Start Printing →</button>`;
+  else if(o.status==='printing') actBtn = `<button class="btn" onclick="moveOrder('${o.id}','printed')">Mark Printed →</button>`;
+  else if(o.status==='printed') actBtn = `<button class="btn" onclick="moveOrder('${o.id}','packaging')">To Packaging →</button>`;
+  else if(o.status==='packaging') actBtn = `<button class="btn pri" onclick="openShip('${o.id}')">📦 Ship Order</button>`;
+
+  const isSel = selectedOrders.has(o.id);
+  const cardBorder = isSel ? 'border:2px solid var(--goldl);' : (bulkMode ? 'border:2px dashed rgba(201,168,76,0.3);cursor:pointer;' : '');
+
+  return `
+    <div class="card" data-id="${o.id}" style="${cardBorder}" ${bulkMode ? `onclick="toggleOrderSelection('${o.id}')"` : ''}>
+      <div class="card-top">
+        <div>
+          <div class="card-id">#${o.etsy_order_id||o.id.slice(0,8)}</div>
+          <div class="card-buyer">${o.buyer_name||'No Name'}</div>
+        </div>
+        <div class="card-date">${o.order_date?new Date(o.order_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):''}</div>
+      </div>
+      <div class="checklist">
+        ${itemsHtml}
+      </div>
+      <div class="card-act" style="${bulkMode ? 'display:none;' : ''}">
+        ${actBtn}
+      </div>
+    </div>
+  `;
+}
+
+async function toggleItem(orderId, itemIndex){
+  const order = orders.find(o=>o.id===orderId);
+  if(!order) return;
+  const newItems = [...order.items];
+  const itm = newItems[itemIndex];
+  if(itm.startsWith('[x] ')) newItems[itemIndex] = itm.slice(4);
+  else newItems[itemIndex] = '[x] ' + itm;
+  
+  order.items = newItems;
+  renderBoard(); // optimistic update
+  
+  await db.from('orders').update({items: newItems}).eq('id', orderId);
+}
+
+async function moveOrder(id, newStatus, skipRender=false){
+  const order = orders.find(o=>o.id===id);
+  if(!order) return;
+  order.status = newStatus;
+  if(!skipRender) renderBoard(); // optimistic
+  
+  await db.from('orders').update({status: newStatus}).eq('id', id);
+  toast('Moved to ' + newStatus);
+}
+
+function openShip(id){
+  document.getElementById('s-id').value = id;
+  const order = orders.find(o=>o.id===id);
+  document.getElementById('s-track').value = order?.tracking_number || '';
+  document.getElementById('s-carrier').value = order?.carrier || '';
+  document.getElementById('s-note').value = order?.shipping_note || '';
+  document.getElementById('m-ship').classList.add('open');
+}
+
+async function saveShipping(){
+  const id = document.getElementById('s-id').value;
+  const tracking_number = document.getElementById('s-track').value;
+  const carrier = document.getElementById('s-carrier').value;
+  const shipping_note = document.getElementById('s-note').value;
+  
+  const order = orders.find(o=>o.id===id);
+  if(order){
+    order.tracking_number = tracking_number;
+    order.carrier = carrier;
+    order.shipping_note = shipping_note;
+    order.status = 'shipped';
+  }
+  
+  document.getElementById('m-ship').classList.remove('open');
+  
+  const {error} = await db.from('orders').update({
+    status: 'shipped',
+    shipped_date: new Date().toISOString().slice(0,10),
+    tracking_number, carrier, shipping_note
+  }).eq('id', id);
+  
+  if(error){toast('Error','err'); return;}
+  
+  toast('Order Shipped!','ok');
+  // Remove from local array since it's no longer in the 4 board columns
+  orders = orders.filter(o=>o.id!==id);
+  renderBoard();
+}
+
+// ── BULK ACTIONS ──
+let bulkMode = false;
+let selectedOrders = new Set();
+
+function toggleBulkMode() {
+  bulkMode = !bulkMode;
+  selectedOrders.clear();
+  renderBoard();
+  document.getElementById('bulk-bar').style.display = bulkMode ? 'flex' : 'none';
+}
+
+function toggleOrderSelection(id) {
+  if(!bulkMode) return;
+  if(selectedOrders.has(id)) selectedOrders.delete(id);
+  else selectedOrders.add(id);
+  renderBoard();
+  document.getElementById('bulk-count').textContent = selectedOrders.size;
+}
+
+async function bulkMoveOrders() {
+  const newStatus = document.getElementById('bulk-status').value;
+  if(selectedOrders.size === 0) return;
+  
+  const ids = Array.from(selectedOrders);
+  ids.forEach(id => {
+    const o = orders.find(x => x.id === id);
+    if(o) o.status = newStatus;
+  });
+  
+  toggleBulkMode();
+  
+  const {error} = await db.from('orders').update({status: newStatus}).in('id', ids);
+  if(error) toast('Error updating orders', 'err');
+  else toast('Moved ' + ids.length + ' orders', 'ok');
+}
+
+function printPullList() {
+  const pkgs = orders.filter(o => o.status === 'packaging');
+  if(pkgs.length === 0) return toast('No orders in Packaging column!', 'err');
+  
+  let html = '<html><head><title>Packing Slip</title><style>body{font-family:sans-serif;padding:20px;} h2{margin-bottom:5px;font-size:18px;} .order{border-bottom:1px solid #ccc;padding-bottom:15px;margin-bottom:15px;} ul{list-style:none;padding-left:0;} li{margin-bottom:8px;font-size:14px;} .check{display:inline-block;width:16px;height:16px;border:1.5px solid #000;margin-right:12px;position:relative;top:3px;border-radius:3px;}</style></head><body>';
+  html += '<h1>📦 Cadence Creatures — Packing List</h1><p>Date: ' + new Date().toLocaleDateString() + '</p><hr/>';
+  
+  pkgs.forEach(o => {
+    html += '<div class="order">';
+    html += '<h2>Order #' + (o.etsy_order_id||o.id.slice(0,8)) + ' - ' + (o.buyer_name||'No Name') + '</h2>';
+    html += '<ul>';
+    (o.items||[]).forEach(itm => {
+      const isDone = itm.startsWith('[x] ');
+      const text = isDone ? itm.slice(4) : itm;
+      html += '<li><div class="check"></div>' + text + '</li>';
+    });
+    html += '</ul></div>';
+  });
+  html += '</body></html>';
+  
+  const w = window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(()=>w.print(), 500);
+}
+</script>
+</body>
+</html>

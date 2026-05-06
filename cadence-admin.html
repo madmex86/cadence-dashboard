@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cadence Creatures — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--ink:#1C1612;--gold:#C9A84C;--goldl:#E8D08A;--dim:#8A7D6E;--teal:#5BBFD4;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--ink);color:#FAF6F0;font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;min-height:100vh;}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:160px;opacity:0.04;pointer-events:none;z-index:9998;}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;border-bottom:1px solid rgba(201,168,76,0.12);position:relative;z-index:10;}
+.topbar-left{display:flex;align-items:center;gap:12px;}
+.topbar-name{font-family:'Lora',Georgia,serif;font-size:13px;font-weight:500;color:#E8D08A;letter-spacing:0.04em;}
+.topbar-sub{font-family:'Lora',Georgia,serif;font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(201,168,76,0.35);margin-top:1px;}
+.topbar-link{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#8A7D6E;text-decoration:none;transition:color 0.2s;cursor:pointer;}
+.topbar-link:hover{color:#E8D08A;}
+
+.dash-nav{display:flex;align-items:center;gap:0;border-bottom:1px solid rgba(201,168,76,0.1);background:rgba(0,0,0,0.18);padding:0 16px;overflow-x:auto;}
+.dash-nav a{font-family:'Lora',Georgia,serif;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(196,188,178,0.5);text-decoration:none;padding:10px 14px;white-space:nowrap;border-bottom:2px solid transparent;transition:color 0.2s,border-color 0.2s;}
+.dash-nav a:hover{color:#E8D08A;}
+.dash-nav a.active{color:#E8D08A;border-bottom-color:#C9A84C;}
+
+.main{max-width:800px;margin:0 auto;padding:32px 24px 80px;position:relative;z-index:1;}
+.header{margin-bottom:24px;}
+.title{font-size:20px;font-weight:600;color:var(--goldl);margin-bottom:4px;}
+.subtitle{font-size:13px;color:rgba(250,246,240,0.5);}
+
+.card{background:rgba(255,255,255,0.02);border:1px solid rgba(201,168,76,0.12);border-radius:6px;padding:24px;}
+.fg{display:flex;flex-direction:column;gap:16px;margin-bottom:24px;}
+.fl{display:block;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:rgba(250,246,240,0.4);margin-bottom:6px;}
+input, select{width:100%;background:rgba(0,0,0,0.2);border:1px solid rgba(201,168,76,0.2);color:#FAF6F0;padding:10px 12px;border-radius:4px;font-family:inherit;font-size:13px;outline:none;}
+input:focus, select:focus{border-color:var(--gold);}
+.btn{background:var(--gold);color:var(--ink);border:none;padding:10px 16px;border-radius:4px;font-weight:600;cursor:pointer;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;}
+.btn:hover{background:var(--goldl);}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);border:1px solid rgba(201,168,76,.3);color:var(--cream);padding:12px 24px;border-radius:6px;font-size:13px;opacity:0;pointer-events:none;transition:all .3s ease;z-index:9999;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.ok{border-color:rgba(74,140,92,.4);color:#7dc994;}
+.toast.err{border-color:rgba(168,68,68,.4);color:#e09090;}
+
+@media (max-width: 600px) {
+  .topbar { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .topbar-right { align-self: flex-end; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round"/><rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C"/><circle cx="36" cy="4" r="5.5" fill="#E8D08A"/><circle cx="6" cy="18" r="4" fill="#5BBFD4"/><circle cx="66" cy="18" r="4" fill="#5BBFD4"/></svg>
+    <div><div class="topbar-name">Cadence Creatures</div><div class="topbar-sub">Back Office</div></div>
+  </div>
+  <div class="topbar-right">
+    <a class="topbar-link" onclick="signOut()">Sign Out</a>
+  </div>
+</div>
+
+<div class="dash-nav">
+  <a href="index.html">Hub</a>
+  <a href="cadence-queue.html">Queue</a>
+  <a href="cadence-fulfillment.html">Fulfillment</a>
+  <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
+  <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
+  <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
+</div>
+
+<div class="main">
+  <div class="header">
+    <div class="title">Admin Control Room</div>
+    <div class="subtitle">Manage team members and access control.</div>
+  </div>
+  
+  <div class="card">
+    <div class="title" style="font-size:16px;">Add Team Member</div>
+    <div class="subtitle" style="margin-bottom:16px;">Create an account with specific access privileges. They will receive a verification email.</div>
+    
+    <div class="fg">
+      <div><label class="fl">Email Address</label><input type="email" id="new-email" placeholder="wife@cadencecreatures.com"/></div>
+      <div><label class="fl">Temporary Password</label><input type="password" id="new-pw" placeholder="Must be at least 6 characters"/></div>
+      <div>
+        <label class="fl">Account Role</label>
+        <select id="new-role">
+          <option value="fulfillment">Packer / Fulfillment (Only sees Queue and Fulfillment board)</option>
+          <option value="finance">Finance (Only sees P&L Tracker)</option>
+          <option value="admin">Administrator (Full Access)</option>
+        </select>
+      </div>
+    </div>
+    
+    <button class="btn" onclick="inviteUser()">Create Account</button>
+  </div>
+</div>
+
+<div class="toast" id="tst"></div>
+
+<script src="shared.js"></script>
+<script>
+const tempDb = supabase.createClient(supabaseUrl, supabaseKey, {
+  auth: { persistSession: false, autoRefreshToken: false }
+});
+
+async function inviteUser() {
+  const email = document.getElementById('new-email').value;
+  const password = document.getElementById('new-pw').value;
+  const role = document.getElementById('new-role').value;
+  
+  if(!email || !password) return toast('Please enter email and password', 'err');
+  
+  toast('Creating account...');
+  
+  const { data, error } = await tempDb.auth.signUp({
+    email, password, options: { data: { role } }
+  });
+  
+  if(error) {
+    toast('Error: ' + error.message, 'err');
+  } else {
+    toast('Success! Verification email sent.', 'ok');
+    document.getElementById('new-email').value = '';
+    document.getElementById('new-pw').value = '';
+  }
+}
+</script>
+</body>
+</html>

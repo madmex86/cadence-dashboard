@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cadence Creatures — P&amp;L</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--ink:#1C1612;--gold:#C9A84C;--gold-light:#E8D08A;--gold-dim:rgba(201,168,76,0.14);--green:#4a8c5c;--red:#a84444;--amber:#c97c2a;--cream:#FAF6F0;--cream-dim:#c4bcb2;--cream-faint:#7a6f62;--border:rgba(201,168,76,0.12);--border-h:rgba(201,168,76,0.3);}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--ink);color:var(--cream);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;font-size:14px;}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:160px;opacity:0.04;pointer-events:none;z-index:9998;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;border-bottom:1px solid var(--border);position:relative;z-index:10;}
+.topbar-left{display:flex;align-items:center;gap:12px;}
+.topbar-name{font-family:'Lora',Georgia,serif;font-size:13px;font-weight:500;color:#E8D08A;letter-spacing:0.04em;}
+.topbar-sub{font-family:'Lora',Georgia,serif;font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(201,168,76,0.35);margin-top:1px;}
+.topbar-link{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#8A7D6E;text-decoration:none;transition:color 0.2s;cursor:pointer;}
+.topbar-link:hover{color:#E8D08A;}
+.sync-pill{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--cream-faint);}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+.sync-dot.busy{background:var(--amber);animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.tabs{display:flex;padding:0 28px;border-bottom:1px solid var(--border);gap:2px;z-index:10;position:relative;}
+.tab{font-family:'Lora',Georgia,serif;padding:11px 16px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-faint);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all .2s;}
+.tab:hover{color:var(--cream-dim);}
+.tab.active{color:var(--gold-light);border-bottom-color:var(--gold);}
+.content{max-width:1100px;margin:0 auto;padding:28px;position:relative;z-index:1;}
+.panel{display:none;}.panel.active{display:block;}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px;}
+.kpi{background:rgba(255,255,255,.03);border:1px solid var(--border);padding:14px 16px;border-radius:3px;}
+.kpi-l{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--cream-faint);margin-bottom:5px;}
+.kpi-v{font-size:22px;font-weight:600;}
+.kpi-s{font-size:11px;color:var(--cream-faint);margin-top:2px;}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.sec-title{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:rgba(201,168,.5);}
+.sec-title{color:rgba(201,168,76,.5);}
+.btn{font-family:inherit;font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:8px 16px;cursor:pointer;border:1px solid var(--border-h);background:transparent;color:var(--gold-light);transition:all .2s;border-radius:2px;}
+.btn:hover{background:var(--gold-dim);border-color:var(--gold);}
+.btn.pri{background:var(--gold-dim);border-color:var(--gold);}
+.btn.pri:hover{background:rgba(201,168,76,.22);}
+.btn.grn{border-color:rgba(74,140,92,.4);color:#7dc994;}
+.btn.grn:hover{background:rgba(74,140,92,.1);}
+.btn.red{border-color:rgba(168,68,68,.35);color:#e09090;}
+.btn.red:hover{background:rgba(168,68,68,.1);}
+.btn.sm{padding:5px 11px;font-size:10px;}
+table{width:100%;border-collapse:collapse;}
+th{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:rgba(201,168,76,.45);padding:9px 13px;text-align:left;border-bottom:1px solid var(--border);}
+td{padding:10px 13px;border-bottom:1px solid rgba(201,168,76,.05);vertical-align:middle;}
+tr td { transition: all 0.2s ease; }
+tr:hover td { background:rgba(201,168,76,.04); }
+tr:hover td:first-child { box-shadow: inset 2px 0 0 var(--gold); }
+.empty td{color:var(--cream-faint);font-style:italic;text-align:center;padding:28px;}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;}
+.overlay.open{display:flex;}
+.modal{background:#1e1a15;border:1px solid rgba(201,168,76,.2);max-width:500px;width:100%;padding:26px;max-height:90vh;overflow-y:auto;border-radius:3px;}
+.modal-t{font-size:14px;font-weight:500;color:var(--gold-light);margin-bottom:18px;}
+.modal-act{display:flex;gap:10px;margin-top:18px;justify-content:flex-end;}
+.fg{display:grid;gap:11px;}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.fl{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:5px;}
+input,select{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--cream);font-family:inherit;font-size:13px;padding:8px 11px;outline:none;transition:border-color .2s;border-radius:2px;}
+input:focus,select:focus{border-color:rgba(201,168,76,.38);}
+select option{background:#1a1610;}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(14px);background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);color:var(--gold-light);font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:9px 22px;opacity:0;transition:all .25s;pointer-events:none;z-index:9999;border-radius:2px;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.ok{border-color:rgba(74,140,92,.4);color:#7dc994;}
+.toast.err{border-color:rgba(168,68,68,.4);color:#e09090;}
+.tax-card{background:rgba(255,255,255,.03);border:1px solid var(--border);padding:20px;border-radius:3px;margin-bottom:16px;}
+.tax-card h3{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:rgba(201,168,76,.6);margin-bottom:14px;}
+.tax-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(201,168,76,.06);font-size:13px;}
+.tax-row:last-child{border-bottom:none;}
+.tax-row.total{font-weight:600;font-size:14px;padding-top:12px;}
+.q-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.q-card{background:rgba(255,255,255,.03);border:1px solid var(--border);padding:14px;border-radius:3px;text-align:center;}
+.q-label{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--cream-faint);margin-bottom:6px;}
+.q-val{font-size:18px;font-weight:600;margin-bottom:4px;}
+.q-due{font-size:11px;color:var(--amber);}
+  .dash-nav{display:flex;align-items:center;gap:0;border-bottom:1px solid rgba(201,168,76,0.1);background:rgba(0,0,0,0.2);padding:0 16px;overflow-x:auto;}
+  .dash-nav a{font-family:'Lora',Georgia,serif;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(196,188,178,0.5);text-decoration:none;padding:10px 14px;white-space:nowrap;border-bottom:2px solid transparent;transition:color 0.2s,border-color 0.2s;}
+  .dash-nav a:hover{color:#E8D08A;}
+  .dash-nav a.active{color:#E8D08A;border-bottom-color:#C9A84C;}
+  @media (max-width: 768px) {
+    .topbar { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .tabs { overflow-x: auto; white-space: nowrap; padding: 0 16px; }
+    .content { padding: 16px; }
+    .kpis, .q-grid { grid-template-columns: 1fr 1fr; }
+    .fr { grid-template-columns: 1fr; }
+    .modal { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-left">
+    <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round"/><rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C"/><circle cx="36" cy="4" r="5.5" fill="#E8D08A"/><circle cx="6" cy="18" r="4" fill="#5BBFD4"/><circle cx="66" cy="18" r="4" fill="#5BBFD4"/></svg>
+    <div><div class="topbar-name">Cadence Creatures</div><div class="topbar-sub">Back Office</div></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="sync-pill"><div class="sync-dot" id="sdot"></div><span id="slabel">Connected</span></div>
+    <a class="topbar-link" onclick="signOut()">Sign Out</a>
+  </div>
+</div>
+<div class="dash-nav">
+  <a href="index.html">Hub</a>
+  <a href="cadence-queue.html">Queue</a>
+  <a href="cadence-fulfillment.html">Fulfillment</a>
+  <a href="cadence-creatures-pl-tracker.html" class="active">P&amp;L</a>
+  <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
+  <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
+</div>
+<div class="tabs">
+  <button class="tab active" onclick="go('overview')">Overview</button>
+  <button class="tab" onclick="go('income')">Income</button>
+  <button class="tab" onclick="go('expenses')">Expenses</button>
+  <button class="tab" onclick="go('mileage')">Mileage</button>
+  <button class="tab" onclick="go('tax')">Tax Estimate</button>
+</div>
+
+<div class="content">
+
+<!-- OVERVIEW -->
+<div class="panel active" id="panel-overview">
+  <div class="header" style="margin-bottom:24px;">
+    <div class="sec-title">P&amp;L Tracker</div>
+    <div style="font-size:12px;color:var(--cream-faint);">Monitor expenses, track income, and auto-calculate profit margins.</div>
+  </div>
+
+  <!-- CHART -->
+  <div class="card" style="margin-bottom:24px;position:relative;height:300px;">
+    <canvas id="revChart"></canvas>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-l">Gross Revenue</div><div class="kpi-v" id="ov-rev">—</div></div>
+    <div class="kpi"><div class="kpi-l">Total Expenses</div><div class="kpi-v" id="ov-exp">—</div></div>
+    <div class="kpi"><div class="kpi-l">Net Profit</div><div class="kpi-v" id="ov-net">—</div></div>
+    <div class="kpi"><div class="kpi-l">Profit Margin</div><div class="kpi-v" id="ov-mgn">—</div></div>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-l">This Month</div><div class="kpi-v" id="ov-mo">—</div></div>
+    <div class="kpi"><div class="kpi-l">This Quarter</div><div class="kpi-v" id="ov-qtr">—</div></div>
+    <div class="kpi"><div class="kpi-l">Total Mileage</div><div class="kpi-v" id="ov-miles">—</div><div class="kpi-s" id="ov-mi-val">at IRS rate</div></div>
+    <div class="kpi"><div class="kpi-l">Orders in Queue</div><div class="kpi-v" id="ov-orders">—</div><div class="kpi-s">shipped/complete</div></div>
+  </div>
+  <div class="sec-hdr">
+    <span class="sec-title">Import from Queue</span>
+    <button class="btn grn" onclick="importFromQueue()">↙ Import shipped orders from Queue</button>
+  </div>
+  <div id="import-preview" style="font-size:12px;color:var(--cream-faint);font-style:italic">Click to pull any unrecorded shipped/complete orders from Cadence Queue.</div>
+</div>
+
+<!-- INCOME -->
+<div class="panel" id="panel-income">
+  <div class="sec-hdr">
+    <span class="sec-title">Income entries</span>
+    <button class="btn sm pri" onclick="fModal('income')">+ Add income</button>
+  </div>
+  <div style="overflow-x:auto">
+    <table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th></th></tr></thead>
+    <tbody id="inc-tb"><tr class="empty"><td colspan="5">Loading…</td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- EXPENSES -->
+<div class="panel" id="panel-expenses">
+  <div class="sec-hdr">
+    <span class="sec-title">Expense entries</span>
+    <button class="btn sm pri" onclick="fModal('expense')">+ Add expense</button>
+  </div>
+  <div style="overflow-x:auto">
+    <table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th></th></tr></thead>
+    <tbody id="exp-tb"><tr class="empty"><td colspan="5">Loading…</td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- MILEAGE -->
+<div class="panel" id="panel-mileage">
+  <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+    <div class="kpi"><div class="kpi-l">Total Miles</div><div class="kpi-v" id="mi-total">—</div></div>
+    <div class="kpi"><div class="kpi-l">Deductible Value</div><div class="kpi-v" id="mi-val">—</div><div class="kpi-s">@ $0.67/mile (2024 IRS rate)</div></div>
+    <div class="kpi"><div class="kpi-l">Trips logged</div><div class="kpi-v" id="mi-trips">—</div></div>
+  </div>
+  <div class="sec-hdr">
+    <span class="sec-title">Mileage log</span>
+    <button class="btn sm pri" onclick="mModal()">+ Log trip</button>
+  </div>
+  <div style="overflow-x:auto">
+    <table><thead><tr><th>Date</th><th>Purpose</th><th>Miles</th><th>Round Trip</th><th>Notes</th><th></th></tr></thead>
+    <tbody id="mi-tb"><tr class="empty"><td colspan="6">No trips logged yet.</td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- TAX ESTIMATE -->
+<div class="panel" id="panel-tax">
+  <div class="q-grid" id="q-grid" style="margin-bottom:24px"></div>
+  <div class="tax-card" id="tax-card">
+    <h3>Schedule C Estimate</h3>
+    <div id="tax-rows"></div>
+  </div>
+  <p style="font-size:11px;color:var(--cream-faint);font-style:italic">⚠ Estimates only. Consult a tax professional. SE tax rate ~15.3%, income tax rate varies.</p>
+</div>
+
+</div>
+
+<!-- MODALS -->
+<div class="overlay" id="m-fin"><div class="modal">
+  <div class="modal-t" id="ft-title">Add Entry</div>
+  <input type="hidden" id="f-id"/>
+  <input type="hidden" id="f-type-hidden"/>
+  <div class="fg">
+    <div class="fr"><div><label class="fl">Amount ($)</label><input id="f-amt" type="number" step="0.01" placeholder="0.00"/></div><div><label class="fl">Date</label><input id="f-dt" type="date"/></div></div>
+    <div class="fr"><div><label class="fl">Category</label><input id="f-cat" placeholder="Etsy Sale, Filament, Shipping…"/></div><div><label class="fl">Description</label><input id="f-desc"/></div></div>
+  </div>
+  <div class="modal-act"><button class="btn" onclick="closeM('m-fin')">Cancel</button><button class="btn pri" onclick="saveFin()">Save</button></div>
+</div></div>
+
+<div class="overlay" id="m-mile"><div class="modal">
+  <div class="modal-t">Log Mileage</div>
+  <input type="hidden" id="mi-id"/>
+  <div class="fg">
+    <div class="fr"><div><label class="fl">Date</label><input id="mi-dt" type="date"/></div><div><label class="fl">Miles</label><input id="mi-mi" type="number" step="0.1" placeholder="0.0"/></div></div>
+    <div><label class="fl">Purpose</label><input id="mi-pur" placeholder="Post office run, supplies, etc."/></div>
+    <div class="fr"><div><label class="fl">Round Trip?</label><select id="mi-rt"><option value="false">One-way</option><option value="true">Round trip</option></select></div><div><label class="fl">Notes</label><input id="mi-notes"/></div></div>
+  </div>
+  <div class="modal-act"><button class="btn" onclick="closeM('m-mile')">Cancel</button><button class="btn pri" onclick="saveMile()">Save</button></div>
+</div></div>
+
+<div class="toast" id="tst"></div>
+
+<script src="shared.js"></script>
+<script>
+const IRS_RATE=0.67;
+let fin=[],miles=[];
+
+function sync(on){document.getElementById('sdot').className='sync-dot'+(on?' busy':'');document.getElementById('slabel').textContent=on?'Syncing…':'Connected';}
+function closeM(id){document.getElementById(id).classList.remove('open');}
+function openM(id){document.getElementById(id).classList.add('open');}
+function g(id){return document.getElementById(id).value.trim();}
+
+let cur='overview';
+function go(tab){
+  cur=tab;
+  document.querySelectorAll('.tab').forEach((t,i)=>{const ts=['overview','income','expenses','mileage','tax'];t.classList.toggle('active',ts[i]===tab);});
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+  if(tab==='overview'){ update_overview(); renderChart(); }
+  if(tab==='income')render_inc();
+  if(tab==='expenses')render_exp();
+  if(tab==='mileage')render_miles();
+  if(tab==='tax')render_tax();
+}
+
+let revChartInstance = null;
+function renderChart() {
+  const ctx = document.getElementById('revChart');
+  if(!ctx) return;
+  const dataMap = {};
+  const today = new Date();
+  for(let i=29; i>=0; i--){
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    dataMap[d.toISOString().slice(0,10)] = { rev: 0, exp: 0 };
+  }
+  fin.forEach(f => {
+    if(!f.entry_date) return;
+    const dt = f.entry_date.slice(0,10);
+    if(dataMap[dt]) {
+      const amt = parseFloat(f.amount) || 0;
+      if(f.entry_type === 'income') dataMap[dt].rev += amt;
+      else dataMap[dt].exp += amt;
+    }
+  });
+  const labels = Object.keys(dataMap).map(d => d.slice(5).replace('-','/'));
+  const revData = Object.values(dataMap).map(d => d.rev);
+  const expData = Object.values(dataMap).map(d => d.exp);
+  if(revChartInstance) revChartInstance.destroy();
+  Chart.defaults.color = '#8A7D6E';
+  Chart.defaults.font.family = "'Segoe UI', sans-serif";
+  revChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [
+        { label: 'Revenue', data: revData, borderColor: '#C9A84C', backgroundColor: 'rgba(201,168,76,0.1)', fill: true, tension: 0.4 },
+        { label: 'Expenses', data: expData, borderColor: '#a84444', backgroundColor: 'transparent', borderDash: [5, 5], tension: 0.4 }
+    ]},
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top', align: 'end' } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, border: { display: false } }, x: { grid: { display: false }, border: { display: false } } } }
+  });
+}
+
+async function load_fin(){sync(true);const{data,error}=await db.from('finance').select('*').order('entry_date',{ascending:false});if(error){sync(false);return;}fin=data;sync(false);update_overview();if(cur==='income')render_inc();if(cur==='expenses')render_exp();if(cur==='tax')render_tax();renderChart();}
+async function load_miles(){sync(true);const{data,error}=await db.from('mileage').select('*').order('trip_date',{ascending:false});if(error){sync(false);return;}miles=data;sync(false);if(cur==='mileage')render_miles();update_overview();}
+
+function fmt$(v){return'$'+Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function sum(arr,type){return arr.filter(e=>e.entry_type===type).reduce((s,e)=>s+Number(e.amount),0);}
+
+function update_overview(){
+  const rev=sum(fin,'income'),exp=sum(fin,'expense'),net=rev-exp;
+  const mgn=rev>0?Math.round(net/rev*100):0;
+  const now=new Date();
+  const mo_net=fin.filter(e=>{const d=new Date(e.entry_date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).reduce((s,e)=>s+(e.entry_type==='income'?1:-1)*Number(e.amount),0);
+  const q=Math.floor(now.getMonth()/3);
+  const qtr_net=fin.filter(e=>{const d=new Date(e.entry_date);return Math.floor(d.getMonth()/3)===q&&d.getFullYear()===now.getFullYear();}).reduce((s,e)=>s+(e.entry_type==='income'?1:-1)*Number(e.amount),0);
+  const tot_mi=miles.reduce((s,m)=>s+Number(m.miles),0);
+  document.getElementById('ov-rev').textContent=fmt$(rev);
+  document.getElementById('ov-exp').textContent=fmt$(exp);
+  const ne=document.getElementById('ov-net');ne.textContent=(net>=0?'+':'')+fmt$(net);ne.style.color=net>=0?'#7dc994':'#e09090';
+  document.getElementById('ov-mgn').textContent=mgn+'%';
+  const me=document.getElementById('ov-mo');me.textContent=(mo_net>=0?'+':'')+fmt$(mo_net);me.style.color=mo_net>=0?'#7dc994':'#e09090';
+  const qe=document.getElementById('ov-qtr');qe.textContent=(qtr_net>=0?'+':'')+fmt$(qtr_net);qe.style.color=qtr_net>=0?'#7dc994':'#e09090';
+  document.getElementById('ov-miles').textContent=tot_mi.toFixed(1);
+  document.getElementById('ov-mi-val').textContent=fmt$(tot_mi*IRS_RATE)+' deductible';
+}
+
+async function importFromQueue(){
+  sync(true);
+  const{data:orders,error:oe}=await db.from('orders').select('*').in('status',['shipped','complete']).not('total_amount','is',null);
+  if(oe){sync(false);toast('Failed to load Queue orders','err');return;}
+  const existingOrderIds=fin.filter(f=>f.order_id).map(f=>f.order_id);
+  const newOrders=orders.filter(o=>!existingOrderIds.includes(o.id));
+  if(!newOrders.length){sync(false);const el=document.getElementById('import-preview');el.textContent='All shipped orders are already recorded.';el.style.color='#7dc994';return;}
+  const rows=newOrders.map(o=>({entry_type:'income',category:'Etsy Sale',description:`Order #${o.etsy_order_id||o.id.slice(0,8)}${o.buyer_name?' — '+o.buyer_name:''}`,amount:o.total_amount,entry_date:o.order_date||new Date().toISOString().slice(0,10),order_id:o.id}));
+  const{error}=await db.from('finance').insert(rows);
+  if(error){sync(false);toast('Import failed','err');return;}
+  toast(`Imported ${rows.length} order${rows.length!==1?'s':''} from Queue`,'ok');
+  document.getElementById('import-preview').textContent=`Imported ${rows.length} order${rows.length!==1?'s':''}.`;
+  document.getElementById('import-preview').style.color='#7dc994';
+  await load_fin();
+  const oe2=document.getElementById('ov-orders');if(oe2)oe2.textContent=orders.length;
+}
+
+function render_rows(type,tbId){
+  const rows=fin.filter(e=>e.entry_type===type);
+  const tb=document.getElementById(tbId);
+  if(!rows.length){tb.innerHTML=`<tr class="empty"><td colspan="5">No ${type} entries yet.</td></tr>`;return;}
+  tb.innerHTML=rows.map(e=>{
+    const dt=new Date(e.entry_date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    return`<tr><td style="font-size:12px;color:var(--cream-faint)">${dt}</td><td style="font-size:12px;color:var(--cream-faint)">${e.category||'—'}</td><td>${e.description||'—'}</td><td style="font-weight:500;color:${type==='income'?'#7dc994':'#e09090'}">${type==='income'?'+':'-'}${fmt$(e.amount)}</td><td style="white-space:nowrap"><button class="btn sm" onclick="fModal('${type}','${e.id}')">Edit</button><button class="btn sm red" style="margin-left:4px" onclick="delFin('${e.id}')">✕</button></td></tr>`;
+  }).join('');
+}
+function render_inc(){render_rows('income','inc-tb');}
+function render_exp(){render_rows('expense','exp-tb');}
+
+function render_miles(){
+  const tb=document.getElementById('mi-tb');
+  const tot=miles.reduce((s,m)=>s+Number(m.miles),0);
+  document.getElementById('mi-total').textContent=tot.toFixed(1)+' mi';
+  document.getElementById('mi-val').textContent=fmt$(tot*IRS_RATE);
+  document.getElementById('mi-trips').textContent=miles.length;
+  if(!miles.length){tb.innerHTML='<tr class="empty"><td colspan="6">No trips logged.</td></tr>';return;}
+  tb.innerHTML=miles.map(m=>{
+    const dt=new Date(m.trip_date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    return`<tr><td style="font-size:12px;color:var(--cream-faint)">${dt}</td><td>${m.purpose||'—'}</td><td style="font-weight:500">${Number(m.miles).toFixed(1)} mi</td><td style="font-size:12px;color:var(--cream-faint)">${m.round_trip?'Yes':'No'}</td><td style="font-size:12px;color:var(--cream-faint)">${m.notes||''}</td><td><button class="btn sm red" onclick="delMile('${m.id}')">✕</button></td></tr>`;
+  }).join('');
+}
+
+function render_tax(){
+  const now=new Date(),yr=now.getFullYear();
+  const QUARTERS=[{label:'Q1',start:new Date(yr,0,1),end:new Date(yr,2,31),due:'Apr 15'},{label:'Q2',start:new Date(yr,3,1),end:new Date(yr,5,30),due:'Jun 15'},{label:'Q3',start:new Date(yr,6,1),end:new Date(yr,8,30),due:'Sep 15'},{label:'Q4',start:new Date(yr,9,1),end:new Date(yr,11,31),due:'Jan 15'}];
+  const qg=document.getElementById('q-grid');
+  qg.innerHTML=QUARTERS.map(q=>{
+    const net=fin.filter(e=>{const d=new Date(e.entry_date);return d>=q.start&&d<=q.end;}).reduce((s,e)=>s+(e.entry_type==='income'?1:-1)*Number(e.amount),0);
+    const est=Math.max(0,net*0.153*0.9);
+    const col=net>=0?'#7dc994':'#e09090';
+    return`<div class="q-card"><div class="q-label">${q.label} ${yr}</div><div class="q-val" style="color:${col}">${fmt$(net)}</div><div style="font-size:12px;color:var(--amber);margin-bottom:2px">Est. tax: ${fmt$(est)}</div><div class="q-due">Due ${q.due}</div></div>`;
+  }).join('');
+  const rev=sum(fin,'income'),exp=sum(fin,'expense'),mi_val=miles.reduce((s,m)=>s+Number(m.miles),0)*IRS_RATE;
+  const gross_profit=rev-exp;
+  const se_tax=Math.max(0,gross_profit*0.9235*0.153);
+  const ded_half_se=se_tax/2;
+  const taxable=Math.max(0,gross_profit-ded_half_se-mi_val);
+  const income_tax=taxable*0.22;
+  const total_est=se_tax+income_tax;
+  const tr=document.getElementById('tax-rows');
+  tr.innerHTML=[
+    ['Gross Revenue',fmt$(rev),'var(--cream)'],
+    ['Business Expenses',-fmt$(exp),'#e09090'],
+    ['Mileage Deduction',-fmt$(mi_val),'#e09090'],
+    ['Gross Profit',fmt$(gross_profit),gross_profit>=0?'#7dc994':'#e09090'],
+    ['Self-Employment Tax (15.3%)','−'+fmt$(se_tax),'#e09090'],
+    ['½ SE Deduction','−'+fmt$(ded_half_se),'#e09090'],
+    ['Estimated Taxable Income',fmt$(taxable),'var(--cream)'],
+    ['Est. Income Tax (22% bracket)',fmt$(income_tax),'#e09090'],
+  ].map(([l,v,c])=>`<div class="tax-row"><span>${l}</span><span style="color:${c};font-weight:500">${v}</span></div>`).join('')
+  +`<div class="tax-row total"><span>Estimated Total Tax Liability</span><span style="color:#e09090">${fmt$(total_est)}</span></div>`;
+}
+
+function fModal(type,id=''){
+  document.getElementById('f-id').value=id;document.getElementById('f-type-hidden').value=type;
+  document.getElementById('ft-title').textContent=id?`Edit ${type}`:`Add ${type}`;
+  if(id){const e=fin.find(x=>x.id===id);if(!e)return;document.getElementById('f-amt').value=e.amount||'';document.getElementById('f-dt').value=e.entry_date||'';document.getElementById('f-cat').value=e.category||'';document.getElementById('f-desc').value=e.description||'';}
+  else{['f-amt','f-cat','f-desc'].forEach(x=>document.getElementById(x).value='');document.getElementById('f-dt').value=new Date().toISOString().slice(0,10);}
+  openM('m-fin');
+}
+async function saveFin(){
+  const id=g('f-id');
+  const p={entry_type:document.getElementById('f-type-hidden').value,amount:parseFloat(g('f-amt'))||0,category:g('f-cat')||null,entry_date:g('f-dt')||new Date().toISOString().slice(0,10),description:g('f-desc')||null};
+  sync(true);closeM('m-fin');
+  const{error}=id?await db.from('finance').update(p).eq('id',id):await db.from('finance').insert(p);
+  if(error){sync(false);toast('Save failed','err');return;}
+  toast('Saved','ok');await load_fin();
+}
+async function delFin(id){if(!confirm('Delete?'))return;sync(true);const{error}=await db.from('finance').delete().eq('id',id);if(error){sync(false);toast('Failed','err');return;}toast('Deleted');await load_fin();}
+
+function mModal(id=''){
+  document.getElementById('mi-id').value=id;
+  if(id){const m=miles.find(x=>x.id===id);if(!m)return;document.getElementById('mi-dt').value=m.trip_date||'';document.getElementById('mi-mi').value=m.miles||'';document.getElementById('mi-pur').value=m.purpose||'';document.getElementById('mi-rt').value=String(m.round_trip);document.getElementById('mi-notes').value=m.notes||'';}
+  else{['mi-mi','mi-pur','mi-notes'].forEach(x=>document.getElementById(x).value='');document.getElementById('mi-dt').value=new Date().toISOString().slice(0,10);document.getElementById('mi-rt').value='false';}
+  openM('m-mile');
+}
+async function saveMile(){
+  const id=g('mi-id');
+  const p={trip_date:g('mi-dt')||new Date().toISOString().slice(0,10),miles:parseFloat(g('mi-mi'))||0,purpose:g('mi-pur')||null,round_trip:document.getElementById('mi-rt').value==='true',notes:g('mi-notes')||null};
+  sync(true);closeM('m-mile');
+  const{error}=id?await db.from('mileage').update(p).eq('id',id):await db.from('mileage').insert(p);
+  if(error){sync(false);toast('Save failed','err');return;}
+  toast('Saved','ok');await load_miles();
+}
+async function delMile(id){if(!confirm('Delete?'))return;sync(true);const{error}=await db.from('mileage').delete().eq('id',id);if(error){sync(false);toast('Failed','err');return;}toast('Deleted');await load_miles();}
+
+db.channel('pl-rt')
+  .on('postgres_changes',{event:'*',schema:'public',table:'finance'},()=>load_fin())
+  .on('postgres_changes',{event:'*',schema:'public',table:'mileage'},()=>load_miles())
+  .subscribe();
+
+Promise.all([load_fin(),load_miles()]);
+</script>
+</body>
+</html>

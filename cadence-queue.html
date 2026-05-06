@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cadence Queue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--ink:#1C1612;--gold:#C9A84C;--gold-light:#E8D08A;--gold-dim:rgba(201,168,76,0.14);--teal:#5BBFD4;--green:#4a8c5c;--red:#a84444;--amber:#c97c2a;--cream:#FAF6F0;--cream-dim:#c4bcb2;--cream-faint:#7a6f62;--border:rgba(201,168,76,0.12);--border-h:rgba(201,168,76,0.30);}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--ink);color:var(--cream);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;font-size:14px;}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:160px;opacity:0.04;pointer-events:none;z-index:9998;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;border-bottom:1px solid var(--border);position:relative;z-index:10;}
+.topbar-left{display:flex;align-items:center;gap:12px;}
+.topbar-name{font-family:'Lora',Georgia,serif;font-size:13px;font-weight:500;color:#E8D08A;letter-spacing:0.04em;}
+.topbar-sub{font-family:'Lora',Georgia,serif;font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(201,168,76,0.35);margin-top:1px;}
+.topbar-link{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#8A7D6E;text-decoration:none;transition:color 0.2s;cursor:pointer;}
+.topbar-link:hover{color:#E8D08A;}
+.sync-pill{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--cream-faint);}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+.sync-dot.busy{background:var(--amber);animation:blink 1s infinite;}
+.sync-dot.err{background:var(--red);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.dash-nav{display:flex;align-items:center;gap:0;border-bottom:1px solid rgba(201,168,76,0.1);background:rgba(0,0,0,0.2);padding:0 16px;overflow-x:auto;}
+.dash-nav a{font-family:'Lora',Georgia,serif;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(196,188,178,0.5);text-decoration:none;padding:10px 14px;white-space:nowrap;border-bottom:2px solid transparent;transition:color 0.2s,border-color 0.2s;}
+.dash-nav a:hover{color:#E8D08A;}
+.dash-nav a.active{color:#E8D08A;border-bottom-color:#C9A84C;}
+.tabs{display:flex;padding:0 28px;border-bottom:1px solid var(--border);gap:2px;z-index:10;position:relative;}
+.tab{font-family:'Lora',Georgia,serif;padding:11px 16px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-faint);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all .2s;}
+.tab:hover{color:var(--cream-dim);}
+.tab.active{color:var(--gold-light);border-bottom-color:var(--gold);}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:rgba(168,68,68,.25);color:#e09090;font-size:10px;margin-left:5px;}
+.content{max-width:1280px;margin:0 auto;padding:28px;position:relative;z-index:1;}
+.panel{display:none;}.panel.active{display:block;}
+.stats-widget{display:grid;grid-template-columns:repeat(6,1fr);gap:0;margin-bottom:22px;border:1px solid var(--border);border-radius:3px;overflow:hidden;}
+.stat-cell{padding:12px 14px;text-align:center;border-right:1px solid var(--border);}
+.stat-cell:last-child{border-right:none;}
+.stat-l{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--cream-faint);margin-bottom:5px;}
+.stat-v{font-size:22px;font-weight:600;}
+.stat-v.blue{color:#5BBFD4;}.stat-v.gold{color:var(--gold-light);}.stat-v.purple{color:#b89de8;}.stat-v.green{color:#7dc994;}
+.alert{display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(168,68,68,.1);border:1px solid rgba(168,68,68,.25);border-radius:3px;margin-bottom:18px;font-size:12px;color:#e09090;}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px;}
+.kpi{background:rgba(255,255,255,.03);border:1px solid var(--border);padding:14px 16px;border-radius:3px;}
+.kpi-l{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--cream-faint);margin-bottom:5px;}
+.kpi-v{font-size:22px;font-weight:600;}
+.kpi-s{font-size:11px;color:var(--cream-faint);margin-top:2px;}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.sec-title{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:rgba(201,168,76,.5);}
+.btn{font-family:inherit;font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:8px 16px;cursor:pointer;border:1px solid var(--border-h);background:transparent;color:var(--gold-light);transition:all .2s;border-radius:2px;}
+.btn:hover{background:var(--gold-dim);border-color:var(--gold);}
+.btn.pri{background:var(--gold-dim);border-color:var(--gold);}
+.btn.pri:hover{background:rgba(201,168,76,.22);}
+.btn.grn{border-color:rgba(74,140,92,.4);color:#7dc994;}
+.btn.grn:hover{background:rgba(74,140,92,.1);}
+.btn.red{border-color:rgba(168,68,68,.35);color:#e09090;}
+.btn.red:hover{background:rgba(168,68,68,.1);}
+.btn.sm{padding:5px 11px;font-size:10px;}
+.btn:disabled{opacity:.35;cursor:not-allowed;}
+table{width:100%;border-collapse:collapse;}
+th{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:rgba(201,168,76,.45);padding:9px 13px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:10px 13px;border-bottom:1px solid rgba(201,168,76,.05);vertical-align:middle;}
+tr td { transition: all 0.2s ease; }
+tr:hover td { background:rgba(201,168,76,.04); }
+tr:hover td:first-child { box-shadow: inset 2px 0 0 var(--gold); }
+.empty td{color:var(--cream-faint);font-style:italic;text-align:center;padding:30px;}
+.pill{display:inline-flex;align-items:center;font-size:10px;letter-spacing:.07em;padding:3px 9px;border-radius:12px;font-weight:500;}
+.p-queued{background:rgba(91,191,212,.12);color:#5BBFD4;}
+.p-printing{background:rgba(201,168,76,.14);color:#E8D08A;}
+.p-printed{background:rgba(147,112,219,.15);color:#b89de8;}
+.p-shipped{background:rgba(74,140,92,.15);color:#7dc994;}
+.p-complete{background:rgba(74,140,92,.2);color:#7dc994;}
+.p-active{background:rgba(74,140,92,.15);color:#7dc994;}
+.p-inactive{background:rgba(255,255,255,.06);color:var(--cream-faint);}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;}
+.overlay.open{display:flex;}
+.modal{background:#1e1a15;border:1px solid rgba(201,168,76,.2);max-width:540px;width:100%;padding:26px;max-height:90vh;overflow-y:auto;border-radius:3px;}
+.modal-t{font-size:14px;font-weight:500;color:var(--gold-light);margin-bottom:18px;}
+.modal-act{display:flex;gap:10px;margin-top:18px;justify-content:flex-end;}
+.fg{display:grid;gap:11px;}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;}
+.fl{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:5px;}
+input,textarea,select{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--cream);font-family:inherit;font-size:13px;padding:8px 11px;outline:none;transition:border-color .2s;border-radius:2px;}
+input:focus,textarea:focus,select:focus{border-color:rgba(201,168,76,.38);}
+select option{background:#1a1610;}
+textarea{resize:vertical;min-height:68px;}
+.import-ta{width:100%;background:rgba(255,255,255,.03);border:1px solid var(--border);color:var(--cream);font-family:monospace;font-size:12px;padding:11px;min-height:110px;resize:vertical;outline:none;border-radius:2px;}
+.import-ta:focus{border-color:rgba(201,168,76,.38);}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(14px);background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);color:var(--gold-light);font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:9px 22px;opacity:0;transition:all .25s;pointer-events:none;z-index:9999;border-radius:2px;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.ok{border-color:rgba(74,140,92,.4);color:#7dc994;}
+.toast.err{border-color:rgba(168,68,68,.4);color:#e09090;}
+.printer-tag{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 7px;border:1px solid rgba(91,191,212,.25);color:#5BBFD4;border-radius:10px;}
+@media (max-width: 768px) {
+  .topbar { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .tabs { overflow-x: auto; white-space: nowrap; padding: 0 16px; }
+  .content { padding: 16px; }
+  .stats-widget { grid-template-columns: repeat(3, 1fr); }
+  .kpis { grid-template-columns: 1fr 1fr; }
+  .fr, .fr3 { grid-template-columns: 1fr; }
+  .modal { padding: 16px; }
+}
+@media (max-width: 480px) {
+  .stats-widget { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round"/><rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C"/><circle cx="36" cy="4" r="5.5" fill="#E8D08A"/><circle cx="6" cy="18" r="4" fill="#5BBFD4"/><circle cx="66" cy="18" r="4" fill="#5BBFD4"/></svg>
+    <div><div class="topbar-name">Cadence Creatures</div><div class="topbar-sub">Back Office</div></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="printer-tag" id="printer-display">🖨 Vision</div>
+    <div class="sync-pill"><div class="sync-dot" id="sdot"></div><span id="slabel">Connected</span></div>
+    <a class="topbar-link" onclick="signOut()">Sign Out</a>
+  </div>
+</div>
+
+<div class="dash-nav">
+  <a href="index.html">Hub</a>
+  <a href="cadence-queue.html" class="active">Queue</a>
+  <a href="cadence-fulfillment.html">Fulfillment</a>
+  <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
+  <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
+  <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="go('orders')">Orders <span class="badge" id="b-orders" style="display:none"></span></button>
+  <button class="tab" onclick="go('stock')">Stock &amp; Queue</button>
+  <button class="tab" onclick="go('creatures')">Creatures <span class="badge" id="b-creatures" style="display:none"></span></button>
+  <button class="tab" onclick="go('inventory')">Filament <span class="badge" id="b-inv" style="display:none"></span></button>
+  <button class="tab" onclick="go('finance')">Finance</button>
+  <button class="tab" onclick="go('mileage')">Mileage</button>
+  <button class="tab" onclick="go('printers')">Printers</button>
+</div>
+
+<div class="content">
+
+<!-- ORDERS -->
+<div class="panel active" id="panel-orders">
+  <div style="display:grid;grid-template-columns:3fr 1fr;gap:20px;margin-bottom:20px;">
+    <div class="stats-widget" style="margin-bottom:0;display:grid;grid-template-columns:repeat(5,1fr);height:100%;">
+      <div class="stat-cell" style="background:rgba(91,191,212,.04);display:flex;flex-direction:column;justify-content:center;"><div class="stat-l">Queued</div><div class="stat-v blue" id="ps-queued">—</div></div>
+      <div class="stat-cell" style="background:rgba(201,168,76,.04);display:flex;flex-direction:column;justify-content:center;"><div class="stat-l">Printing</div><div class="stat-v gold" id="ps-printing">—</div></div>
+      <div class="stat-cell" style="background:rgba(147,112,219,.04);display:flex;flex-direction:column;justify-content:center;"><div class="stat-l">Printed</div><div class="stat-v purple" id="ps-printed">—</div></div>
+      <div class="stat-cell" style="background:rgba(74,140,92,.04);display:flex;flex-direction:column;justify-content:center;"><div class="stat-l">Shipped</div><div class="stat-v green" id="ps-shipped">—</div></div>
+      <div class="stat-cell" style="background:rgba(74,140,92,.07);display:flex;flex-direction:column;justify-content:center;"><div class="stat-l">Complete</div><div class="stat-v green" id="ps-complete">—</div></div>
+    </div>
+    
+    <div style="background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:3px;text-align:center;padding:24px 16px;display:flex;flex-direction:column;justify-content:center;">
+      <div style="font-family:'Lora',Georgia,serif;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:12px;">Available for Sale</div>
+      <div id="stat-on-hand" style="font-family:'Lora',Georgia,serif;font-size:36px;font-weight:600;color:var(--gold-light);margin-bottom:12px;line-height:1;">—</div>
+      <div id="stat-on-hand-detail" style="font-family:'Lora',Georgia,serif;font-size:13px;color:var(--cream-faint);line-height:1.6;"></div>
+    </div>
+  </div>
+  <div id="alert-box"></div>
+  <div class="sec-hdr">
+    <span class="sec-title">Orders</span>
+    <div style="display:flex;gap:8px;align-items:center">
+      <label style="font-size:11px;color:var(--cream-dim);display:flex;align-items:center;gap:6px;cursor:pointer;margin-right:8px;padding-right:12px;border-right:1px solid var(--border);user-select:none;">
+        <input type="checkbox" id="hide-completed-cb" onchange="render_orders()" style="width:auto;margin:0" checked> Hide Shipped/Complete
+      </label>
+      <button class="btn sm" onclick="openPrintCost()">🖨 Print Cost</button>
+      <button class="btn sm" onclick="openImport()">Import Etsy</button>
+      <button class="btn sm pri" onclick="oModal()">+ Add order</button>
+    </div>
+  </div>
+  <div style="overflow-x:auto">
+    <table><thead><tr><th>Order</th><th>Buyer</th><th>Items</th><th>Status</th><th>Printer</th><th>Total</th><th>Margin</th><th>Tracking</th><th>Date</th><th></th></tr></thead>
+    <tbody id="otb"><tr class="empty"><td colspan="9">Loading…</td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- STOCK & QUEUE -->
+<div class="panel" id="panel-stock">
+  <div class="sec-hdr">
+    <span class="sec-title">Stock vs. Active Prints — real-time comparison</span>
+    <button class="btn sm pri" onclick="cModal()">+ Add Creature</button>
+  </div>
+  <div style="overflow-x:auto">
+    <table><thead><tr><th>Log</th><th>Name</th><th>SKU</th><th>Species</th><th>Env</th><th>Qty On Hand</th><th>Currently Printing</th><th>Queued</th><th>Net Available</th></tr></thead>
+    <tbody id="sttb"><tr class="empty"><td colspan="9">Loading…</td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- CREATURES -->
+<div class="panel" id="panel-creatures">
+  <div id="creature-alert-box"></div>
+  <div class="sec-hdr">
+    <span class="sec-title">Creature Lineup · syncs to Market Intelligence</span>
+    <button class="btn sm pri" onclick="cModal()">+ Add creature</button>
+  </div>
+  <div style="overflow-x:auto">
+    <table><thead><tr><th>Log</th><th>Name</th><th>SKU</th><th>Species</th><th>Env</th><th>Retail $</th><th>Etsy $</th><th>Cost $</th><th>Margin</th><th>On Hand</th><th>Filaments</th><th>Status</th><th></th></tr></thead>
+    <tbody id="ctb"><tr class="empty"><td colspan="12">Loading…</td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- INVENTORY -->
+<div class="panel" id="panel-inventory">
+  <div class="sec-hdr">
+    <span class="sec-title">Filament Inventory</span>
+    <button class="btn sm pri" onclick="iModal()">+ Add spool</button>
+  </div>
+  <div style="overflow-x:auto">
+    <table><thead><tr><th>Spool</th><th>Brand</th><th>Color</th><th>Material</th><th>Spools on Hand</th><th>Reorder At</th><th>Cost/Spool</th><th></th></tr></thead>
+    <tbody id="itb"><tr class="empty"><td colspan="8">Loading…</td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- FINANCE -->
+<div class="panel" id="panel-finance">
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-l">Revenue</div><div class="kpi-v" id="k-rev">—</div></div>
+    <div class="kpi"><div class="kpi-l">Expenses</div><div class="kpi-v" id="k-exp">—</div></div>
+    <div class="kpi"><div class="kpi-l">Net</div><div class="kpi-v" id="k-net">—</div></div>
+    <div class="kpi"><div class="kpi-l">This month</div><div class="kpi-v" id="k-mo">—</div></div>
+  </div>
+  <div class="sec-hdr">
+    <span class="sec-title">Finance entries · shared with P&amp;L Tracker</span>
+    <div style="display:flex;gap:8px">
+      <button class="btn sm grn" onclick="exportShipped()">Export shipped → P&amp;L</button>
+      <button class="btn sm pri" onclick="fModal()">+ Add entry</button>
+    </div>
+  </div>
+  <div style="overflow-x:auto">
+    <table><thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Description</th><th>Invoice</th><th>Amount</th><th></th></tr></thead>
+    <tbody id="ftb"><tr class="empty"><td colspan="6">Loading…</td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- MILEAGE -->
+<div class="panel" id="panel-mileage">
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-l">Total Miles</div><div class="kpi-v" id="k-miles">—</div></div>
+    <div class="kpi"><div class="kpi-l">IRS Deduction</div><div class="kpi-v" id="k-deduct" style="color:#7dc994">—</div><div class="kpi-s">@ $0.70/mile (2025)</div></div>
+    <div class="kpi"><div class="kpi-l">This Month</div><div class="kpi-v" id="k-miles-mo">—</div></div>
+    <div class="kpi"><div class="kpi-l">Trips Logged</div><div class="kpi-v" id="k-trips">—</div></div>
+  </div>
+  <div class="sec-hdr">
+    <span class="sec-title">Mileage Log · supply runs, post office, etc.</span>
+    <button class="btn sm pri" onclick="mileModal()">+ Add trip</button>
+  </div>
+  <div style="overflow-x:auto">
+    <table><thead><tr><th>Date</th><th>Purpose</th><th>Miles</th><th>Round Trip</th><th>Deduction</th><th>Notes</th><th></th></tr></thead>
+    <tbody id="mtb"><tr class="empty"><td colspan="7">No trips yet.</td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- PRINTERS -->
+<div class="panel" id="panel-printers">
+  <div class="sec-hdr">
+    <span class="sec-title">Printer Fleet · dynamic tracking</span>
+    <button class="btn sm pri" onclick="printerModal()">+ Add printer</button>
+  </div>
+  <div style="overflow-x:auto">
+    <table><thead><tr><th>Name</th><th>Model</th><th>Default</th><th>Current Job</th><th>Status</th><th>Notes</th><th></th></tr></thead>
+    <tbody id="ptb"><tr class="empty"><td colspan="7">Loading…</td></tr></tbody></table>
+  </div>
+</div>
+
+</div>
+
+<!-- ORDER MODAL -->
+<div class="overlay" id="m-order"><div class="modal">
+  <div class="modal-t" id="ot">Add Order</div>
+  <input type="hidden" id="o-id"/>
+  <div class="fg">
+    <div class="fr"><div><label class="fl">Etsy Order ID</label><input id="o-eid" placeholder="e.g. 1234567890"/></div><div><label class="fl">Buyer Name</label><input id="o-buyer"/></div></div>
+    <div><label class="fl">Items (one per line)</label><textarea id="o-items" placeholder="S'mores — Forest Gecko&#10;Bandit — Raccoon"></textarea></div>
+    <div class="fr">
+      <div><label class="fl">Status</label><select id="o-st"><option value="queued">Queued</option><option value="printing">Printing</option><option value="printed">Printed</option><option value="packaging">Packaging</option><option value="shipped">Shipped</option><option value="complete">Complete</option></select></div>
+      <div><label class="fl">Printer</label><select id="o-printer"><option value="Vision">Vision</option></select></div>
+    </div>
+    <div class="fr"><div><label class="fl">Total ($)</label><input id="o-amt" type="number" step="0.01"/></div><div><label class="fl">Order Date</label><input id="o-dt" type="date"/></div></div>
+    <div class="fr"><div><label class="fl">Tracking Number</label><input id="o-track" placeholder="9400111899223397" oninput="autoDetectCarrier()"/></div><div><label class="fl">Carrier</label><select id="o-carrier"><option value="">Auto-detect</option><option value="usps">USPS</option><option value="ups">UPS</option><option value="fedex">FedEx</option></select></div></div>
+    <div><label class="fl">Shipping Note</label><input id="o-note"/></div>
+  </div>
+  <div class="modal-act"><button class="btn" onclick="closeModal('m-order')">Cancel</button><button class="btn pri" onclick="saveOrder()">Save</button></div>
+</div></div>
+
+<!-- CREATURE MODAL -->
+<div class="overlay" id="m-creature"><div class="modal">
+  <div class="modal-t" id="cmt">Add Creature</div>
+  <input type="hidden" id="c-id"/>
+  <div class="fg">
+    <div class="fr"><div><label class="fl">Log #</label><input id="c-log" placeholder="001"/></div><div><label class="fl">Name</label><input id="c-name" placeholder="S'mores"/></div></div>
+    <div class="fr"><div><label class="fl">SKU</label><input id="c-sku" placeholder="CC-001-SMORES"/></div><div><label class="fl">Species</label><input id="c-species" placeholder="Gecko"/></div></div>
+    <div class="fr"><div><label class="fl">Environment</label><select id="c-env"><option value="forest">Forest</option><option value="sea">Ocean</option><option value="fantasy">Fantasy</option><option value="holiday">Holiday</option><option value="space">Space</option></select></div><div><label class="fl">Qty On Hand</label><input id="c-qty" type="number" min="0" placeholder="0"/></div></div>
+    <div class="fr3"><div><label class="fl">Retail ($)</label><input id="c-retail" type="number" step="0.01"/></div><div><label class="fl">Etsy ($)</label><input id="c-etsy" type="number" step="0.01"/></div><div><label class="fl">Cost ($)</label><input id="c-cost" type="number" step="0.01"/></div></div>
+    <div class="fr"><div><label class="fl">Active</label><select id="c-active"><option value="true">Active</option><option value="false">Inactive</option></select></div><div><label class="fl">Notes</label><input id="c-notes"/></div></div>
+    <div><label class="fl">Tagline <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">Short description shown on home page &amp; bestiary cards</span></label><input id="c-tagline" placeholder="e.g. Those eyes don't miss a thing. Not a single thing."/></div>
+    <div><label class="fl">Etsy Listing URL <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">Direct link to this creature's listing</span></label><input id="c-etsy-url" placeholder="https://etsy.com/listing/…"/></div>
+    <div class="fr"><div><label class="fl">Image URL <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">Direct link to full unblurred photo</span></label><input id="c-image-url" placeholder="https://.../photo.jpg"/></div><div><label class="fl">Reveal Image <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">(Set to No to blur image on site)</span></label><select id="c-is-revealed"><option value="true">Yes — Revealed</option><option value="false">No — Blurred (Secret)</option></select></div></div>
+    <div><label class="fl">Filament Colors Used <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">(hold Ctrl/Cmd to select multiple)</span></label><select id="c-filaments" multiple style="min-height:80px;font-size:12px"></select></div>
+  </div>
+  <div class="modal-act"><button class="btn" onclick="closeModal('m-creature')">Cancel</button><button class="btn pri" onclick="saveCreature()">Save</button></div>
+</div></div>
+
+<!-- INVENTORY MODAL — BUG FIXED -->
+<div class="overlay" id="m-inv"><div class="modal">
+  <div class="modal-t" id="it">Add Spool</div>
+  <input type="hidden" id="i-id"/>
+  <div class="fg">
+    <div><label class="fl">Spool Name</label><input id="i-name" placeholder="Polymaker Panchroma Forest Green"/></div>
+    <div class="fr"><div><label class="fl">Brand</label><input id="i-brand" placeholder="Polymaker"/></div><div><label class="fl">Color</label><input id="i-color" placeholder="Forest Green"/></div></div>
+    <div class="fr"><div><label class="fl">Material</label><select id="i-mat"><option>PLA</option><option>TPU</option><option>PETG</option><option>ABS</option><option>ASA</option><option>Other</option></select></div><div><label class="fl">Cost/Spool ($)</label><input id="i-cost" type="number" step="0.01"/></div></div>
+    <div class="fr"><div><label class="fl">Spools on Hand</label><input id="i-spool-count" type="number" min="0" placeholder="2"/></div><div><label class="fl">Reorder When Below</label><input id="i-spool-thr" type="number" min="0" placeholder="1" value="1"/></div></div>
+    <div><label class="fl">Purchase URL</label><input id="i-url"/></div>
+    <div id="i-finance-wrap" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(74,140,92,.06);border:1px solid rgba(74,140,92,.2);border-radius:2px">
+      <input type="checkbox" id="i-log-fin" style="width:auto;accent-color:var(--green)"/>
+      <label for="i-log-fin" style="font-size:11px;color:#7dc994;cursor:pointer;text-transform:none;letter-spacing:0">Also log this purchase as a Finance expense</label>
+    </div>
+  </div>
+  <div class="modal-act"><button class="btn" onclick="closeModal('m-inv')">Cancel</button><button class="btn pri" onclick="saveInv()">Save</button></div>
+</div></div>
+
+<!-- FINANCE MODAL -->
+<div class="overlay" id="m-fin"><div class="modal">
+  <div class="modal-t" id="ft">Add Finance Entry</div>
+  <input type="hidden" id="f-id"/>
+  <div class="fg">
+    <div class="fr"><div><label class="fl">Type</label><select id="f-type"><option value="income">Income</option><option value="expense">Expense</option></select></div><div><label class="fl">Amount ($)</label><input id="f-amt" type="number" step="0.01"/></div></div>
+    <div class="fr"><div><label class="fl">Category</label><input id="f-cat" placeholder="Etsy Sale, Filament…"/></div><div><label class="fl">Date</label><input id="f-dt" type="date"/></div></div>
+    <div><label class="fl">Description</label><input id="f-desc"/></div>
+    <div class="fr"><div><label class="fl">Invoice # (optional)</label><input id="f-invoice" placeholder="INV-001"/></div><div><label class="fl">Notes</label><input id="f-fnotes" placeholder="optional"/></div></div>
+  </div>
+  <div class="modal-act"><button class="btn" onclick="closeModal('m-fin')">Cancel</button><button class="btn pri" onclick="saveFin()">Save</button></div>
+</div></div>
+
+<!-- IMPORT MODAL -->
+<div class="overlay" id="m-import"><div class="modal">
+  <div class="modal-t">Import Etsy Orders</div>
+  <p style="font-size:12px;color:var(--cream-faint);margin-bottom:12px;line-height:1.7">Paste orders — one per line:<br><code style="color:var(--gold)">ORDER_ID | Buyer Name | Items | Amount</code></p>
+  <textarea class="import-ta" id="imp-ta" placeholder="1234567890 | Jane Smith | S'mores x1, Bandit x1 | 24.00"></textarea>
+  <div class="modal-act"><button class="btn" onclick="closeModal('m-import')">Cancel</button><button class="btn pri" onclick="runImport()">Import</button></div>
+</div></div>
+
+<!-- SHIPPING LABEL MODAL -->
+<div class="overlay" id="m-label"><div class="modal" style="max-width:580px">
+  <div class="modal-t">📦 Shipping Label</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div><div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin-bottom:8px">FROM</div><div style="font-size:12px;color:var(--cream-dim);line-height:1.9" id="label-from"></div></div>
+    <div><div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin-bottom:8px">TO</div><div style="font-size:13px;font-weight:500;color:var(--cream);line-height:1.9" id="label-to"></div></div>
+  </div>
+  <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);padding:12px;margin-bottom:14px"><div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin-bottom:6px">Items</div><div style="font-size:13px;color:var(--cream)" id="label-items"></div></div>
+  <div class="fg">
+    <div class="fr"><div><label class="fl">Address Line 1</label><input id="lb-addr1" placeholder="123 Main St"/></div><div><label class="fl">Line 2 (apt, etc.)</label><input id="lb-addr2" placeholder="optional"/></div></div>
+    <div class="fr"><div><label class="fl">City</label><input id="lb-city"/></div><div><label class="fl">State</label><input id="lb-state" placeholder="CA"/></div></div>
+    <div class="fr"><div><label class="fl">ZIP</label><input id="lb-zip"/></div><div><label class="fl">Weight (oz)</label><input id="lb-weight" type="number" placeholder="4"/></div></div>
+  </div>
+  <div class="modal-act"><button class="btn" onclick="closeModal('m-label')">Cancel</button><button class="btn pri" onclick="copyLabel()">Copy Label Info</button><button class="btn grn" onclick="openUSPS()">USPS Click-N-Ship ↗</button></div>
+</div></div>
+
+<!-- PRINT COST MODAL -->
+<div class="overlay" id="m-printcost"><div class="modal">
+  <div class="modal-t">🖨 Print Cost Calculator</div>
+  <div class="fg">
+    <div class="fr"><div><label class="fl">Creature</label><select id="pc-creature" onchange="calcPrintCost()"><option value="">Select…</option></select></div><div><label class="fl">Packaging ($)</label><input id="pc-pkg" type="number" value="0.75" step="0.01" oninput="calcPrintCost()"/></div></div>
+    <div style="background:rgba(201,168,76,.06);border:1px solid var(--border);padding:14px 16px;margin-top:4px;border-radius:2px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">
+        <div><div style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--cream-faint);margin-bottom:4px">Packaging</div><div style="font-size:20px;font-weight:600" id="pc-r-fil">—</div></div>
+        <div><div style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--cream-faint);margin-bottom:4px">Total COGS</div><div style="font-size:20px;font-weight:600;color:var(--gold-light)" id="pc-r-cogs">—</div></div>
+        <div><div style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--cream-faint);margin-bottom:4px">Margin</div><div style="font-size:20px;font-weight:600" id="pc-r-margin">—</div></div>
+      </div>
+      <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--cream-faint)" id="pc-r-detail">Select a creature to see margin</div>
+    </div>
+  </div>
+  <div class="modal-act"><button class="btn" onclick="closeModal('m-printcost')">Close</button><button class="btn pri" onclick="saveCostToCreature()">Save COGS to Creature</button></div>
+</div></div>
+
+<!-- MILEAGE MODAL -->
+<div class="overlay" id="m-mile-q"><div class="modal">
+  <div class="modal-t" id="mile-title">Add Trip</div>
+  <input type="hidden" id="mile-id"/>
+  <div class="fg">
+    <div class="fr"><div><label class="fl">Date</label><input id="mile-date" type="date"/></div><div><label class="fl">Miles</label><input id="mile-miles" type="number" step="0.1" placeholder="12.4"/></div></div>
+    <div><label class="fl">Purpose</label><select id="mile-purpose"><option>Post office — shipping</option><option>Office Depot / Staples</option><option>Supply run — filament</option><option>Supply run — packaging</option><option>Bank deposit</option><option>Other business</option></select></div>
+    <div class="fr"><div><label class="fl">Round Trip?</label><select id="mile-rt"><option value="true">Yes — double miles</option><option value="false">No — one way</option></select></div><div><label class="fl">Notes</label><input id="mile-notes" placeholder="optional"/></div></div>
+  </div>
+  <div class="modal-act"><button class="btn" onclick="closeModal('m-mile-q')">Cancel</button><button class="btn pri" onclick="saveMile()">Save</button></div>
+</div></div>
+
+<!-- PRINTER MODAL -->
+<div class="overlay" id="m-printer"><div class="modal">
+  <div class="modal-t" id="pmt">Add Printer</div>
+  <input type="hidden" id="pr-id"/>
+  <div class="fg">
+    <div class="fr"><div><label class="fl">Printer Name</label><input id="pr-name" placeholder="Vision"/></div><div><label class="fl">Model</label><input id="pr-model" placeholder="Bambu Lab P1S"/></div></div>
+    <div class="fr"><div><label class="fl">Default Printer</label><select id="pr-default"><option value="false">No</option><option value="true">Yes</option></select></div><div><label class="fl">Status</label><select id="pr-active"><option value="true">Active</option><option value="false">Inactive</option></select></div></div>
+    <div><label class="fl">Notes</label><input id="pr-notes" placeholder="optional"/></div>
+  </div>
+  <div class="modal-act"><button class="btn" onclick="closeModal('m-printer')">Cancel</button><button class="btn pri" onclick="savePrinter()">Save</button></div>
+</div></div>
+
+<!-- ASSIGN PRINTER MODAL -->
+<div class="overlay" id="m-assign"><div class="modal" style="max-width:400px">
+  <div class="modal-t">🖨 Print Creature</div>
+  <input type="hidden" id="assign-c-id"/>
+  <div style="font-size:14px;color:var(--gold-light);margin-bottom:12px" id="assign-c-name">—</div>
+  <div class="fg">
+    <div><label class="fl">Select Printer</label><select id="assign-p-id"></select></div>
+  </div>
+  <div class="modal-act"><button class="btn" onclick="closeModal('m-assign')">Cancel</button><button class="btn pri" onclick="saveAssign()">Start Print</button></div>
+</div></div>
+
+<!-- CREATURE LABEL MODAL -->
+<div class="overlay" id="m-clabel"><div class="modal" style="max-width:420px">
+  <div class="modal-t">🏷 Creature Label</div>
+  <div id="sticker-preview" style="border:2px dashed rgba(201,168,76,0.3);padding:20px;margin-bottom:16px;text-align:center;background:rgba(255,255,255,0.03)">
+    <div style="font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:rgba(201,168,76,.5);margin-bottom:6px">Cadence Creatures</div>
+    <div style="font-size:22px;font-weight:700;color:var(--gold-light);letter-spacing:.04em" id="lbl-name">—</div>
+    <div style="font-size:13px;color:var(--cream-dim);margin:4px 0" id="lbl-species">—</div>
+    <div style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(201,168,76,.4);margin-top:8px" id="lbl-log">Log #—</div>
+  </div>
+  <div style="font-size:11px;color:var(--cream-faint);margin-bottom:14px;line-height:1.6">Print on a 2×1" label sheet (Avery 8167 or similar). Each label = one creature.</div>
+  <div class="modal-act"><button class="btn" onclick="closeModal('m-clabel')">Close</button><button class="btn pri" onclick="printLabel()">🖨 Print</button></div>
+</div></div>
+
+<div class="toast" id="tst"></div>
+
+<script src="shared.js"></script>
+<script>
+document.addEventListener('keydown', (e) => {
+  if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if(e.key.toLowerCase() === 'o') { e.preventDefault(); oModal(); }
+  if(e.key.toLowerCase() === 'c') { e.preventDefault(); cModal(); }
+});
+let orders=[],creatures=[],inv=[],fin=[],printers=[];
+
+function fmt$(v){return'$'+Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+
+function sync(on){const d=document.getElementById('sdot'),l=document.getElementById('slabel');d.className='sync-dot'+(on?' busy':'');l.textContent=on?'Syncing…':'Connected';}
+function serr(){document.getElementById('sdot').className='sync-dot err';document.getElementById('slabel').textContent='Error';}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function g(id){return document.getElementById(id).value.trim();}
+
+let cur='orders';
+function go(tab){
+  cur=tab;
+  document.querySelectorAll('.tab').forEach((t,i)=>{const ts=['orders','stock','creatures','inventory','finance','mileage','printers'];t.classList.toggle('active',ts[i]===tab);});
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+  if(tab==='orders')render_orders();
+  if(tab==='stock')render_stock();
+  if(tab==='creatures')render_creatures();
+  if(tab==='inventory')render_inv();
+  if(tab==='finance'){render_fin();update_fin_kpis();}
+  if(tab==='mileage'){render_mileage();update_mileage_kpis();}
+  if(tab==='printers')render_printers();
+}
+
+async function load_orders(){sync(true);const{data,error}=await db.from('orders').select('*').order('created_at',{ascending:false});if(error){serr();return;}orders=data;sync(false);render_orders();update_order_kpis();update_badges();check_alerts();}
+function render_orders(){
+  const tb=document.getElementById('otb');
+  const hideCompleted = document.getElementById('hide-completed-cb') ? document.getElementById('hide-completed-cb').checked : true;
+  const filteredOrders = hideCompleted ? orders.filter(o => !['shipped','complete'].includes(o.status)) : orders;
+  if(!filteredOrders.length){tb.innerHTML='<tr class="empty"><td colspan="10">No orders match criteria.</td></tr>';return;}
+  tb.innerHTML=filteredOrders.map(o=>{
+    const items=Array.isArray(o.items)?o.items.join(', '):(o.items||'—');
+    const dt=o.order_date?new Date(o.order_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'—';
+    const shipDt=o.shipped_date?` → ${new Date(o.shipped_date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}`:'' ;
+    const canExport=(['shipped','complete'].includes(o.status)&&o.total_amount);
+    const printer=o.printer_name||'Vision';
+    
+    let cogs = 0;
+    let foundCost = false;
+    if (Array.isArray(o.items)) {
+       o.items.forEach(itm => {
+          const rawName = itm.replace('[x] ','').trim();
+          const c = creatures.find(x => x.name === rawName);
+          if(c && c.cost_to_print) { cogs += parseFloat(c.cost_to_print); foundCost = true; }
+       });
+    }
+    if(foundCost) cogs += 0.75; // standard box/packaging cost
+    
+    let marginHtml = '<span style="color:var(--cream-faint);font-size:11px;">N/A</span>';
+    if(o.total_amount && foundCost) {
+       const rev = parseFloat(o.total_amount);
+       if(rev > 0) {
+         const profit = rev - cogs;
+         const marginPct = (profit / rev) * 100;
+         marginHtml = `<span style="color:var(--green)">${marginPct.toFixed(0)}%</span> <span style="font-size:10px;color:var(--cream-faint)">($${profit.toFixed(2)})</span>`;
+       }
+    }
+
+    return`<tr>
+      <td style="font-weight:500;color:var(--gold-light)">#${o.etsy_order_id||o.id.slice(0,8)}</td>
+      <td>${o.buyer_name||'—'}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${items}">${items}</td>
+      <td><span class="pill p-${o.status}">${o.status}</span></td>
+      <td><span class="printer-tag">🖨 ${printer}</span></td>
+      <td style="font-weight:600;">${o.total_amount?fmt$(o.total_amount):'—'}</td>
+      <td>${marginHtml}</td>
+      <td>${renderTracking(o)}</td>
+      <td style="color:var(--cream-faint);font-size:12px">${dt}<span style="color:var(--green)">${shipDt}</span></td>
+      <td style="white-space:nowrap;display:flex;gap:4px;align-items:center">
+        <select style="font-size:11px;padding:3px 7px;width:auto;cursor:pointer" onchange="updateStatus('${o.id}',this.value)">
+          ${['queued','printing','printed','packaging','shipped','complete'].map(s=>`<option value="${s}"${s===o.status?' selected':''}>${s}</option>`).join('')}
+        </select>
+        ${canExport?`<button class="btn sm grn" title="Export to P&L" onclick="exportOne('${o.id}')">→P&L</button>`:''}
+        <button class="btn sm" onclick="oModal('${o.id}')">Edit</button>
+        <button class="btn sm" title="Shipping label" onclick="openLabel('${o.id}')">📦</button>
+        <button class="btn sm red" onclick="delOrder('${o.id}')">✕</button>
+      </td></tr>`;
+  }).join('');
+}
+async function updateStatus(id,status){sync(true);const upd={status};if(status==='shipped')upd.shipped_date=new Date().toISOString().slice(0,10);const{error}=await db.from('orders').update(upd).eq('id',id);if(error){serr();toast('Update failed','err');return;}orders=orders.map(o=>o.id===id?{...o,...upd}:o);sync(false);update_order_kpis();update_badges();render_orders();toast(status==='shipped'?'Marked shipped — date stamped':'Status updated','ok');}
+async function exportOne(id){const o=orders.find(x=>x.id===id);if(!o||!o.total_amount)return;sync(true);const{error}=await db.from('finance').insert({entry_type:'income',category:'Etsy Sale',description:`Order #${o.etsy_order_id||id.slice(0,8)} — ${o.buyer_name||''}`.trim(),amount:o.total_amount,entry_date:o.order_date||new Date().toISOString().slice(0,10),order_id:id});if(error){serr();toast('Export failed','err');return;}sync(false);toast('Exported to P&L','ok');await load_fin();}
+async function exportShipped(){const eligible=orders.filter(o=>['shipped','complete'].includes(o.status)&&o.total_amount);if(!eligible.length){toast('No shipped orders with a total to export');return;}sync(true);const rows=eligible.map(o=>({entry_type:'income',category:'Etsy Sale',description:`Order #${o.etsy_order_id||o.id.slice(0,8)} — ${o.buyer_name||''}`.trim(),amount:o.total_amount,entry_date:o.order_date||new Date().toISOString().slice(0,10),order_id:o.id}));const{error}=await db.from('finance').upsert(rows,{onConflict:'order_id',ignoreDuplicates:true});if(error){serr();toast('Export failed','err');return;}sync(false);toast(`Exported ${rows.length} orders to P&L`,'ok');await load_fin();}
+function oModal(id=''){
+  document.getElementById('o-id').value=id;document.getElementById('ot').textContent=id?'Edit Order':'Add Order';
+  const sel=document.getElementById('o-printer');
+  sel.innerHTML=printers.filter(p=>p.active).map(p=>`<option value="${p.name}">${p.name}${p.is_default?' (default)':''}</option>`).join('') + '<option value="In Stock">In Stock / No Print</option>';
+  if(id){const o=orders.find(x=>x.id===id);if(!o)return;document.getElementById('o-eid').value=o.etsy_order_id||'';document.getElementById('o-buyer').value=o.buyer_name||'';document.getElementById('o-items').value=Array.isArray(o.items)?o.items.join('\n'):(o.items||'');document.getElementById('o-st').value=o.status;document.getElementById('o-printer').value=o.printer_name||'Vision';document.getElementById('o-amt').value=o.total_amount||'';document.getElementById('o-dt').value=o.order_date?o.order_date.slice(0,10):'';document.getElementById('o-note').value=o.shipping_note||'';document.getElementById('o-track').value=o.tracking_number||'';document.getElementById('o-carrier').value=o.carrier||'';}
+  else{['o-eid','o-buyer','o-items','o-amt','o-note','o-track'].forEach(x=>document.getElementById(x).value='');document.getElementById('o-carrier').value='';document.getElementById('o-st').value='queued';document.getElementById('o-dt').value=new Date().toISOString().slice(0,10);const def=printers.find(p=>p.is_default);if(def)document.getElementById('o-printer').value=def.name;}
+  openModal('m-order');
+}
+async function saveOrder(){
+  const id=g('o-id');
+  const items=g('o-items').split('\n').map(s=>s.trim()).filter(Boolean);
+  const carrier=document.getElementById('o-carrier').value;
+  const p={etsy_order_id:g('o-eid')||null,buyer_name:g('o-buyer')||null,items,status:g('o-st'),printer_name:document.getElementById('o-printer').value||'Vision',total_amount:parseFloat(g('o-amt'))||null,order_date:g('o-dt')||null,shipping_note:g('o-note')||null,tracking_number:g('o-track')||null,carrier:carrier||null};
+  sync(true);closeModal('m-order');
+  const{error}=id?await db.from('orders').update(p).eq('id',id):await db.from('orders').insert(p);
+  if(error){serr();toast('Save failed','err');return;}
+  toast(id?'Order updated':'Order added','ok');await load_orders();
+}
+async function delOrder(id){if(!confirm('Delete order?'))return;sync(true);const{error}=await db.from('orders').delete().eq('id',id);if(error){serr();toast('Failed','err');return;}toast('Deleted');await load_orders();}
+function openImport(){document.getElementById('imp-ta').value='';openModal('m-import');}
+async function runImport(){
+  const raw=g('imp-ta');if(!raw){toast('Nothing to import','err');return;}
+  const rows=raw.split('\n').filter(Boolean).map(l=>{const p=l.split('|').map(s=>s.trim());return{etsy_order_id:p[0]||null,buyer_name:p[1]||null,items:p[2]?p[2].split(',').map(s=>s.trim()):[],total_amount:p[3]?parseFloat(p[3]):null,status:'queued',order_date:new Date().toISOString().slice(0,10)};});
+  sync(true);closeModal('m-import');
+  const{error}=await db.from('orders').upsert(rows,{onConflict:'etsy_order_id',ignoreDuplicates:true});
+  if(error){serr();toast('Import failed','err');return;}
+  toast(`Imported ${rows.length} order${rows.length!==1?'s':''}`,'ok');await load_orders();
+}
+function update_order_kpis(){update_pipeline();update_stats_widget();}
+function check_alerts(){
+  const low=inv.filter(s=>(s.spool_count??0)<=(s.reorder_spool_threshold??1));
+  const box=document.getElementById('alert-box');
+  box.innerHTML=low.length?`<div class="alert">⚠ Low filament: ${low.map(s=>s.spool_name).join(', ')}</div>`:'';
+}
+
+async function quickStock(id, delta) {
+  const c = creatures.find(x => x.id === id);
+  if(!c) return;
+  const current = c.qty_on_hand ?? c.inventory_count ?? 0;
+  const next = Math.max(0, current + delta);
+  c.qty_on_hand = next;
+  render_stock();
+  render_creatures();
+  update_badges();
+  const {error} = await db.from('creatures').update({qty_on_hand: next}).eq('id', id);
+  if(error) { toast('Failed to update stock', 'err'); }
+}
+
+function render_stock(){
+  const tb=document.getElementById('sttb');
+  if(!creatures.length){tb.innerHTML='<tr class="empty"><td colspan="9">No creatures yet.</td></tr>';return;}
+  tb.innerHTML=creatures.map(c=>{
+    const printingOrders=orders.filter(o=>o.status==='printing'&&Array.isArray(o.items)&&o.items.some(i=>i.toLowerCase().includes(c.name.toLowerCase())));
+    const assignedPrinters=printers.filter(p=>p.current_creature_id===c.id);
+    const printingOnPrinters=assignedPrinters.length;
+    const totalPrinting=printingOrders.length+printingOnPrinters;
+    
+    const allPrinters = new Set([
+      ...assignedPrinters.map(p=>p.name),
+      ...printingOrders.map(o=>(o.printer_name||'Vision'))
+    ]);
+    
+    let printingCell='<span style="color:var(--cream-faint);font-size:11px">—</span>';
+    if(allPrinters.size>0){
+      printingCell=Array.from(allPrinters).map(name=>`<span class="pill p-printing" style="margin-bottom:4px">🖨 ${name}</span>`).join('<br>');
+    } else if(totalPrinting>0){
+      printingCell=`<span class="pill p-printing">${totalPrinting} printing</span>`;
+    }
+
+    const queued=orders.filter(o=>o.status==='queued'&&Array.isArray(o.items)&&o.items.some(i=>i.toLowerCase().includes(c.name.toLowerCase()))).length;
+    const onHand=c.qty_on_hand??c.inventory_count??0;
+    const net=onHand-printingOrders; // kept as printingOrders for net calculation to avoid double-counting active stock prints
+    const netCol=net<0?'#e09090':net===0?'#c97c2a':'#7dc994';
+    return`<tr>
+      <td style="color:var(--cream-faint)">${c.log_number||'—'}</td>
+      <td style="font-weight:500;color:var(--gold-light)">${c.name}</td>
+      <td style="font-size:11px;color:var(--cream-faint);letter-spacing:.04em">${c.sku||'—'}</td>
+      <td>${c.species||'—'}</td>
+      <td style="color:var(--cream-faint);font-size:12px;text-transform:capitalize">${c.environment||'—'}</td>
+      <td style="font-size:18px;font-weight:600;color:${onHand===0?'var(--cream-faint)':onHand<=2?'#e09090':'#7dc994'};white-space:nowrap;">
+        <button onclick="quickStock('${c.id}', -1)" class="btn sm" style="padding:0 6px;min-width:22px;margin-right:6px;border-color:transparent;background:rgba(255,255,255,0.03);color:var(--cream-faint);">-</button>
+        ${onHand}
+        <button onclick="quickStock('${c.id}', 1)" class="btn sm" style="padding:0 6px;min-width:22px;margin-left:6px;border-color:transparent;background:rgba(255,255,255,0.03);color:var(--cream-faint);">+</button>
+      </td>
+      <td>${printingCell}</td>
+      <td>${queued>0?`<span class="pill p-queued">${queued} queued</span>`:'<span style="color:var(--cream-faint);font-size:11px">—</span>'}</td>
+      <td style="font-size:18px;font-weight:600;color:${netCol}">${net}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function load_creatures(){sync(true);const{data,error}=await db.from('creatures').select('*').order('log_number');if(error){serr();return;}creatures=data;sync(false);render_creatures();render_stock();update_stats_widget();}
+function render_creatures(){
+  const tb=document.getElementById('ctb');
+  if(!creatures.length){tb.innerHTML='<tr class="empty"><td colspan="13">No creatures yet.</td></tr>';return;}
+  tb.innerHTML=creatures.map(c=>{
+    const margin=c.price_etsy&&c.cost_to_print?Math.round((c.price_etsy-c.cost_to_print)/c.price_etsy*100):null;
+    const mCol=margin===null?'var(--cream-faint)':margin>=60?'#7dc994':margin>=40?'#E8D08A':'#e09090';
+    const onHand=c.qty_on_hand??c.inventory_count??0;
+    // filament color swatches
+    let filDots='<span style="color:var(--cream-faint);font-size:11px">—</span>';
+    if(c.filament_colors){
+      try{
+        const cols=JSON.parse(c.filament_colors);
+        if(cols.length){
+          filDots=cols.map(id=>{
+            const s=inv.find(x=>x.id===id);
+            if(!s)return'';
+            const col=colorFromName(s.color||s.spool_name);
+            return`<span title="${s.spool_name}" style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${col};border:1px solid rgba(255,255,255,.15);margin-right:3px"></span>`;
+          }).join('');
+        }
+      }catch{}
+    }
+    return`<tr>
+      <td style="color:var(--cream-faint)">${c.log_number||'—'}</td>
+      <td style="font-weight:500;color:var(--gold-light)">${c.name}</td>
+      <td style="font-size:11px;color:var(--cream-faint);letter-spacing:.04em">${c.sku||'—'}</td>
+      <td>${c.species||'—'}</td>
+      <td style="color:var(--cream-faint);font-size:12px;text-transform:capitalize">${c.environment||'—'}</td>
+      <td>${c.price_retail?fmt$(c.price_retail):'—'}</td>
+      <td>${c.price_etsy?fmt$(c.price_etsy):'—'}</td>
+      <td style="color:var(--cream-faint)">${c.cost_to_print?fmt$(c.cost_to_print):'—'}</td>
+      <td style="font-weight:500;color:${mCol}">${margin!==null?margin+'%':'—'}</td>
+      <td style="font-size:16px;font-weight:600;color:${onHand===0?'var(--cream-faint)':onHand<=2?'#e09090':'#7dc994'}">${onHand}</td>
+      <td>${filDots}</td>
+      <td><span class="pill ${c.active?'p-active':'p-inactive'}">${c.active?'Active':'Inactive'}</span></td>
+      <td style="white-space:nowrap">
+        <button class="btn sm" onclick="cModal('${c.id}')">Edit</button>
+        <button class="btn sm" style="margin-left:4px" title="Print this creature" onclick="openAssign('${c.id}')">🖨</button>
+        <button class="btn sm" style="margin-left:4px" title="Print label" onclick="openCreatureLabel('${c.id}')">🏷</button>
+        <button class="btn sm red" style="margin-left:4px" onclick="delCreature('${c.id}')">✕</button>
+      </td></tr>`;
+  }).join('');
+}
+
+// Map color names to approximate CSS colors for swatches
+function colorFromName(name){
+  const n=(name||'').toLowerCase();
+  if(n.includes('black'))return'#222';
+  if(n.includes('white'))return'#f0f0f0';
+  if(n.includes('red')||n.includes('scarlet'))return'#c44';
+  if(n.includes('blue'))return'#4477cc';
+  if(n.includes('green')||n.includes('forest')||n.includes('olive'))return'#4a8c5c';
+  if(n.includes('yellow')||n.includes('gold'))return'#C9A84C';
+  if(n.includes('orange')||n.includes('amber'))return'#c97c2a';
+  if(n.includes('purple')||n.includes('violet'))return'#7766cc';
+  if(n.includes('pink')||n.includes('rose'))return'#cc6688';
+  if(n.includes('teal')||n.includes('cyan'))return'#5BBFD4';
+  if(n.includes('brown')||n.includes('tan'))return'#8B6347';
+  if(n.includes('grey')||n.includes('gray'))return'#888';
+  if(n.includes('crystal'))return'#aee0f0';
+  if(n.includes('glow')||n.includes('lumin'))return'#aaee66';
+  return'#7a6f62';
+}
+function cModal(id=''){
+  document.getElementById('c-id').value=id;document.getElementById('cmt').textContent=id?'Edit Creature':'Add Creature';
+  // populate filament multi-select from inventory
+  const fsel=document.getElementById('c-filaments');
+  fsel.innerHTML=inv.map(s=>`<option value="${s.id}">${s.spool_name}${s.color?' — '+s.color:''}</option>`).join('');
+  if(id){const c=creatures.find(x=>x.id===id);if(!c)return;document.getElementById('c-log').value=c.log_number||'';document.getElementById('c-name').value=c.name||'';document.getElementById('c-sku').value=c.sku||'';document.getElementById('c-species').value=c.species||'';document.getElementById('c-env').value=c.environment||'forest';document.getElementById('c-retail').value=c.price_retail||'';document.getElementById('c-etsy').value=c.price_etsy||'';document.getElementById('c-cost').value=c.cost_to_print||'';document.getElementById('c-active').value=String(c.active);document.getElementById('c-notes').value=c.notes||'';document.getElementById('c-qty').value=c.qty_on_hand??c.inventory_count??0;document.getElementById('c-tagline').value=c.tagline||'';document.getElementById('c-etsy-url').value=c.etsy_url||'';document.getElementById('c-image-url').value=c.image_url||'';document.getElementById('c-is-revealed').value=String(c.is_revealed!==false);
+    // restore filament selections
+    if(c.filament_colors){try{const ids=JSON.parse(c.filament_colors);Array.from(fsel.options).forEach(o=>o.selected=ids.includes(o.value));}catch{}}
+    else{Array.from(fsel.options).forEach(o=>o.selected=false);}
+  }
+  else{['c-log','c-name','c-sku','c-species','c-retail','c-etsy','c-cost','c-notes','c-qty','c-tagline','c-etsy-url','c-image-url'].forEach(x=>document.getElementById(x).value='');document.getElementById('c-env').value='forest';document.getElementById('c-active').value='true';document.getElementById('c-is-revealed').value='true';Array.from(fsel.options).forEach(o=>o.selected=false);}
+  openModal('m-creature');
+}
+async function saveCreature(){
+  const id=g('c-id');
+  const fsel=document.getElementById('c-filaments');
+  const selectedFils=Array.from(fsel.selectedOptions).map(o=>o.value);
+  const p={log_number:g('c-log')||null,name:g('c-name'),sku:g('c-sku')||null,slug:g('c-name').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''),species:g('c-species')||null,environment:g('c-env'),price_retail:parseFloat(g('c-retail'))||null,price_etsy:parseFloat(g('c-etsy'))||null,cost_to_print:parseFloat(g('c-cost'))||null,active:document.getElementById('c-active').value==='true',notes:g('c-notes')||null,qty_on_hand:parseInt(g('c-qty'))||0,inventory_count:parseInt(g('c-qty'))||0,filament_colors:selectedFils.length?JSON.stringify(selectedFils):null,tagline:g('c-tagline')||null,etsy_url:g('c-etsy-url')||null,image_url:g('c-image-url')||null,is_revealed:document.getElementById('c-is-revealed').value==='true'};
+  if(!p.name){toast('Name required','err');return;}
+  sync(true);closeModal('m-creature');
+  const{error}=id?await db.from('creatures').update(p).eq('id',id):await db.from('creatures').insert(p);
+  if(error){serr();toast('Save failed','err');return;}
+  toast(id?'Updated':'Added','ok');await load_creatures();
+}
+function openCreatureLabel(id){
+  const c=creatures.find(x=>x.id===id);if(!c)return;
+  document.getElementById('lbl-name').textContent=c.name||'—';
+  document.getElementById('lbl-species').textContent=c.species||'—';
+  document.getElementById('lbl-log').textContent='Log #'+(c.log_number||'—');
+  openModal('m-clabel');
+}
+function printLabel(){
+  const name=document.getElementById('lbl-name').textContent;
+  const species=document.getElementById('lbl-species').textContent;
+  const log=document.getElementById('lbl-log').textContent;
+  const w=window.open('','_blank','width=600,height=400');
+  w.document.write(`<!DOCTYPE html><html><head><title>Label — ${name}</title><style>
+    @page{size:2in 1in;margin:0}
+    body{margin:0;padding:0;font-family:'Segoe UI',sans-serif;width:2in;height:1in;display:flex;align-items:center;justify-content:center;text-align:center;border:1px dashed #ccc;}
+    .wrap{padding:6px 10px}
+    .brand{font-size:7pt;letter-spacing:.2em;text-transform:uppercase;color:#7a6b58;margin-bottom:4px}
+    .name{font-size:16pt;font-weight:700;letter-spacing:.03em;line-height:1.1}
+    .species{font-size:8pt;color:#555;margin-top:2px}
+    .log{font-size:7pt;letter-spacing:.15em;text-transform:uppercase;color:#aaa;margin-top:5px}
+  </style></head><body><div class="wrap">
+    <div class="brand">Cadence Creatures</div>
+    <div class="name">${name}</div>
+    <div class="species">${species}</div>
+    <div class="log">${log}</div>
+  </div></body></html>`);
+  w.document.close();
+  w.focus();setTimeout(()=>{w.print();},300);
+}
+
+async function delCreature(id){if(!confirm('Delete creature?'))return;sync(true);const{error}=await db.from('creatures').delete().eq('id',id);if(error){serr();toast('Failed','err');return;}toast('Deleted');await load_creatures();}
+
+// BUG FIX: saveInv no longer reads phantom inputs (i-total, i-rem, i-thr)
+async function load_inv(){sync(true);const{data,error}=await db.from('inventory').select('id,spool_name,brand,color,material,spool_count,reorder_spool_threshold,cost_per_spool,purchase_url').order('spool_name');if(error){serr();return;}inv=data;sync(false);render_inv();update_badges();check_alerts();}
+function render_inv(){
+  const tb=document.getElementById('itb');
+  if(!inv.length){tb.innerHTML='<tr class="empty"><td colspan="8">No spools tracked yet.</td></tr>';return;}
+  tb.innerHTML=inv.map(s=>{
+    const count=s.spool_count??0,thr=s.reorder_spool_threshold??1;
+    const low=count<=thr;
+    return`<tr>
+      <td style="font-weight:500;color:${low?'#e09090':'var(--cream)'}">${s.spool_name}${low?' ⚠':''}</td>
+      <td style="color:var(--cream-faint)">${s.brand||'—'}</td>
+      <td>${s.color||'—'}</td>
+      <td style="font-size:12px;color:var(--cream-dim)">${s.material||'PLA'}</td>
+      <td style="font-size:18px;font-weight:600;color:${low?'#e09090':count>2?'#7dc994':'#c97c2a'}">${count}</td>
+      <td style="font-size:12px;color:var(--cream-faint)">${thr}</td>
+      <td style="color:var(--cream-faint);font-size:12px">${s.cost_per_spool?fmt$(s.cost_per_spool):'-'}</td>
+      <td style="white-space:nowrap"><button class="btn sm" onclick="iModal('${s.id}')">Edit</button>${s.purchase_url?`<a class="btn sm grn" href="${s.purchase_url}" target="_blank" rel="noopener" style="margin-left:4px;text-decoration:none;display:inline-block">Order Now ↗</a>`:''}<button class="btn sm red" style="margin-left:4px" onclick="delInv('${s.id}')">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+function iModal(id=''){
+  document.getElementById('i-id').value=id;document.getElementById('it').textContent=id?'Edit Spool':'Add Spool';
+  // only show the finance log checkbox for new spools
+  document.getElementById('i-finance-wrap').style.display=id?'none':'flex';
+  document.getElementById('i-log-fin').checked=false;
+  if(id){const s=inv.find(x=>x.id===id);if(!s)return;document.getElementById('i-name').value=s.spool_name||'';document.getElementById('i-brand').value=s.brand||'';document.getElementById('i-color').value=s.color||'';document.getElementById('i-mat').value=s.material||'PLA';document.getElementById('i-cost').value=s.cost_per_spool||'';document.getElementById('i-spool-count').value=s.spool_count??0;document.getElementById('i-spool-thr').value=s.reorder_spool_threshold??1;document.getElementById('i-url').value=s.purchase_url||'';}
+  else{['i-name','i-brand','i-color','i-cost','i-url'].forEach(x=>document.getElementById(x).value='');document.getElementById('i-mat').value='PLA';document.getElementById('i-spool-count').value='0';document.getElementById('i-spool-thr').value='1';}
+  openModal('m-inv');
+}
+async function saveInv(){
+  const id=g('i-id');
+  const logFin=!id&&document.getElementById('i-log-fin').checked;
+  const cost=parseFloat(g('i-cost'))||null;
+  const count=parseInt(g('i-spool-count'))||0;
+  const p={spool_name:g('i-name'),brand:g('i-brand')||null,color:g('i-color')||null,material:document.getElementById('i-mat').value,spool_count:count,reorder_spool_threshold:parseInt(g('i-spool-thr'))||1,cost_per_spool:cost,purchase_url:g('i-url')||null};
+  if(!p.spool_name){toast('Name required','err');return;}
+  sync(true);closeModal('m-inv');
+  const{error}=id?await db.from('inventory').update(p).eq('id',id):await db.from('inventory').insert(p);
+  if(error){serr();toast('Save failed','err');return;}
+  // log to finance if checkbox was checked
+  if(logFin&&cost){
+    const totalCost=cost*(count||1);
+    await db.from('finance').insert({entry_type:'expense',category:'Filament',description:`Filament — ${p.spool_name}${count>1?' × '+count+' spools':''}`,amount:totalCost,entry_date:new Date().toISOString().slice(0,10)});
+    await load_fin();
+    toast(`Added + logged $${totalCost.toFixed(2)} expense to Finance`,'ok');
+  }else{
+    toast(id?'Updated':'Added','ok');
+  }
+  await load_inv();
+}
+async function delInv(id){if(!confirm('Delete spool?'))return;sync(true);const{error}=await db.from('inventory').delete().eq('id',id);if(error){serr();toast('Failed','err');return;}toast('Deleted');await load_inv();}
+
+async function load_fin(){sync(true);const{data,error}=await db.from('finance').select('*').order('entry_date',{ascending:false});if(error){serr();return;}fin=data;sync(false);render_fin();update_fin_kpis();}
+function render_fin(){
+  const tb=document.getElementById('ftb');
+  if(!fin.length){tb.innerHTML='<tr class="empty"><td colspan="6">No entries yet.</td></tr>';return;}
+  tb.innerHTML=fin.map(e=>{
+    const dt=new Date(e.entry_date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const inc=e.entry_type==='income';
+    return`<tr><td style="font-size:12px;color:var(--cream-faint)">${dt}</td><td><span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${inc?'rgba(74,140,92,.15)':'rgba(168,68,68,.15)'};color:${inc?'#7dc994':'#e09090'}">${e.entry_type}</span></td><td style="font-size:12px;color:var(--cream-faint)">${e.category||'—'}</td><td>${e.description||'—'}</td><td style="font-size:11px;color:var(--cream-faint)">${e.invoice_number||''}</td><td style="font-weight:500;color:${inc?'#7dc994':'#e09090'}">${inc?'+':'-'}${fmt$(Math.abs(e.amount))}</td><td style="white-space:nowrap"><button class="btn sm" onclick="fModal('${e.id}')">Edit</button><button class="btn sm red" style="margin-left:4px" onclick="delFin('${e.id}')">✕</button></td></tr>`;
+  }).join('');
+}
+function update_fin_kpis(){
+  const rev=fin.filter(e=>e.entry_type==='income').reduce((s,e)=>s+Number(e.amount),0);
+  const exp=fin.filter(e=>e.entry_type==='expense').reduce((s,e)=>s+Number(e.amount),0);
+  const net=rev-exp;
+  const now=new Date();
+  const mo=fin.filter(e=>{const d=new Date(e.entry_date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).reduce((s,e)=>s+(e.entry_type==='income'?1:-1)*Number(e.amount),0);
+  document.getElementById('k-rev').textContent=fmt$(rev);
+  document.getElementById('k-exp').textContent=fmt$(exp);
+  const ne=document.getElementById('k-net');ne.textContent=(net>=0?'+':'')+fmt$(net);ne.style.color=net>=0?'#7dc994':'#e09090';
+  const me=document.getElementById('k-mo');me.textContent=(mo>=0?'+':'')+fmt$(mo);me.style.color=mo>=0?'#7dc994':'#e09090';
+}
+function fModal(id=''){
+  document.getElementById('f-id').value=id;document.getElementById('ft').textContent=id?'Edit Entry':'Add Entry';
+  if(id){const e=fin.find(x=>x.id===id);if(!e)return;document.getElementById('f-type').value=e.entry_type;document.getElementById('f-amt').value=e.amount||'';document.getElementById('f-cat').value=e.category||'';document.getElementById('f-dt').value=e.entry_date||'';document.getElementById('f-desc').value=e.description||'';}
+  else{['f-amt','f-cat','f-desc'].forEach(x=>document.getElementById(x).value='');document.getElementById('f-type').value='income';document.getElementById('f-dt').value=new Date().toISOString().slice(0,10);}
+  openModal('m-fin');
+}
+async function saveFin(){
+  const id=g('f-id');
+  const p={entry_type:document.getElementById('f-type').value,amount:parseFloat(g('f-amt'))||0,category:g('f-cat')||null,entry_date:g('f-dt')||new Date().toISOString().slice(0,10),description:g('f-desc')||null};
+  sync(true);closeModal('m-fin');
+  const{error}=id?await db.from('finance').update(p).eq('id',id):await db.from('finance').insert(p);
+  if(error){serr();toast('Save failed','err');return;}
+  toast(id?'Updated':'Added','ok');await load_fin();
+}
+async function delFin(id){if(!confirm('Delete entry?'))return;sync(true);const{error}=await db.from('finance').delete().eq('id',id);if(error){serr();toast('Failed','err');return;}toast('Deleted');await load_fin();}
+
+const CARRIERS={usps:{name:'USPS',color:'#3875CF',icon:'📬',url:n=>`https://tools.usps.com/go/TrackConfirmAction?tLabels=${n}`},ups:{name:'UPS',color:'#FFB500',icon:'📦',url:n=>`https://www.ups.com/track?tracknum=${n}`},fedex:{name:'FedEx',color:'#FF6200',icon:'📮',url:n=>`https://www.fedex.com/fedextrack/?trknbr=${n}`}};
+function detectCarrier(num){if(!num)return null;const n=num.replace(/\s/g,'').toUpperCase();if(/^1Z/i.test(n))return'ups';if(/^[A-Z]{2}[0-9]{9}US$/.test(n))return'usps';if(n.length>=20&&/^[0-9]+$/.test(n))return'usps';if(/^[0-9]{12}$/.test(n)||/^[0-9]{15}$/.test(n))return'fedex';return null;}
+function autoDetectCarrier(){const num=document.getElementById('o-track').value.trim();const sel=document.getElementById('o-carrier');if(sel.value===''){const d=detectCarrier(num);if(d)sel.value=d;}}
+function renderTracking(o){
+  if(!o.tracking_number)return`<span style="color:var(--cream-faint);font-size:11px">—</span>`;
+  const carrier=o.carrier||detectCarrier(o.tracking_number)||'usps';
+  const c=CARRIERS[carrier]||CARRIERS.usps;
+  const short=o.tracking_number.length>14?'…'+o.tracking_number.slice(-8):o.tracking_number;
+  return`<a href="${c.url(o.tracking_number)}" target="_blank" title="${o.tracking_number}" style="display:inline-flex;align-items:center;gap:5px;text-decoration:none;font-size:11px;padding:3px 8px;border:1px solid rgba(255,255,255,0.1);border-radius:3px;background:rgba(255,255,255,0.03);color:var(--cream-dim);white-space:nowrap;">${c.icon} <span style="color:${c.color};font-weight:500;font-size:10px;">${c.name}</span> ${short}</a>`;
+}
+
+function update_pipeline(){['queued','printing','printed','packaging','shipped','complete'].forEach(s=>{const el=document.getElementById('ps-'+s);if(el)el.textContent=orders.filter(o=>o.status===s).length;});}
+function update_stats_widget(){
+  update_pipeline();
+  const queuedOrders = orders.filter(o => o.status === 'queued');
+  let totalAvail = 0;
+  let availList = [];
+  creatures.forEach(c => {
+    let onHand = c.qty_on_hand ?? c.inventory_count ?? 0;
+    let queuedForThis = 0;
+    queuedOrders.forEach(o => {
+      if (Array.isArray(o.items)) {
+        queuedForThis += o.items.filter(i => i.toLowerCase().includes(c.name.toLowerCase())).length;
+      }
+    });
+    let avail = onHand - queuedForThis;
+    if (avail < 0) avail = 0;
+    totalAvail += avail;
+    if (avail > 0) availList.push({ name: c.name, avail });
+  });
+  const el=document.getElementById('stat-on-hand');if(el)el.textContent=totalAvail;
+  const detailEl=document.getElementById('stat-on-hand-detail');
+  if(detailEl){
+    if(availList.length>0){
+      availList.sort((a,b)=>b.avail-a.avail);
+      const top=availList.slice(0,2).map(x=>`<strong>${x.avail}x</strong> ${x.name}`).join(', ');
+      detailEl.innerHTML=`Across <strong>${availList.length}</strong> unique models<br/><span style="opacity:0.7">Top: ${top}</span>`;
+    }else{
+      detailEl.innerHTML='Everything is sold out.';
+    }
+  }
+}
+
+const RETURN_ADDR={name:'Cadence Creatures',line1:'144 S. Roeben Ct.',city:'Visalia',state:'CA',zip:'93291'};
+function openLabel(id){
+  const o=orders.find(x=>x.id===id);if(!o)return;
+  document.getElementById('label-from').innerHTML=`${RETURN_ADDR.name}<br>${RETURN_ADDR.line1}<br>${RETURN_ADDR.city}, ${RETURN_ADDR.state} ${RETURN_ADDR.zip}`;
+  document.getElementById('label-to').innerHTML=`<strong>${o.buyer_name||'Customer'}</strong><br><span style="color:var(--cream-faint);font-size:12px">Fill address below</span>`;
+  document.getElementById('label-items').textContent=Array.isArray(o.items)?o.items.join(', '):(o.items||'—');
+  ['lb-addr1','lb-addr2','lb-city','lb-state','lb-zip','lb-weight'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('m-label').dataset.orderId=id;openModal('m-label');
+}
+function copyLabel(){
+  const o=orders.find(x=>x.id===document.getElementById('m-label').dataset.orderId)||{};
+  const a1=document.getElementById('lb-addr1').value.trim(),a2=document.getElementById('lb-addr2').value.trim(),city=document.getElementById('lb-city').value.trim(),state=document.getElementById('lb-state').value.trim(),zip=document.getElementById('lb-zip').value.trim();
+  const txt=`FROM:\n${RETURN_ADDR.name}\n${RETURN_ADDR.line1}\n${RETURN_ADDR.city}, ${RETURN_ADDR.state} ${RETURN_ADDR.zip}\n\nTO:\n${o.buyer_name||'Customer'}\n${a1}${a2?'\n'+a2:''}\n${city}, ${state} ${zip}`;
+  navigator.clipboard.writeText(txt).then(()=>toast('Copied','ok'));
+}
+function openUSPS(){window.open('https://cns.usps.com/labelInformation.shtml','_blank');}
+
+function openPrintCost(){
+  const sel=document.getElementById('pc-creature');
+  sel.innerHTML='<option value="">Select creature…</option>'+creatures.map(c=>`<option value="${c.id}" data-price="${c.price_etsy||0}" data-cost="${c.cost_to_print||0}">${c.name}</option>`).join('');
+  calcPrintCost();openModal('m-printcost');
+}
+function calcPrintCost(){
+  const pkg=parseFloat(document.getElementById('pc-pkg').value)||0.75;
+  const sel=document.getElementById('pc-creature');const opt=sel.options[sel.selectedIndex];
+  const price=parseFloat(opt?.dataset?.price)||0;const savedCogs=parseFloat(opt?.dataset?.cost)||0;
+  const cogs=savedCogs>0?savedCogs+pkg:pkg;const etsyFee=price*0.065;const net=price-cogs-etsyFee;
+  const margin=price>0?Math.round((net/price)*100):null;
+  document.getElementById('pc-r-fil').textContent=fmt$(pkg);
+  document.getElementById('pc-r-cogs').textContent=cogs>0?fmt$(cogs):'—';
+  const mg=document.getElementById('pc-r-margin');mg.textContent=margin!==null?margin+'%':'—';mg.style.color=margin===null?'var(--cream-faint)':margin>=60?'#7dc994':margin>=40?'#E8D08A':'#e09090';
+  document.getElementById('pc-r-detail').textContent=price>0?`Etsy $${price.toFixed(2)} — fees $${etsyFee.toFixed(2)} — net $${net.toFixed(2)}`:(savedCogs>0?`Saved COGS $${savedCogs.toFixed(2)} + pkg $${pkg.toFixed(2)}`:'Select a creature to see margin');
+}
+async function saveCostToCreature(){
+  const sel=document.getElementById('pc-creature');const id=sel.value;if(!id){toast('Select a creature','err');return;}
+  const pkg=parseFloat(document.getElementById('pc-pkg').value)||0.75;
+  sync(true);const{error}=await db.from('creatures').update({cost_to_print:parseFloat(pkg.toFixed(2))}).eq('id',id);
+  if(error){serr();toast('Save failed','err');return;}
+  sync(false);toast('Packaging cost saved as COGS','ok');closeModal('m-printcost');await load_creatures();
+}
+
+let mileage=[];const IRS_RATE=0.70;
+async function load_mileage(){sync(true);const{data,error}=await db.from('mileage').select('*').order('trip_date',{ascending:false});if(error){serr();return;}mileage=data||[];sync(false);render_mileage();update_mileage_kpis();}
+function render_mileage(){
+  const tb=document.getElementById('mtb');
+  if(!mileage.length){tb.innerHTML='<tr class="empty"><td colspan="7">No trips logged yet.</td></tr>';return;}
+  tb.innerHTML=mileage.map(m=>{
+    const miles=parseFloat(m.miles)||0;const total=m.round_trip?miles*2:miles;const deduct=(total*IRS_RATE).toFixed(2);
+    const dt=new Date(m.trip_date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    return`<tr><td style="color:var(--cream-faint);font-size:12px">${dt}</td><td style="font-weight:500">${m.purpose||'—'}</td><td>${miles}mi${m.round_trip?` <span style="color:var(--cream-faint);font-size:11px">×2=${total}</span>`:''}</td><td style="font-size:11px;color:${m.round_trip?'#7dc994':'var(--cream-faint)'}">${m.round_trip?'Yes':'No'}</td><td style="color:#7dc994;font-weight:500">$${deduct}</td><td style="color:var(--cream-faint);font-size:12px">${m.notes||''}</td><td style="white-space:nowrap"><button class="btn sm" onclick="mileModal('${m.id}')">Edit</button><button class="btn sm red" style="margin-left:4px" onclick="delMile('${m.id}')">✕</button></td></tr>`;
+  }).join('');
+}
+function update_mileage_kpis(){
+  const total=mileage.reduce((s,m)=>{const mi=parseFloat(m.miles)||0;return s+(m.round_trip?mi*2:mi);},0);
+  const now=new Date();
+  const mo=mileage.filter(m=>{const d=new Date(m.trip_date+'T12:00:00');return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).reduce((s,m)=>{const mi=parseFloat(m.miles)||0;return s+(m.round_trip?mi*2:mi);},0);
+  document.getElementById('k-miles').textContent=total.toFixed(1);
+  document.getElementById('k-deduct').textContent='$'+(total*IRS_RATE).toFixed(2);
+  document.getElementById('k-miles-mo').textContent=mo.toFixed(1)+' mi';
+  document.getElementById('k-trips').textContent=mileage.length;
+}
+function mileModal(id=''){
+  document.getElementById('mile-id').value=id;document.getElementById('mile-title').textContent=id?'Edit Trip':'Add Trip';
+  if(id){const m=mileage.find(x=>x.id===id);if(!m)return;document.getElementById('mile-date').value=m.trip_date||'';document.getElementById('mile-miles').value=m.miles||'';document.getElementById('mile-purpose').value=m.purpose||'Post office — shipping';document.getElementById('mile-rt').value=String(m.round_trip!==false);document.getElementById('mile-notes').value=m.notes||'';}
+  else{document.getElementById('mile-date').value=new Date().toISOString().slice(0,10);document.getElementById('mile-miles').value='';document.getElementById('mile-notes').value='';document.getElementById('mile-rt').value='true';}
+  openModal('m-mile-q');
+}
+async function saveMile(){
+  const id=g('mile-id');
+  const p={trip_date:g('mile-date'),miles:parseFloat(g('mile-miles'))||0,purpose:document.getElementById('mile-purpose').value,round_trip:document.getElementById('mile-rt').value==='true',notes:g('mile-notes')||null};
+  if(!p.trip_date||!p.miles){toast('Date and miles required','err');return;}
+  sync(true);closeModal('m-mile-q');
+  const{error}=id?await db.from('mileage').update(p).eq('id',id):await db.from('mileage').insert(p);
+  if(error){serr();toast('Save failed','err');return;}
+  toast(id?'Trip updated':'Trip added','ok');await load_mileage();
+}
+async function delMile(id){if(!confirm('Delete trip?'))return;sync(true);const{error}=await db.from('mileage').delete().eq('id',id);if(error){serr();toast('Failed','err');return;}toast('Deleted');await load_mileage();}
+
+async function load_printers(){
+  sync(true);
+  const{data,error}=await db.from('printers').select('*').order('name');
+  if(error){printers=[{id:'default',name:'Vision',model:'Bambu Lab P1S',is_default:true,active:true,notes:''}];}
+  else{printers=data&&data.length?data:[{id:'default',name:'Vision',model:'Bambu Lab P1S',is_default:true,active:true,notes:''}];}
+  sync(false);render_printers();updatePrinterDisplay();if(cur==='stock')render_stock();
+}
+function updatePrinterDisplay(){
+  const def=printers.find(p=>p.is_default&&p.active)||printers[0];
+  const el=document.getElementById('printer-display');if(el&&def)el.textContent='🖨 '+def.name;
+}
+function render_printers(){
+  const tb=document.getElementById('ptb');
+  if(!printers.length){tb.innerHTML='<tr class="empty"><td colspan="7">No printers yet.</td></tr>';return;}
+  tb.innerHTML=printers.map(p=>{
+    const currentC=p.current_creature_id?creatures.find(c=>c.id===p.current_creature_id):null;
+    const printingStatus=currentC?`<span class="pill p-printing">Printing: ${currentC.name}</span> <button class="btn sm" style="padding:2px 5px;margin-left:4px" onclick="clearPrinterJob('${p.id}')">Done</button>`:`<span style="color:var(--cream-faint)">Idle</span>`;
+    return`<tr>
+    <td style="font-weight:500;color:var(--gold-light)">${p.name}</td>
+    <td style="color:var(--cream-faint)">${p.model||'—'}</td>
+    <td>${p.is_default?'<span class="pill p-active">Default</span>':'—'}</td>
+    <td>${printingStatus}</td>
+    <td><span class="pill ${p.active?'p-active':'p-inactive'}">${p.active?'Active':'Inactive'}</span></td>
+    <td style="color:var(--cream-faint);font-size:12px">${p.notes||''}</td>
+    <td style="white-space:nowrap">
+      <button class="btn sm" onclick="printerModal('${p.id}')">Edit</button>
+      ${!p.is_default?`<button class="btn sm red" style="margin-left:4px" onclick="delPrinter('${p.id}')">✕</button>`:''}
+    </td>
+  </tr>`}).join('');
+}
+function printerModal(id=''){
+  document.getElementById('pr-id').value=id;document.getElementById('pmt').textContent=id?'Edit Printer':'Add Printer';
+  if(id){const p=printers.find(x=>x.id===id);if(!p)return;document.getElementById('pr-name').value=p.name||'';document.getElementById('pr-model').value=p.model||'';document.getElementById('pr-default').value=String(p.is_default);document.getElementById('pr-active').value=String(p.active);document.getElementById('pr-notes').value=p.notes||'';}
+  else{['pr-name','pr-model','pr-notes'].forEach(x=>document.getElementById(x).value='');document.getElementById('pr-default').value='false';document.getElementById('pr-active').value='true';}
+  openModal('m-printer');
+}
+async function savePrinter(){
+  const id=g('pr-id');
+  const p={name:g('pr-name'),model:g('pr-model')||null,is_default:document.getElementById('pr-default').value==='true',active:document.getElementById('pr-active').value==='true',notes:g('pr-notes')||null};
+  if(!p.name){toast('Name required','err');return;}
+  if(p.is_default)printers.forEach(pr=>pr.is_default=false);
+  sync(true);closeModal('m-printer');
+  try{
+    const{error}=id&&id!=='default'?await db.from('printers').update(p).eq('id',id):await db.from('printers').insert(p);
+    if(error)throw error;
+    toast(id?'Updated':'Printer added','ok');await load_printers();
+  }catch{
+    if(id){const i=printers.findIndex(x=>x.id===id);if(i>=0)printers[i]={...printers[i],...p};}
+    else printers.push({id:Date.now().toString(),...p});
+    toast(id?'Updated (local)':'Printer added (local)','ok');render_printers();updatePrinterDisplay();sync(false);
+  }
+}
+async function delPrinter(id){
+  if(!confirm('Remove printer?'))return;
+  try{const{error}=await db.from('printers').delete().eq('id',id);if(error)throw error;await load_printers();}
+  catch{printers=printers.filter(p=>p.id!==id);render_printers();updatePrinterDisplay();}
+  toast('Removed');
+}
+
+function openAssign(cid){
+  const c=creatures.find(x=>x.id===cid);if(!c)return;
+  document.getElementById('assign-c-id').value=cid;
+  document.getElementById('assign-c-name').textContent='Printing: '+c.name;
+  const sel=document.getElementById('assign-p-id');
+  sel.innerHTML='<option value="">Select Printer...</option><option value="none">None (Clear Job)</option>'+printers.filter(p=>p.active).map(p=>`<option value="${p.id}">${p.name}${p.current_creature_id?' (Busy)':''}</option>`).join('');
+  openModal('m-assign');
+}
+async function saveAssign(){
+  const cid=g('assign-c-id'), pid=g('assign-p-id');
+  if(!pid){toast('Select a printer','err');return;}
+  sync(true);closeModal('m-assign');
+  if(pid === 'none'){
+    const{error}=await db.from('printers').update({current_creature_id:null}).eq('current_creature_id',cid);
+    if(error){serr();toast(error.message||'Failed','err');console.error(error);return;}
+    toast('Cleared from printers','ok');await load_printers();
+    return;
+  }
+  const{error}=await db.from('printers').update({current_creature_id:cid}).eq('id',pid);
+  if(error){serr();toast(error.message||'Failed','err');console.error(error);return;}
+  toast('Assigned to printer','ok');await load_printers();
+}
+async function clearPrinterJob(id){
+  sync(true);
+  const{error}=await db.from('printers').update({current_creature_id:null}).eq('id',id);
+  if(error){serr();toast(error.message||'Failed','err');console.error(error);return;}
+  toast('Printer cleared','ok');await load_printers();
+}
+
+function update_badges(){
+  const ob=document.getElementById('b-orders'),ib=document.getElementById('b-inv'),cb=document.getElementById('b-creatures');
+  const pend=orders.filter(o=>['queued','printing','printed'].includes(o.status)).length;
+  const low=inv.filter(s=>(s.spool_count??0)<=(s.reorder_spool_threshold??1)).length;
+  const lowC=creatures.filter(c=>(c.qty_on_hand??c.inventory_count??0)<=2).length;
+  ob.style.display=pend>0?'':'none';ob.textContent=pend;
+  ib.style.display=low>0?'':'none';ib.textContent=low;
+  if(cb){cb.style.display=lowC>0?'':'none';cb.textContent=lowC;}
+  // update creature alert bar
+  const cab=document.getElementById('creature-alert-box');
+  if(cab){
+    const lowNames=creatures.filter(c=>(c.qty_on_hand??c.inventory_count??0)<=2).map(c=>c.name);
+    cab.innerHTML=lowNames.length?`<div class="alert" style="margin-bottom:14px">⚠ Low stock (≤2): ${lowNames.join(', ')}</div>`:'';
+  }
+}
+
+db.channel('queue-rt')
+  .on('postgres_changes',{event:'*',schema:'public',table:'orders'},()=>load_orders())
+  .on('postgres_changes',{event:'*',schema:'public',table:'creatures'},()=>load_creatures())
+  .on('postgres_changes',{event:'*',schema:'public',table:'inventory'},()=>load_inv())
+  .on('postgres_changes',{event:'*',schema:'public',table:'finance'},()=>load_fin())
+  .on('postgres_changes',{event:'*',schema:'public',table:'mileage'},()=>load_mileage())
+  .subscribe();
+
+Promise.all([load_printers(),load_orders(),load_creatures(),load_inv(),load_fin(),load_mileage()]);
+</script>
+</body>
+</html>
