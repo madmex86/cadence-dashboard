@@ -298,7 +298,19 @@ textarea{resize:vertical;min-height:68px;}
     <div class="fr"><div><label class="fl">Active</label><select id="c-active"><option value="true">Active</option><option value="false">Inactive</option></select></div><div><label class="fl">Notes</label><input id="c-notes"/></div></div>
     <div><label class="fl">Tagline <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">Short description shown on home page &amp; bestiary cards</span></label><input id="c-tagline" placeholder="e.g. Those eyes don't miss a thing. Not a single thing."/></div>
     <div><label class="fl">Etsy Listing URL <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">Direct link to this creature's listing</span></label><input id="c-etsy-url" placeholder="https://etsy.com/listing/…"/></div>
-    <div class="fr"><div><label class="fl">Image URL <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">Direct link to full unblurred photo</span></label><input id="c-image-url" placeholder="https://.../photo.jpg"/></div><div><label class="fl">Reveal Image <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">(Set to No to blur image on site)</span></label><select id="c-is-revealed"><option value="true">Yes — Revealed</option><option value="false">No — Blurred (Secret)</option></select></div></div>
+    <div class="fr">
+      <div>
+        <label class="fl">Image URL <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">Paste link or upload photo</span></label>
+        <div style="display:flex;gap:6px;">
+          <input id="c-image-url" placeholder="https://.../photo.jpg" style="flex:1;"/>
+          <label class="btn pri" style="cursor:pointer;margin:0;padding:6px 10px;font-size:11px;display:flex;align-items:center;">
+            Upload
+            <input type="file" accept="image/*" style="display:none;" onchange="uploadCreatureImage(event)"/>
+          </label>
+        </div>
+      </div>
+      <div><label class="fl">Reveal Image <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">(Set to No to blur image on site)</span></label><select id="c-is-revealed"><option value="true">Yes — Revealed</option><option value="false">No — Blurred (Secret)</option></select></div>
+    </div>
     <div><label class="fl">Filament Colors Used <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">(hold Ctrl/Cmd to select multiple)</span></label><select id="c-filaments" multiple style="min-height:80px;font-size:12px"></select></div>
   </div>
   <div class="modal-act"><button class="btn" onclick="closeModal('m-creature')">Cancel</button><button class="btn pri" onclick="saveCreature()">Save</button></div>
@@ -671,6 +683,29 @@ function colorFromName(name){
   if(n.includes('crystal'))return'#aee0f0';
   if(n.includes('glow')||n.includes('lumin'))return'#aaee66';
   return'#7a6f62';
+}
+async function uploadCreatureImage(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const btn = e.target.parentElement;
+  const ogText = btn.innerHTML;
+  btn.innerHTML = 'Wait...';
+  try {
+    const ext = file.name.split('.').pop();
+    const fileName = 'creature_' + Date.now() + '.' + ext;
+    const { data, error } = await _db.storage.from('creature-images').upload(fileName, file);
+    if(error) throw error;
+    const { data: pubData } = _db.storage.from('creature-images').getPublicUrl(fileName);
+    if(pubData && pubData.publicUrl) {
+      document.getElementById('c-image-url').value = pubData.publicUrl;
+    }
+  } catch(err) {
+    console.error(err);
+    alert('Upload failed. Please ensure you created a public bucket called "creature-images" in Supabase with an INSERT policy.');
+  } finally {
+    btn.innerHTML = ogText;
+    e.target.value = '';
+  }
 }
 function cModal(id=''){
   document.getElementById('c-id').value=id;document.getElementById('cmt').textContent=id?'Edit Creature':'Add Creature';
