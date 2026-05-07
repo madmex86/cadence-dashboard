@@ -98,6 +98,14 @@ input:focus,select:focus{border-color:rgba(201,168,76,.38);}
 .toast.ok{border-color:rgba(74,140,92,.4);color:#7dc994;}
 .toast.err{border-color:rgba(168,68,68,.4);color:#e09090;}
 
+.ship-btn { background:var(--green); color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:600; flex:1; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:6px; }
+.ship-btn:hover { background:#38a169; transform:translateY(-1px); box-shadow:0 2px 8px rgba(0,0,0,0.2); }
+.ship-btn:active { transform:translateY(0); }
+.ship-btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+.track-input { background:rgba(0,0,0,0.2); border:1px solid var(--border); color:var(--cream); padding:6px 10px; border-radius:4px; font-size:12px; width:100%; outline:none; transition:border-color 0.2s; }
+.track-input:focus { border-color:var(--gold); }
+
 @media (max-width: 768px) {
   .topbar { flex-direction: column; align-items: flex-start; gap: 16px; }
   .topbar-right { width: 100%; justify-content: flex-end; }
@@ -393,13 +401,26 @@ async function quickShip(id) {
   const track = document.getElementById('track-'+id).value;
   if(!track && !confirm('Ship without tracking?')) return;
   
+  const order = orders.find(o => o.id === id);
+  if(!order) return;
+
+  const btn = document.querySelector(`button[onclick="quickShip('${id}')"]`);
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span>⌛</span> Shipping...';
+
   const {error} = await db.from('orders').update({
     status: 'shipped',
     tracking_number: track,
     shipped_date: new Date().toISOString().slice(0,10)
   }).eq('id', id);
   
-  if(error) { toast('Error shipping', 'err'); return; }
+  if(error) { 
+    toast('Error shipping', 'err'); 
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+    return; 
+  }
   
   toast('Order Shipped!', 'ok');
   sendFulfillmentEmail({ ...order, tracking_number: track });

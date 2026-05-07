@@ -674,14 +674,14 @@ function render_orders(){
       <td>${marginHtml}</td>
       <td>${renderTracking(o)}</td>
       <td style="color:var(--cream-faint);font-size:12px">${dt}<span style="color:var(--green)">${shipDt}</span></td>
-      <td style="white-space:nowrap;display:flex;gap:4px;align-items:center">
-        <select style="font-size:11px;padding:3px 7px;width:auto;cursor:pointer" onchange="updateStatus('${o.id}',this.value)">
+      <td style="white-space:nowrap;display:flex;gap:6px;align-items:center;padding:12px 8px;">
+        <select style="font-size:11px;padding:4px 8px;width:auto;cursor:pointer;background:rgba(0,0,0,0.2);border-color:var(--border);" onchange="updateStatus('${o.id}',this.value)">
           ${['queued','printing','printed','packaging','shipped','complete'].map(s=>`<option value="${s}"${s===o.status?' selected':''}>${s}</option>`).join('')}
         </select>
-        ${canExport?`<button class="btn sm grn" title="Export to P&L" onclick="exportOne('${o.id}')">→P&L</button>`:''}
-        <button class="btn sm" onclick="oModal('${o.id}')">Edit</button>
-        <button class="btn sm" title="Shipping label" onclick="openLabel('${o.id}')">📦</button>
-        <button class="btn sm red" onclick="delOrder('${o.id}')">✕</button>
+        ${canExport?`<button class="btn sm grn" title="Export to P&L" onclick="exportOne('${o.id}')" style="padding:4px 8px;">📊</button>`:''}
+        <button class="btn sm" onclick="oModal('${o.id}')" title="Edit Order" style="padding:4px 8px;">✏️</button>
+        <button class="btn sm" title="Shipping label" onclick="openLabel('${o.id}')" style="padding:4px 8px;">📦</button>
+        <button class="btn sm red" id="del-btn-${o.id}" onclick="confirmDeleteOrder('${o.id}')" title="Delete Order" style="padding:4px 8px;">🗑️</button>
       </td></tr>`;
   }).join('');
 }
@@ -697,6 +697,11 @@ function oModal(id=''){
   openModal('m-order');
 }
 async function saveOrder(){
+  const btn = document.querySelector('#m-order .btn.pri');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
   const id=g('o-id');
   const items=g('o-items').split('\n').map(s=>s.trim()).filter(Boolean);
   const carrier=document.getElementById('o-carrier').value;
@@ -708,13 +713,27 @@ async function saveOrder(){
     console.error('Supabase Save Error:', error);
     serr();
     toast('Save failed: ' + error.message, 'err');
+    btn.disabled = false;
+    btn.textContent = originalText;
     return;
   }
   
   closeModal('m-order');
   toast(id?'Order updated':'Order added','ok');await load_orders();
 }
-async function delOrder(id){if(!confirm('Delete order?'))return;sync(true);const{error}=await db.from('orders').delete().eq('id',id);if(error){serr();toast('Failed','err');return;}toast('Deleted');await load_orders();}
+function confirmDeleteOrder(id) {
+  const btn = document.getElementById(`del-btn-${id}`);
+  if (btn.textContent === '🗑️') {
+    btn.textContent = 'Sure?';
+    btn.style.background = 'var(--red)';
+    btn.style.color = 'white';
+    setTimeout(() => { if(btn) { btn.textContent = '🗑️'; btn.style.background = ''; btn.style.color = ''; } }, 3000);
+  } else {
+    delOrder(id);
+  }
+}
+
+async function delOrder(id){sync(true);const{error}=await db.from('orders').delete().eq('id',id);if(error){serr();toast('Failed','err');return;}toast('Deleted');await load_orders();}
 function openImport(){document.getElementById('imp-ta').value='';openModal('m-import');}
 async function runImport(){
   const raw=g('imp-ta');if(!raw){toast('Nothing to import','err');return;}
