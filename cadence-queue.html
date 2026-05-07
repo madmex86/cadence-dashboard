@@ -393,17 +393,27 @@ textarea{resize:vertical;min-height:68px;}
 </div></div>
 
 <!-- PRINT COST MODAL -->
-<div class="overlay" id="m-printcost"><div class="modal">
-  <div class="modal-t">🖨 Print Cost Calculator</div>
+<div class="overlay" id="m-printcost"><div class="modal" style="max-width:540px;">
+  <div class="modal-t">💎 Intelligence: Advanced COGS Calculator</div>
   <div class="fg">
-    <div class="fr"><div><label class="fl">Creature</label><select id="pc-creature" onchange="calcPrintCost()"><option value="">Select…</option></select></div><div><label class="fl">Packaging ($)</label><input id="pc-pkg" type="number" value="0.75" step="0.01" oninput="calcPrintCost()"/></div></div>
-    <div style="background:rgba(201,168,76,.06);border:1px solid var(--border);padding:14px 16px;margin-top:4px;border-radius:2px">
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">
-        <div><div style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--cream-faint);margin-bottom:4px">Packaging</div><div style="font-size:20px;font-weight:600" id="pc-r-fil">—</div></div>
-        <div><div style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--cream-faint);margin-bottom:4px">Total COGS</div><div style="font-size:20px;font-weight:600;color:var(--gold-light)" id="pc-r-cogs">—</div></div>
-        <div><div style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--cream-faint);margin-bottom:4px">Margin</div><div style="font-size:20px;font-weight:600" id="pc-r-margin">—</div></div>
+    <div class="fr">
+      <div><label class="fl">Creature</label><select id="pc-creature" onchange="loadCreaturePrices()"><option value="">Select…</option></select></div>
+      <div><label class="fl">Packaging ($)</label><input id="pc-pkg" type="number" value="0.75" step="0.01" oninput="calcPrintCost()"/></div>
+    </div>
+    
+    <div style="margin-top:10px;">
+      <label class="fl">Print Parts (from Bambu Studio)</label>
+      <div id="pc-parts-list" style="display:grid;gap:8px;margin-bottom:12px;"></div>
+      <button class="btn sm" onclick="addPartRow()">+ Add Part</button>
+    </div>
+
+    <div style="background:rgba(201,168,76,.06);border:1px solid var(--border);padding:20px;margin-top:10px;border-radius:4px;">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:15px;text-align:center">
+        <div><div style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--cream-faint);margin-bottom:6px">Total Cost</div><div style="font-size:24px;font-weight:600;color:var(--goldl)" id="pc-r-cogs">—</div></div>
+        <div><div style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--cream-faint);margin-bottom:6px">Etsy Net</div><div style="font-size:24px;font-weight:600" id="pc-r-net">—</div></div>
+        <div><div style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--cream-faint);margin-bottom:6px">Margin</div><div style="font-size:24px;font-weight:600" id="pc-r-margin">—</div></div>
       </div>
-      <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--cream-faint)" id="pc-r-detail">Select a creature to see margin</div>
+      <div style="text-align:center;margin-top:15px;font-size:11px;color:var(--cream-faint);border-top:1px solid rgba(201,168,76,0.1);padding-top:12px;" id="pc-r-detail">Select a creature to start</div>
     </div>
   </div>
   <div class="modal-act"><button class="btn" onclick="closeModal('m-printcost')">Close</button><button class="btn pri" onclick="saveCostToCreature()">Save COGS to Creature</button></div>
@@ -1014,25 +1024,94 @@ function openUSPS(){window.open('https://cns.usps.com/labelInformation.shtml','_
 function openPrintCost(){
   const sel=document.getElementById('pc-creature');
   sel.innerHTML='<option value="">Select creature…</option>'+creatures.map(c=>`<option value="${c.id}" data-price="${c.price_etsy||0}" data-cost="${c.cost_to_print||0}">${c.name}</option>`).join('');
-  calcPrintCost();openModal('m-printcost');
+  document.getElementById('pc-parts-list').innerHTML = '';
+  addPartRow(); // start with one part
+  calcPrintCost();
+  openModal('m-printcost');
 }
+
+function addPartRow() {
+  const list = document.getElementById('pc-parts-list');
+  const div = document.createElement('div');
+  div.className = 'fr';
+  div.style.gridTemplateColumns = '1fr 2fr auto';
+  div.innerHTML = `
+    <div><input type="number" placeholder="Grams" class="pc-part-grams" oninput="calcPrintCost()" /></div>
+    <div>
+      <select class="pc-part-filament" onchange="calcPrintCost()">
+        <option value="0" data-cost="0">Select Filament…</option>
+        ${inv.map(s => `<option value="${s.id}" data-cost="${s.cost_per_spool || 0}">${s.spool_name} (${fmt$(s.cost_per_spool)})</option>`).join('')}
+      </select>
+    </div>
+    <button class="btn sm red" onclick="this.parentElement.remove();calcPrintCost()">✕</button>
+  `;
+  list.appendChild(div);
+}
+
+function loadCreaturePrices() {
+  calcPrintCost();
+}
+
 function calcPrintCost(){
   const pkg=parseFloat(document.getElementById('pc-pkg').value)||0.75;
-  const sel=document.getElementById('pc-creature');const opt=sel.options[sel.selectedIndex];
-  const price=parseFloat(opt?.dataset?.price)||0;const savedCogs=parseFloat(opt?.dataset?.cost)||0;
-  const cogs=savedCogs>0?savedCogs+pkg:pkg;const etsyFee=price*0.065;const net=price-cogs-etsyFee;
-  const margin=price>0?Math.round((net/price)*100):null;
-  document.getElementById('pc-r-fil').textContent=fmt$(pkg);
-  document.getElementById('pc-r-cogs').textContent=cogs>0?fmt$(cogs):'—';
-  const mg=document.getElementById('pc-r-margin');mg.textContent=margin!==null?margin+'%':'—';mg.style.color=margin===null?'var(--cream-faint)':margin>=60?'#7dc994':margin>=40?'#E8D08A':'#e09090';
-  document.getElementById('pc-r-detail').textContent=price>0?`Etsy $${price.toFixed(2)} — fees $${etsyFee.toFixed(2)} — net $${net.toFixed(2)}`:(savedCogs>0?`Saved COGS $${savedCogs.toFixed(2)} + pkg $${pkg.toFixed(2)}`:'Select a creature to see margin');
+  const sel=document.getElementById('pc-creature');
+  const opt=sel.options[sel.selectedIndex];
+  const etsysPrice=parseFloat(opt?.dataset?.price)||0;
+  
+  let totalFilCost = 0;
+  let totalGrams = 0;
+  
+  document.querySelectorAll('#pc-parts-list .fr').forEach(row => {
+    const grams = parseFloat(row.querySelector('.pc-part-grams').value) || 0;
+    const filSelect = row.querySelector('.pc-part-filament');
+    const spoolCost = parseFloat(filSelect.options[filSelect.selectedIndex].dataset.cost) || 0;
+    
+    // Calculate cost per gram (assuming 1000g spool)
+    const costPerGram = spoolCost / 1000;
+    totalFilCost += (grams * costPerGram);
+    totalGrams += grams;
+  });
+
+  const totalCogs = totalFilCost + pkg;
+  const etsyFee = etsysPrice * 0.065;
+  const net = etsysPrice - totalCogs - etsyFee;
+  const margin = etsysPrice > 0 ? Math.round((net / etsysPrice) * 100) : null;
+
+  document.getElementById('pc-r-cogs').textContent = fmt$(totalCogs);
+  document.getElementById('pc-r-net').textContent = fmt$(net);
+  
+  const mg = document.getElementById('pc-r-margin');
+  mg.textContent = margin !== null ? margin + '%' : '—';
+  mg.style.color = margin === null ? 'var(--cream-faint)' : margin >= 60 ? '#7dc994' : margin >= 40 ? '#E8D08A' : '#e09090';
+  
+  document.getElementById('pc-r-detail').textContent = etsysPrice > 0 
+    ? `Total Weight: ${totalGrams.toFixed(1)}g · Etsy Price: $${etsysPrice.toFixed(2)}`
+    : `Total Weight: ${totalGrams.toFixed(1)}g · Select a creature to see margin`;
 }
+
 async function saveCostToCreature(){
-  const sel=document.getElementById('pc-creature');const id=sel.value;if(!id){toast('Select a creature','err');return;}
+  const sel=document.getElementById('pc-creature');
+  const id=sel.value;
+  if(!id){toast('Select a creature','err');return;}
+  
+  // Calculate total COGS one last time
   const pkg=parseFloat(document.getElementById('pc-pkg').value)||0.75;
-  sync(true);const{error}=await db.from('creatures').update({cost_to_print:parseFloat(pkg.toFixed(2))}).eq('id',id);
+  let totalFilCost = 0;
+  document.querySelectorAll('#pc-parts-list .fr').forEach(row => {
+    const grams = parseFloat(row.querySelector('.pc-part-grams').value) || 0;
+    const filSelect = row.querySelector('.pc-part-filament');
+    const spoolCost = parseFloat(filSelect.options[filSelect.selectedIndex].dataset.cost) || 0;
+    totalFilCost += (grams * (spoolCost / 1000));
+  });
+  const totalCogs = parseFloat((totalFilCost + pkg).toFixed(2));
+
+  sync(true);
+  const{error}=await db.from('creatures').update({cost_to_print: totalCogs}).eq('id',id);
   if(error){serr();toast('Save failed','err');return;}
-  sync(false);toast('Packaging cost saved as COGS','ok');closeModal('m-printcost');await load_creatures();
+  sync(false);
+  toast('COGS saved to creature','ok');
+  closeModal('m-printcost');
+  await load_creatures();
 }
 
 let mileage=[];const IRS_RATE=0.70;
