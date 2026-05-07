@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <style>
 :root{
   --ink:#1C1612;--ink-mid:#252018;--gold:#C9A84C;--goldl:#E8D08A;
@@ -216,6 +217,34 @@ input:focus,select:focus{border-color:rgba(201,168,76,.38);}
 
 <script src="shared.js"></script>
 <script>
+// Initialize EmailJS with your Public Key
+emailjs.init("Kf28oWCMQdU-MdlL2"); 
+
+async function sendFulfillmentEmail(order) {
+  if(!order.buyer_email) {
+    console.log("No email address for order:", order.etsy_order_id);
+    return;
+  }
+  
+  const templateParams = {
+    to_name: order.buyer_name || 'Customer',
+    to_email: order.buyer_email,
+    order_id: order.etsy_order_id || order.id.slice(0,8),
+    tracking_number: order.tracking_number || 'N/A',
+    carrier: order.carrier || 'USPS',
+    tracking_link: order.tracking_number ? `https://tools.usps.com/go/TrackConfirmAction?tLabels=${order.tracking_number}` : '#'
+  };
+
+  try {
+    // Replace with your Service ID and Template ID
+    await emailjs.send('service_4z4fm6m', 'template_6waa5cm', templateParams);
+    toast('Notification Email Sent!', 'ok');
+  } catch (error) {
+    console.error('EmailJS Failed:', error);
+    toast('Email notification failed', 'err');
+  }
+}
+
 function showApp(){
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app').classList.add('visible');
@@ -373,6 +402,7 @@ async function quickShip(id) {
   if(error) { toast('Error shipping', 'err'); return; }
   
   toast('Order Shipped!', 'ok');
+  sendFulfillmentEmail({ ...order, tracking_number: track });
   loadData();
 }
 
@@ -410,6 +440,7 @@ async function saveShipping(){
   if(error){toast('Error','err'); return;}
   
   toast('Order Shipped!','ok');
+  sendFulfillmentEmail(order);
   // Remove from local array since it's no longer in the 4 board columns
   orders = orders.filter(o=>o.id!==id);
   renderBoard();
