@@ -393,30 +393,42 @@ textarea{resize:vertical;min-height:68px;}
 </div></div>
 
 <!-- PRINT COST MODAL -->
-<div class="overlay" id="m-printcost"><div class="modal" style="max-width:540px;">
-  <div class="modal-t">💎 Intelligence: Advanced COGS Calculator</div>
+<div class="overlay" id="m-printcost"><div class="modal" style="max-width:700px;">
+  <div class="modal-t">💎 Intelligence: Bambu Slicing Cost Engine</div>
   <div class="fg">
-    <div class="fr">
-      <div><label class="fl">Creature</label><select id="pc-creature" onchange="loadCreaturePrices()"><option value="">Select…</option></select></div>
-      <div><label class="fl">Packaging ($)</label><input id="pc-pkg" type="number" value="0.75" step="0.01" oninput="calcPrintCost()"/></div>
+    <div class="fr" style="grid-template-columns: 2fr 1fr;">
+      <div><label class="fl">Creature</label><select id="pc-creature" onchange="loadRecipe()"><option value="">Select…</option></select></div>
+      <div><label class="fl">Packaging/Misc ($)</label><input id="pc-pkg" type="number" value="0.75" step="0.01" oninput="calcPrintCost()"/></div>
     </div>
     
-    <div style="margin-top:10px;">
-      <label class="fl">Print Parts (from Bambu Studio)</label>
-      <div id="pc-parts-list" style="display:grid;gap:8px;margin-bottom:12px;"></div>
-      <button class="btn sm" onclick="addPartRow()">+ Add Part</button>
+    <div style="margin-top:15px; overflow-x:auto;">
+      <table class="recipe-table" style="width:100%; border-collapse:collapse; font-size:11px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border)">
+            <th style="text-align:left; padding:8px 0;">Filament (Spool)</th>
+            <th style="width:70px">Model (g)</th>
+            <th style="width:70px">Purged (g)</th>
+            <th style="width:70px">Tower (g)</th>
+            <th style="width:70px; text-align:right;">Total (g)</th>
+            <th style="width:40px"></th>
+          </tr>
+        </thead>
+        <tbody id="pc-recipe-body"></tbody>
+      </table>
+      <button class="btn sm" style="margin-top:10px;" onclick="addRecipeRow()">+ Add Filament</button>
     </div>
 
-    <div style="background:rgba(201,168,76,.06);border:1px solid var(--border);padding:20px;margin-top:10px;border-radius:4px;">
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:15px;text-align:center">
-        <div><div style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--cream-faint);margin-bottom:6px">Total Cost</div><div style="font-size:24px;font-weight:600;color:var(--goldl)" id="pc-r-cogs">—</div></div>
-        <div><div style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--cream-faint);margin-bottom:6px">Etsy Net</div><div style="font-size:24px;font-weight:600" id="pc-r-net">—</div></div>
-        <div><div style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--cream-faint);margin-bottom:6px">Margin</div><div style="font-size:24px;font-weight:600" id="pc-r-margin">—</div></div>
+    <div style="background:rgba(201,168,76,.06); border:1px solid var(--border); padding:24px; margin-top:20px; border-radius:4px;">
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:15px; text-align:center">
+        <div><div style="font-size:9px; letter-spacing:.15em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:8px">Filament Cost</div><div style="font-size:20px; font-weight:600;" id="pc-r-fil-total">—</div></div>
+        <div><div style="font-size:9px; letter-spacing:.15em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:8px">Total COGS</div><div style="font-size:20px; font-weight:600; color:var(--goldl)" id="pc-r-cogs">—</div></div>
+        <div><div style="font-size:9px; letter-spacing:.15em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:8px">Etsy Take-Home</div><div style="font-size:20px; font-weight:600" id="pc-r-net">—</div></div>
+        <div><div style="font-size:9px; letter-spacing:.15em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:8px">Net Margin</div><div style="font-size:20px; font-weight:600" id="pc-r-margin">—</div></div>
       </div>
-      <div style="text-align:center;margin-top:15px;font-size:11px;color:var(--cream-faint);border-top:1px solid rgba(201,168,76,0.1);padding-top:12px;" id="pc-r-detail">Select a creature to start</div>
+      <div style="text-align:center; margin-top:18px; font-size:11px; color:var(--cream-faint); border-top:1px solid rgba(201,168,76,0.1); padding-top:14px;" id="pc-r-detail">Select a creature to start</div>
     </div>
   </div>
-  <div class="modal-act"><button class="btn" onclick="closeModal('m-printcost')">Close</button><button class="btn pri" onclick="saveCostToCreature()">Save COGS to Creature</button></div>
+  <div class="modal-act"><button class="btn" onclick="closeModal('m-printcost')">Cancel</button><button class="btn pri" onclick="saveRecipeToCreature()">Save Recipe &amp; COGS</button></div>
 </div></div>
 
 <!-- MILEAGE MODAL -->
@@ -1023,53 +1035,73 @@ function openUSPS(){window.open('https://cns.usps.com/labelInformation.shtml','_
 
 function openPrintCost(){
   const sel=document.getElementById('pc-creature');
-  sel.innerHTML='<option value="">Select creature…</option>'+creatures.map(c=>`<option value="${c.id}" data-price="${c.price_etsy||0}" data-cost="${c.cost_to_print||0}">${c.name}</option>`).join('');
-  document.getElementById('pc-parts-list').innerHTML = '';
-  addPartRow(); // start with one part
+  sel.innerHTML='<option value="">Select creature…</option>'+creatures.map(c=>`<option value="${c.id}" data-price="${c.price_etsy||0}">${c.name}</option>`).join('');
+  document.getElementById('pc-recipe-body').innerHTML = '';
   calcPrintCost();
   openModal('m-printcost');
 }
 
-function addPartRow() {
-  const list = document.getElementById('pc-parts-list');
-  const div = document.createElement('div');
-  div.className = 'fr';
-  div.style.gridTemplateColumns = '1fr 2fr auto';
-  div.innerHTML = `
-    <div><input type="number" placeholder="Grams" class="pc-part-grams" oninput="calcPrintCost()" /></div>
-    <div>
-      <select class="pc-part-filament" onchange="calcPrintCost()">
-        <option value="0" data-cost="0">Select Filament…</option>
-        ${inv.map(s => `<option value="${s.id}" data-cost="${s.cost_per_spool || 0}">${s.spool_name} (${fmt$(s.cost_per_spool)})</option>`).join('')}
+function addRecipeRow(data = null) {
+  const tbody = document.getElementById('pc-recipe-body');
+  const tr = document.createElement('tr');
+  tr.style.borderBottom = '1px solid rgba(201,168,76,0.05)';
+  
+  tr.innerHTML = `
+    <td style="padding:10px 0;">
+      <select class="pc-row-fil" onchange="calcPrintCost()" style="width:100%; border:none; background:transparent; font-size:11px;">
+        <option value="0" data-cost="0">Select Spool…</option>
+        ${inv.map(s => `<option value="${s.id}" data-cost="${s.cost_per_spool || 0}" ${data && data.filId === s.id ? 'selected' : ''}>${s.spool_name} ($${s.cost_per_spool})</option>`).join('')}
       </select>
-    </div>
-    <button class="btn sm red" onclick="this.parentElement.remove();calcPrintCost()">✕</button>
+    </td>
+    <td><input type="number" class="pc-row-model" value="${data ? data.model : ''}" step="0.01" oninput="calcPrintCost()" style="border:none; background:transparent; text-align:center;"/></td>
+    <td><input type="number" class="pc-row-purged" value="${data ? data.purged : ''}" step="0.01" oninput="calcPrintCost()" style="border:none; background:transparent; text-align:center;"/></td>
+    <td><input type="number" class="pc-row-tower" value="${data ? data.tower : ''}" step="0.01" oninput="calcPrintCost()" style="border:none; background:transparent; text-align:center;"/></td>
+    <td style="text-align:right; font-weight:600; color:var(--cream-dim);" class="pc-row-total">0.00g</td>
+    <td style="text-align:right;"><button class="btn sm red" style="padding:2px 6px;" onclick="this.parentElement.parentElement.remove();calcPrintCost()">✕</button></td>
   `;
-  list.appendChild(div);
+  tbody.appendChild(tr);
 }
 
-function loadCreaturePrices() {
+function loadRecipe() {
+  const sel = document.getElementById('pc-creature');
+  const id = sel.value;
+  const c = creatures.find(x => x.id === id);
+  const body = document.getElementById('pc-recipe-body');
+  body.innerHTML = '';
+  
+  if (c && c.print_recipe) {
+    try {
+      const recipe = JSON.parse(c.print_recipe);
+      recipe.forEach(row => addRecipeRow(row));
+    } catch(e) { addRecipeRow(); }
+  } else {
+    addRecipeRow();
+  }
   calcPrintCost();
 }
 
 function calcPrintCost(){
-  const pkg=parseFloat(document.getElementById('pc-pkg').value)||0.75;
-  const sel=document.getElementById('pc-creature');
-  const opt=sel.options[sel.selectedIndex];
-  const etsysPrice=parseFloat(opt?.dataset?.price)||0;
+  const pkg = parseFloat(document.getElementById('pc-pkg').value) || 0.75;
+  const sel = document.getElementById('pc-creature');
+  const opt = sel.options[sel.selectedIndex];
+  const etsysPrice = parseFloat(opt?.dataset?.price) || 0;
   
   let totalFilCost = 0;
   let totalGrams = 0;
   
-  document.querySelectorAll('#pc-parts-list .fr').forEach(row => {
-    const grams = parseFloat(row.querySelector('.pc-part-grams').value) || 0;
-    const filSelect = row.querySelector('.pc-part-filament');
+  document.querySelectorAll('#pc-recipe-body tr').forEach(row => {
+    const m = parseFloat(row.querySelector('.pc-row-model').value) || 0;
+    const p = parseFloat(row.querySelector('.pc-row-purged').value) || 0;
+    const t = parseFloat(row.querySelector('.pc-row-tower').value) || 0;
+    const filSelect = row.querySelector('.pc-row-fil');
     const spoolCost = parseFloat(filSelect.options[filSelect.selectedIndex].dataset.cost) || 0;
     
-    // Calculate cost per gram (assuming 1000g spool)
-    const costPerGram = spoolCost / 1000;
-    totalFilCost += (grams * costPerGram);
-    totalGrams += grams;
+    const rowGrams = m + p + t;
+    const rowCost = (rowGrams * (spoolCost / 1000));
+    
+    row.querySelector('.pc-row-total').textContent = rowGrams.toFixed(2) + 'g';
+    totalFilCost += rowCost;
+    totalGrams += rowGrams;
   });
 
   const totalCogs = totalFilCost + pkg;
@@ -1077,6 +1109,7 @@ function calcPrintCost(){
   const net = etsysPrice - totalCogs - etsyFee;
   const margin = etsysPrice > 0 ? Math.round((net / etsysPrice) * 100) : null;
 
+  document.getElementById('pc-r-fil-total').textContent = fmt$(totalFilCost);
   document.getElementById('pc-r-cogs').textContent = fmt$(totalCogs);
   document.getElementById('pc-r-net').textContent = fmt$(net);
   
@@ -1085,31 +1118,43 @@ function calcPrintCost(){
   mg.style.color = margin === null ? 'var(--cream-faint)' : margin >= 60 ? '#7dc994' : margin >= 40 ? '#E8D08A' : '#e09090';
   
   document.getElementById('pc-r-detail').textContent = etsysPrice > 0 
-    ? `Total Weight: ${totalGrams.toFixed(1)}g · Etsy Price: $${etsysPrice.toFixed(2)}`
-    : `Total Weight: ${totalGrams.toFixed(1)}g · Select a creature to see margin`;
+    ? `Total Weight: ${totalGrams.toFixed(2)}g · Etsy Price: $${etsysPrice.toFixed(2)}`
+    : `Total Weight: ${totalGrams.toFixed(2)}g · Select a creature to see margin`;
 }
 
-async function saveCostToCreature(){
-  const sel=document.getElementById('pc-creature');
-  const id=sel.value;
-  if(!id){toast('Select a creature','err');return;}
+async function saveRecipeToCreature(){
+  const sel = document.getElementById('pc-creature');
+  const id = sel.value;
+  if (!id) { toast('Select a creature', 'err'); return; }
   
-  // Calculate total COGS one last time
-  const pkg=parseFloat(document.getElementById('pc-pkg').value)||0.75;
+  const recipe = [];
   let totalFilCost = 0;
-  document.querySelectorAll('#pc-parts-list .fr').forEach(row => {
-    const grams = parseFloat(row.querySelector('.pc-part-grams').value) || 0;
-    const filSelect = row.querySelector('.pc-part-filament');
+  const pkg = parseFloat(document.getElementById('pc-pkg').value) || 0.75;
+
+  document.querySelectorAll('#pc-recipe-body tr').forEach(row => {
+    const m = parseFloat(row.querySelector('.pc-row-model').value) || 0;
+    const p = parseFloat(row.querySelector('.pc-row-purged').value) || 0;
+    const t = parseFloat(row.querySelector('.pc-row-tower').value) || 0;
+    const filSelect = row.querySelector('.pc-row-fil');
+    const filId = filSelect.value;
     const spoolCost = parseFloat(filSelect.options[filSelect.selectedIndex].dataset.cost) || 0;
-    totalFilCost += (grams * (spoolCost / 1000));
+    
+    recipe.push({ filId, model: m, purged: p, tower: t });
+    totalFilCost += ((m + p + t) * (spoolCost / 1000));
   });
+
   const totalCogs = parseFloat((totalFilCost + pkg).toFixed(2));
 
   sync(true);
-  const{error}=await db.from('creatures').update({cost_to_print: totalCogs}).eq('id',id);
-  if(error){serr();toast('Save failed','err');return;}
+  const { error } = await db.from('creatures').update({ 
+    cost_to_print: totalCogs,
+    print_recipe: JSON.stringify(recipe)
+  }).eq('id', id);
+  
+  if (error) { serr(); toast('Save failed', 'err'); return; }
+  
   sync(false);
-  toast('COGS saved to creature','ok');
+  toast('Recipe and COGS saved', 'ok');
   closeModal('m-printcost');
   await load_creatures();
 }
