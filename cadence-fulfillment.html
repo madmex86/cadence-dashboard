@@ -235,8 +235,9 @@ async function sendFulfillmentEmail(order) {
   }
   
   const templateParams = {
-    to_name: order.buyer_name || 'Customer',
+    buyers_name: order.buyer_name || 'Customer',
     to_email: order.buyer_email,
+    items: Array.isArray(order.items) ? order.items.join(', ') : (order.items || 'Your Cadence Creatures'),
     order_id: order.etsy_order_id || order.id.slice(0,8),
     tracking_number: order.tracking_number || 'N/A',
     carrier: order.carrier || 'USPS',
@@ -244,12 +245,12 @@ async function sendFulfillmentEmail(order) {
   };
 
   try {
-    // Replace with your Service ID and Template ID
-    await emailjs.send('service_4z4fm6m', 'template_6waa5cm', templateParams);
+    const res = await emailjs.send('service_4z4fm6m', 'template_6waa5cm', templateParams);
+    console.log('EmailJS Success Response:', res);
     toast('Notification Email Sent!', 'ok');
   } catch (error) {
-    console.error('EmailJS Failed:', error);
-    toast('Email notification failed', 'err');
+    console.error('EmailJS Server Error:', error);
+    toast('Email notification failed: ' + (error.text || error.message), 'err');
   }
 }
 
