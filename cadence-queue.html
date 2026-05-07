@@ -405,6 +405,7 @@ textarea{resize:vertical;min-height:68px;}
       <table class="recipe-table" style="width:100%; border-collapse:collapse; font-size:11px;">
         <thead>
           <tr style="border-bottom:1px solid var(--border)">
+            <th style="width:100px; text-align:left; padding:8px 0;">Part (Label)</th>
             <th style="text-align:left; padding:8px 0;">Filament (Spool)</th>
             <th style="width:70px">Model (g)</th>
             <th style="width:70px">Purged (g)</th>
@@ -1047,6 +1048,7 @@ function addRecipeRow(data = null) {
   tr.style.borderBottom = '1px solid rgba(201,168,76,0.05)';
   
   tr.innerHTML = `
+    <td><input type="text" class="pc-row-label" value="${data ? data.label || '' : ''}" placeholder="e.g. Body" style="width:100%; border:none; background:transparent; font-size:11px; color:var(--goldl);"/></td>
     <td style="padding:10px 0;">
       <select class="pc-row-fil" onchange="calcPrintCost()" style="width:100%; border:none; background:transparent; font-size:11px;">
         <option value="0" data-cost="0">Select Spool…</option>
@@ -1132,6 +1134,7 @@ async function saveRecipeToCreature(){
   const pkg = parseFloat(document.getElementById('pc-pkg').value) || 0.75;
 
   document.querySelectorAll('#pc-recipe-body tr').forEach(row => {
+    const label = row.querySelector('.pc-row-label').value;
     const m = parseFloat(row.querySelector('.pc-row-model').value) || 0;
     const p = parseFloat(row.querySelector('.pc-row-purged').value) || 0;
     const t = parseFloat(row.querySelector('.pc-row-tower').value) || 0;
@@ -1139,7 +1142,7 @@ async function saveRecipeToCreature(){
     const filId = filSelect.value;
     const spoolCost = parseFloat(filSelect.options[filSelect.selectedIndex].dataset.cost) || 0;
     
-    recipe.push({ filId, model: m, purged: p, tower: t });
+    recipe.push({ label, filId, model: m, purged: p, tower: t });
     totalFilCost += ((m + p + t) * (spoolCost / 1000));
   });
 
