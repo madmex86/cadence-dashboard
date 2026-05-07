@@ -135,6 +135,7 @@ textarea{resize:vertical;min-height:68px;}
   <button class="tab active" onclick="go('orders')">Orders <span class="badge" id="b-orders" style="display:none"></span></button>
   <button class="tab" onclick="go('stock')">Stock &amp; Queue</button>
   <button class="tab" onclick="go('creatures')">Creatures <span class="badge" id="b-creatures" style="display:none"></span></button>
+  <button class="tab" onclick="go('merch')">Merch</button>
   <button class="tab" onclick="go('inventory')">Filament <span class="badge" id="b-inv" style="display:none"></span></button>
   <button class="tab" onclick="go('finance')">Finance</button>
   <button class="tab" onclick="go('mileage')">Mileage</button>
@@ -200,6 +201,18 @@ textarea{resize:vertical;min-height:68px;}
   <div style="overflow-x:auto">
     <table><thead><tr><th>Log</th><th>Name</th><th>SKU</th><th>Species</th><th>Env</th><th>Retail $</th><th>Etsy $</th><th>Cost $</th><th>Margin</th><th>On Hand</th><th>Filaments</th><th>Status</th><th></th></tr></thead>
     <tbody id="ctb"><tr class="empty"><td colspan="12">Loading…</td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- MERCH -->
+<div class="panel" id="panel-merch">
+  <div class="sec-hdr">
+    <span class="sec-title">Merchandising · Control Home Page Visibility</span>
+    <div style="font-size:11px;color:var(--cream-faint)">Toggle "Featured" to show creatures on the main index page.</div>
+  </div>
+  <div style="overflow-x:auto">
+    <table><thead><tr><th>Creature</th><th>Tagline</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody id="merchtb"><tr class="empty"><td colspan="4">Loading…</td></tr></tbody></table>
   </div>
 </div>
 
@@ -465,6 +478,7 @@ function go(tab){
   if(tab==='orders')render_orders();
   if(tab==='stock')render_stock();
   if(tab==='creatures')render_creatures();
+  if(tab==='merch')render_merch();
   if(tab==='inventory')render_inv();
   if(tab==='finance'){render_fin();update_fin_kpis();}
   if(tab==='mileage'){render_mileage();update_mileage_kpis();}
@@ -618,6 +632,54 @@ function render_stock(){
       <td style="font-size:18px;font-weight:600;color:${netCol}">${net}</td>
     </tr>`;
   }).join('');
+}
+
+function render_merch() {
+  const tb = document.getElementById('merchtb');
+  if (!creatures.length) { tb.innerHTML = '<tr class="empty"><td colspan="4">No creatures loaded.</td></tr>'; return; }
+  
+  tb.innerHTML = creatures.map(c => {
+    const isFeatured = c.is_featured === true;
+    return `<tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:40px;height:40px;background:var(--gold-dim);border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+            ${c.image_url ? `<img src="${c.image_url}" style="width:100%;height:100%;object-fit:cover;">` : '🦎'}
+          </div>
+          <div>
+            <div style="font-weight:600;color:var(--gold-light)">${c.name}</div>
+            <div style="font-size:11px;color:var(--cream-faint)">Log #${c.log_number}</div>
+          </div>
+        </div>
+      </td>
+      <td style="font-size:12px;color:var(--cream-dim);font-style:italic;">"${c.tagline || 'No tagline set'}"</td>
+      <td>
+        <span class="pill ${isFeatured ? 'p-active' : 'p-inactive'}">
+          ${isFeatured ? '★ Featured' : 'Not Featured'}
+        </span>
+      </td>
+      <td>
+        <button class="btn sm ${isFeatured ? 'red' : 'pri'}" onclick="toggleFeatured('${c.id}', ${!isFeatured})">
+          ${isFeatured ? 'Remove from Home' : 'Feature on Home'}
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function toggleFeatured(id, status) {
+  sync(true);
+  const { error } = await db.from('creatures').update({ is_featured: status }).eq('id', id);
+  if (error) {
+    serr();
+    toast('Update failed', 'err');
+    return;
+  }
+  // Update local state
+  creatures = creatures.map(c => c.id === id ? { ...c, is_featured: status } : c);
+  sync(false);
+  render_merch();
+  toast(status ? 'Featured on Home Page' : 'Removed from Home Page', 'ok');
 }
 
 async function load_creatures(){sync(true);const{data,error}=await db.from('creatures').select('*').order('log_number');if(error){serr();return;}creatures=data;sync(false);render_creatures();render_stock();update_stats_widget();}
