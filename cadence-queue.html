@@ -701,9 +701,17 @@ async function saveOrder(){
   const items=g('o-items').split('\n').map(s=>s.trim()).filter(Boolean);
   const carrier=document.getElementById('o-carrier').value;
   const p={etsy_order_id:g('o-eid')||null,buyer_name:g('o-buyer')||null,buyer_email:g('o-email')||null,items,status:g('o-st'),printer_name:document.getElementById('o-printer').value||'Vision',total_amount:parseFloat(g('o-amt'))||null,order_date:g('o-dt')||null,shipping_note:g('o-note')||null,tracking_number:g('o-track')||null,carrier:carrier||null};
-  sync(true);closeModal('m-order');
+  sync(true);
   const{error}=id?await db.from('orders').update(p).eq('id',id):await db.from('orders').insert(p);
-  if(error){serr();toast('Save failed','err');return;}
+  
+  if(error){
+    console.error('Supabase Save Error:', error);
+    serr();
+    toast('Save failed: ' + error.message, 'err');
+    return;
+  }
+  
+  closeModal('m-order');
   toast(id?'Order updated':'Order added','ok');await load_orders();
 }
 async function delOrder(id){if(!confirm('Delete order?'))return;sync(true);const{error}=await db.from('orders').delete().eq('id',id);if(error){serr();toast('Failed','err');return;}toast('Deleted');await load_orders();}
@@ -711,9 +719,17 @@ function openImport(){document.getElementById('imp-ta').value='';openModal('m-im
 async function runImport(){
   const raw=g('imp-ta');if(!raw){toast('Nothing to import','err');return;}
   const rows=raw.split('\n').filter(Boolean).map(l=>{const p=l.split('|').map(s=>s.trim());return{etsy_order_id:p[0]||null,buyer_name:p[1]||null,buyer_email:p[2]||null,items:p[3]?p[3].split(',').map(s=>s.trim()):[],total_amount:p[4]?parseFloat(p[4]):null,status:'queued',order_date:new Date().toISOString().slice(0,10)};});
-  sync(true);closeModal('m-import');
+  sync(true);
   const{error}=await db.from('orders').upsert(rows,{onConflict:'etsy_order_id',ignoreDuplicates:true});
-  if(error){serr();toast('Import failed','err');return;}
+  
+  if(error){
+    console.error('Supabase Import Error:', error);
+    serr();
+    toast('Import failed: ' + error.message, 'err');
+    return;
+  }
+  
+  closeModal('m-import');
   toast(`Imported ${rows.length} order${rows.length!==1?'s':''}`,'ok');await load_orders();
 }
 function update_order_kpis(){update_pipeline();update_stats_widget();}
