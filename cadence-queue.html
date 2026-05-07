@@ -693,9 +693,9 @@ async function uploadCreatureImage(e){
   try {
     const ext = file.name.split('.').pop();
     const fileName = 'creature_' + Date.now() + '.' + ext;
-    const { data, error } = await _db.storage.from('creature-images').upload(fileName, file);
+    const { data, error } = await db.storage.from('creature-images').upload(fileName, file);
     if(error) throw error;
-    const { data: pubData } = _db.storage.from('creature-images').getPublicUrl(fileName);
+    const { data: pubData } = db.storage.from('creature-images').getPublicUrl(fileName);
     if(pubData && pubData.publicUrl) {
       document.getElementById('c-image-url').value = pubData.publicUrl;
     }
