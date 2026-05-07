@@ -490,7 +490,7 @@ function g(id){return document.getElementById(id).value.trim();}
 let cur='orders';
 function go(tab){
   cur=tab;
-  document.querySelectorAll('.tab').forEach((t,i)=>{const ts=['orders','stock','creatures','inventory','finance','mileage','printers'];t.classList.toggle('active',ts[i]===tab);});
+    document.querySelectorAll('.tab').forEach((t, i) => { const ts = ['orders', 'stock', 'creatures', 'merch', 'inventory', 'finance', 'mileage', 'printers']; t.classList.toggle('active', ts[i] === tab); });
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+tab).classList.add('active');
   if(tab==='orders')render_orders();
