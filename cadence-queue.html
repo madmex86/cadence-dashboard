@@ -207,12 +207,22 @@ textarea{resize:vertical;min-height:68px;}
 <!-- MERCH -->
 <div class="panel" id="panel-merch">
   <div class="sec-hdr">
-    <span class="sec-title">Merchandising · Control Home Page Visibility</span>
-    <div style="font-size:11px;color:var(--cream-faint)">Toggle "Featured" to show creatures on the main index page.</div>
+    <span class="sec-title">Storefront Merchandising · Marketing HQ</span>
+    <div style="font-size:11px;color:var(--cream-faint)">Manage your home page presence, taglines, and "Secret" reveals here.</div>
   </div>
   <div style="overflow-x:auto">
-    <table><thead><tr><th>Creature</th><th>Tagline</th><th>Status</th><th>Action</th></tr></thead>
-    <tbody id="merchtb"><tr class="empty"><td colspan="4">Loading…</td></tr></tbody></table>
+    <table class="merch-table">
+      <thead>
+        <tr>
+          <th style="width:200px">Creature</th>
+          <th>Marketing Tagline</th>
+          <th style="width:180px">Etsy Link</th>
+          <th style="width:120px">Visibility</th>
+          <th style="width:180px">Home Page Action</th>
+        </tr>
+      </thead>
+      <tbody id="merchtb"><tr class="empty"><td colspan="5">Loading…</td></tr></tbody>
+    </table>
   </div>
 </div>
 
@@ -309,8 +319,6 @@ textarea{resize:vertical;min-height:68px;}
     <div class="fr"><div><label class="fl">Environment</label><select id="c-env"><option value="forest">Forest</option><option value="sea">Ocean</option><option value="fantasy">Fantasy</option><option value="holiday">Holiday</option><option value="space">Space</option></select></div><div><label class="fl">Qty On Hand</label><input id="c-qty" type="number" min="0" placeholder="0"/></div></div>
     <div class="fr3"><div><label class="fl">Retail ($)</label><input id="c-retail" type="number" step="0.01"/></div><div><label class="fl">Etsy ($)</label><input id="c-etsy" type="number" step="0.01"/></div><div><label class="fl">Cost ($)</label><input id="c-cost" type="number" step="0.01"/></div></div>
     <div class="fr"><div><label class="fl">Active</label><select id="c-active"><option value="true">Active</option><option value="false">Inactive</option></select></div><div><label class="fl">Notes</label><input id="c-notes"/></div></div>
-    <div><label class="fl">Tagline <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">Short description shown on home page &amp; bestiary cards</span></label><input id="c-tagline" placeholder="e.g. Those eyes don't miss a thing. Not a single thing."/></div>
-    <div><label class="fl">Etsy Listing URL <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">Direct link to this creature's listing</span></label><input id="c-etsy-url" placeholder="https://etsy.com/listing/…"/></div>
     <div class="fr">
       <div>
         <label class="fl">Image URL <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">Paste link or upload photo</span></label>
@@ -322,7 +330,7 @@ textarea{resize:vertical;min-height:68px;}
           </label>
         </div>
       </div>
-      <div><label class="fl">Reveal Image <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">(Set to No to blur image on site)</span></label><select id="c-is-revealed"><option value="true">Yes — Revealed</option><option value="false">No — Blurred (Secret)</option></select></div>
+      <div style="visibility:hidden"></div> <!-- Placeholder for layout -->
     </div>
     <div><label class="fl">Filament Colors Used <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">(hold Ctrl/Cmd to select multiple)</span></label><select id="c-filaments" multiple style="min-height:80px;font-size:12px"></select></div>
   </div>
@@ -636,50 +644,72 @@ function render_stock(){
 
 function render_merch() {
   const tb = document.getElementById('merchtb');
-  if (!creatures.length) { tb.innerHTML = '<tr class="empty"><td colspan="4">No creatures loaded.</td></tr>'; return; }
+  if (!creatures.length) { tb.innerHTML = '<tr class="empty"><td colspan="5">No creatures loaded.</td></tr>'; return; }
   
   tb.innerHTML = creatures.map(c => {
     const isFeatured = c.is_featured === true;
+    const isRevealed = c.is_revealed !== false;
     return `<tr>
       <td>
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div style="width:40px;height:40px;background:var(--gold-dim);border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:36px;height:36px;background:var(--gold-dim);border-radius:3px;overflow:hidden;flex-shrink:0;">
             ${c.image_url ? `<img src="${c.image_url}" style="width:100%;height:100%;object-fit:cover;">` : '🦎'}
           </div>
           <div>
-            <div style="font-weight:600;color:var(--gold-light)">${c.name}</div>
-            <div style="font-size:11px;color:var(--cream-faint)">Log #${c.log_number}</div>
+            <div style="font-weight:600;color:var(--gold-light);font-size:12px;">${c.name}</div>
+            <div style="font-size:9px;color:var(--cream-faint);letter-spacing:0.1em;text-transform:uppercase;">Log #${c.log_number}</div>
           </div>
         </div>
       </td>
-      <td style="font-size:12px;color:var(--cream-dim);font-style:italic;">"${c.tagline || 'No tagline set'}"</td>
       <td>
-        <span class="pill ${isFeatured ? 'p-active' : 'p-inactive'}">
-          ${isFeatured ? '★ Featured' : 'Not Featured'}
-        </span>
+        <textarea id="tag-${c.id}" class="btn sm" style="width:100%;background:rgba(0,0,0,0.2);border-color:var(--border);color:var(--cream);text-align:left;height:45px;resize:none;font-size:12px;padding:6px;">${c.tagline || ''}</textarea>
       </td>
       <td>
-        <button class="btn sm ${isFeatured ? 'red' : 'pri'}" onclick="toggleFeatured('${c.id}', ${!isFeatured})">
-          ${isFeatured ? 'Remove from Home' : 'Feature on Home'}
-        </button>
+        <input id="etsy-${c.id}" type="text" class="btn sm" style="width:100%;background:rgba(0,0,0,0.2);border-color:var(--border);color:var(--teal);text-align:left;font-size:11px;" value="${c.etsy_url || ''}" placeholder="Etsy Link">
+      </td>
+      <td>
+        <select id="rev-${c.id}" class="btn sm" style="width:100%;background:rgba(0,0,0,0.2);border-color:var(--border);font-size:11px;">
+          <option value="true" ${isRevealed ? 'selected' : ''}>👁 Visible</option>
+          <option value="false" ${!isRevealed ? 'selected' : ''}>🌫 Blurred</option>
+        </select>
+      </td>
+      <td>
+        <div style="display:flex;gap:4px;">
+          <button class="btn sm ${isFeatured ? 'gold' : ''}" style="flex:1;font-size:9px;padding:5px 0;" onclick="saveMerchRow('${c.id}', ${!isFeatured})">
+            ${isFeatured ? '★ Featured' : 'Unfeatured'}
+          </button>
+          <button class="btn sm pri" style="padding:0 8px;" onclick="saveMerchRow('${c.id}', ${isFeatured})" title="Save Changes">💾</button>
+        </div>
       </td>
     </tr>`;
   }).join('');
 }
 
-async function toggleFeatured(id, status) {
+async function saveMerchRow(id, isFeatured) {
+  const tagline = document.getElementById(`tag-${id}`).value;
+  const etsyUrl = document.getElementById(`etsy-${id}`).value;
+  const isRevealed = document.getElementById(`rev-${id}`).value === 'true';
+  
   sync(true);
-  const { error } = await db.from('creatures').update({ is_featured: status }).eq('id', id);
+  const { error } = await db.from('creatures').update({ 
+    is_featured: isFeatured,
+    tagline,
+    etsy_url: etsyUrl,
+    is_revealed: isRevealed
+  }).eq('id', id);
+  
   if (error) {
     serr();
-    toast('Update failed', 'err');
+    toast('Save failed', 'err');
     return;
   }
+  
   // Update local state
-  creatures = creatures.map(c => c.id === id ? { ...c, is_featured: status } : c);
+  creatures = creatures.map(c => c.id === id ? { ...c, is_featured: isFeatured, tagline, etsy_url: etsyUrl, is_revealed } : c);
   sync(false);
   render_merch();
-  toast(status ? 'Featured on Home Page' : 'Removed from Home Page', 'ok');
+  render_creatures();
+  toast('Storefront Updated', 'ok');
 }
 
 async function load_creatures(){sync(true);const{data,error}=await db.from('creatures').select('*').order('log_number');if(error){serr();return;}creatures=data;sync(false);render_creatures();render_stock();update_stats_widget();}
@@ -774,19 +804,19 @@ function cModal(id=''){
   // populate filament multi-select from inventory
   const fsel=document.getElementById('c-filaments');
   fsel.innerHTML=inv.map(s=>`<option value="${s.id}">${s.spool_name}${s.color?' — '+s.color:''}</option>`).join('');
-  if(id){const c=creatures.find(x=>x.id===id);if(!c)return;document.getElementById('c-log').value=c.log_number||'';document.getElementById('c-name').value=c.name||'';document.getElementById('c-sku').value=c.sku||'';document.getElementById('c-species').value=c.species||'';document.getElementById('c-env').value=c.environment||'forest';document.getElementById('c-retail').value=c.price_retail||'';document.getElementById('c-etsy').value=c.price_etsy||'';document.getElementById('c-cost').value=c.cost_to_print||'';document.getElementById('c-active').value=String(c.active);document.getElementById('c-notes').value=c.notes||'';document.getElementById('c-qty').value=c.qty_on_hand??c.inventory_count??0;document.getElementById('c-tagline').value=c.tagline||'';document.getElementById('c-etsy-url').value=c.etsy_url||'';document.getElementById('c-image-url').value=c.image_url||'';document.getElementById('c-is-revealed').value=String(c.is_revealed!==false);
+  if(id){const c=creatures.find(x=>x.id===id);if(!c)return;document.getElementById('c-log').value=c.log_number||'';document.getElementById('c-name').value=c.name||'';document.getElementById('c-sku').value=c.sku||'';document.getElementById('c-species').value=c.species||'';document.getElementById('c-env').value=c.environment||'forest';document.getElementById('c-retail').value=c.price_retail||'';document.getElementById('c-etsy').value=c.price_etsy||'';document.getElementById('c-cost').value=c.cost_to_print||'';document.getElementById('c-active').value=String(c.active);document.getElementById('c-notes').value=c.notes||'';document.getElementById('c-qty').value=c.qty_on_hand??c.inventory_count??0;document.getElementById('c-image-url').value=c.image_url||'';
     // restore filament selections
     if(c.filament_colors){try{const ids=JSON.parse(c.filament_colors);Array.from(fsel.options).forEach(o=>o.selected=ids.includes(o.value));}catch{}}
     else{Array.from(fsel.options).forEach(o=>o.selected=false);}
   }
-  else{['c-log','c-name','c-sku','c-species','c-retail','c-etsy','c-cost','c-notes','c-qty','c-tagline','c-etsy-url','c-image-url'].forEach(x=>document.getElementById(x).value='');document.getElementById('c-env').value='forest';document.getElementById('c-active').value='true';document.getElementById('c-is-revealed').value='true';Array.from(fsel.options).forEach(o=>o.selected=false);}
+  else{['c-log','c-name','c-sku','c-species','c-retail','c-etsy','c-cost','c-notes','c-qty','c-image-url'].forEach(x=>document.getElementById(x).value='');document.getElementById('c-env').value='forest';document.getElementById('c-active').value='true';Array.from(fsel.options).forEach(o=>o.selected=false);}
   openModal('m-creature');
 }
 async function saveCreature(){
   const id=g('c-id');
   const fsel=document.getElementById('c-filaments');
   const selectedFils=Array.from(fsel.selectedOptions).map(o=>o.value);
-  const p={log_number:g('c-log')||null,name:g('c-name'),sku:g('c-sku')||null,slug:g('c-name').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''),species:g('c-species')||null,environment:g('c-env'),price_retail:parseFloat(g('c-retail'))||null,price_etsy:parseFloat(g('c-etsy'))||null,cost_to_print:parseFloat(g('c-cost'))||null,active:document.getElementById('c-active').value==='true',notes:g('c-notes')||null,qty_on_hand:parseInt(g('c-qty'))||0,inventory_count:parseInt(g('c-qty'))||0,filament_colors:selectedFils.length?JSON.stringify(selectedFils):null,tagline:g('c-tagline')||null,etsy_url:g('c-etsy-url')||null,image_url:g('c-image-url')||null,is_revealed:document.getElementById('c-is-revealed').value==='true'};
+  const p={log_number:g('c-log')||null,name:g('c-name'),sku:g('c-sku')||null,slug:g('c-name').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''),species:g('c-species')||null,environment:g('c-env'),price_retail:parseFloat(g('c-retail'))||null,price_etsy:parseFloat(g('c-etsy'))||null,cost_to_print:parseFloat(g('c-cost'))||null,active:document.getElementById('c-active').value==='true',notes:g('c-notes')||null,qty_on_hand:parseInt(g('c-qty'))||0,inventory_count:parseInt(g('c-qty'))||0,filament_colors:selectedFils.length?JSON.stringify(selectedFils):null,image_url:g('c-image-url')||null};
   if(!p.name){toast('Name required','err');return;}
   sync(true);closeModal('m-creature');
   const{error}=id?await db.from('creatures').update(p).eq('id',id):await db.from('creatures').insert(p);
