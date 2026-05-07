@@ -674,14 +674,16 @@ function render_orders(){
       <td>${marginHtml}</td>
       <td>${renderTracking(o)}</td>
       <td style="color:var(--cream-faint);font-size:12px">${dt}<span style="color:var(--green)">${shipDt}</span></td>
-      <td style="white-space:nowrap;display:flex;gap:6px;align-items:center;padding:12px 8px;">
+      <td style="white-space:nowrap;display:flex;gap:8px;align-items:center;padding:12px 12px;justify-content:flex-end;">
         <select style="font-size:11px;padding:4px 8px;width:auto;cursor:pointer;background:rgba(0,0,0,0.2);border-color:var(--border);" onchange="updateStatus('${o.id}',this.value)">
           ${['queued','printing','printed','packaging','shipped','complete'].map(s=>`<option value="${s}"${s===o.status?' selected':''}>${s}</option>`).join('')}
         </select>
-        ${canExport?`<button class="btn sm grn" title="Export to P&L" onclick="exportOne('${o.id}')" style="padding:4px 8px;">📊</button>`:''}
-        <button class="btn sm" onclick="oModal('${o.id}')" title="Edit Order" style="padding:4px 8px;">✏️</button>
-        <button class="btn sm" title="Shipping label" onclick="openLabel('${o.id}')" style="padding:4px 8px;">📦</button>
-        <button class="btn sm red" id="del-btn-${o.id}" onclick="confirmDeleteOrder('${o.id}')" title="Delete Order" style="padding:4px 8px;">🗑️</button>
+        <div style="display:flex;gap:4px;border-left:1px solid rgba(201,168,76,0.15);padding-left:8px;margin-left:4px;">
+          ${canExport?`<button class="btn sm grn" title="Export to P&L" onclick="exportOne('${o.id}')" style="padding:5px 9px;">📊</button>`:''}
+          <button class="btn sm" onclick="oModal('${o.id}')" title="Edit Order" style="padding:5px 9px;">✏️</button>
+          <button class="btn sm" title="Shipping label" onclick="openLabel('${o.id}')" style="padding:5px 9px;">📦</button>
+          <button class="btn sm red" id="del-btn-${o.id}" onclick="confirmDeleteOrder('${o.id}')" title="Delete Order" style="padding:5px 9px;">🗑️</button>
+        </div>
       </td></tr>`;
   }).join('');
 }
@@ -718,8 +720,13 @@ async function saveOrder(){
     return;
   }
   
+  // Reset button immediately
+  btn.disabled = false;
+  btn.textContent = originalText;
+  
   closeModal('m-order');
-  toast(id?'Order updated':'Order added','ok');await load_orders();
+  toast(id?'Order updated':'Order added','ok');
+  await load_orders();
 }
 function confirmDeleteOrder(id) {
   const btn = document.getElementById(`del-btn-${id}`);
