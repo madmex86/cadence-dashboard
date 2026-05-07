@@ -722,6 +722,7 @@
         </div>
       </div>
       <div class="topbar-right">
+        <div id="printer-display" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:4px 10px;border:1px solid rgba(91,191,212,0.25);color:var(--teal);border-radius:12px;margin-right:8px;background:rgba(91,191,212,0.04)">🖨 Vision: Idle</div>
         <input type="text" id="global-search" placeholder="🔍 Search Orders..."
           style="background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.18);color:var(--cream);padding:6px 12px;border-radius:3px;font-size:11px;outline:none;"
           onkeyup="if(event.key==='Enter')handleGlobalSearch()" />
@@ -785,11 +786,19 @@
 
       <div class="notifications-section" style="margin-bottom:20px;">
         <div class="notification-panel">
+          <h2>🖨 Live Printing</h2>
+          <div id="hub-printers">
+            <div class="notif-empty">Loading printers...</div>
+          </div>
+        </div>
+        <div class="notification-panel">
           <h2>🔜 Next Up to Print</h2>
           <div id="hub-next-up">
             <div class="notif-empty">Loading...</div>
           </div>
         </div>
+      </div>
+      <div class="notifications-section" style="margin-bottom:20px;">
         <div class="notification-panel">
           <h2>🛠 Batching Assistant</h2>
           <div id="hub-batching">
@@ -904,17 +913,44 @@
       let allCreatures = [];
       async function loadDashboardData() {
         try {
-          const [invRes, creRes, ordersRes, finRes] = await Promise.all([
+          const [invRes, creRes, ordersRes, finRes, prRes] = await Promise.all([
             db.from('inventory').select('spool_name,brand,color,spool_count,reorder_spool_threshold'),
             db.from('creatures').select('id,name,species,qty_on_hand,inventory_count'),
             db.from('orders').select('*').in('status', ['queued', 'printing']).order('created_at', { ascending: true }),
-            db.from('finance').select('amount,entry_date,entry_type').eq('entry_type', 'income')
+            db.from('finance').select('amount,entry_date,entry_type').eq('entry_type', 'income'),
+            db.from('printers').select('*')
           ]);
 
           if (invRes.error || creRes.error) return;
           allCreatures = creRes.data || [];
+          const printers = prRes.data || [];
+
+          // ── PRINTER STATUS ──
+          const prPanel = document.getElementById('hub-printers');
+          const prDisplay = document.getElementById('printer-display');
+          if (prPanel) {
+            if (!printers.length) {
+              prPanel.innerHTML = '<div class="notif-empty">No printers configured.</div>';
+            } else {
+              prPanel.innerHTML = printers.map(p => {
+                const curC = p.current_creature_id ? allCreatures.find(c => c.id === p.current_creature_id) : null;
+                const statusHtml = curC 
+                  ? `<span style="color:var(--goldl);font-weight:600">Printing ${curC.name}</span>` 
+                  : '<span style="color:var(--dim)">Idle</span>';
+                
+                // Update top bar for default printer
+                if (p.is_default && prDisplay) {
+                   prDisplay.innerHTML = `🖨 ${p.name}: ${curC ? curC.name : 'Idle'}`;
+                   prDisplay.style.color = curC ? 'var(--goldl)' : 'var(--teal)';
+                }
+
+                return `<div class="notif-item"><strong>${p.name}:</strong> ${statusHtml}</div>`;
+              }).join('');
+            }
+          }
 
           const queuedOrders = (ordersRes.data || []).filter(o => o.status === 'queued');
+
 
           // ── KPIS ──
           if (ordersRes.data) document.getElementById('kpi-orders').textContent = ordersRes.data.length;
