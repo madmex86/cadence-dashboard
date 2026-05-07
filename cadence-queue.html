@@ -106,6 +106,56 @@ textarea{resize:vertical;min-height:68px;}
 @media (max-width: 480px) {
   .stats-widget { grid-template-columns: repeat(2, 1fr); }
 }
+  /* HELP SYSTEM */
+  .help-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    background: rgba(201, 168, 76, 0.15);
+    border: 1px solid rgba(201, 168, 76, 0.3);
+    border-radius: 50%;
+    font-size: 9px;
+    color: var(--goldl);
+    cursor: help;
+    margin-left: 5px;
+    vertical-align: middle;
+    position: relative;
+  }
+
+  .help-icon:hover {
+    background: var(--gold);
+    color: var(--ink);
+  }
+
+  .help-icon[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    background: var(--ink-mid);
+    border: 1px solid var(--gold);
+    color: var(--cream);
+    padding: 8px 12px;
+    font-size: 11px;
+    letter-spacing: 0;
+    text-transform: none;
+    white-space: pre-wrap;
+    width: 220px;
+    border-radius: 4px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s;
+    z-index: 9999;
+  }
+
+  .help-icon:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-5px);
+  }
 </style>
 </head>
 <body>
@@ -215,10 +265,10 @@ textarea{resize:vertical;min-height:68px;}
       <thead>
         <tr>
           <th style="width:200px">Creature</th>
-          <th>Marketing Tagline</th>
-          <th style="width:180px">Etsy Link</th>
-          <th style="width:120px">Visibility</th>
-          <th style="width:180px">Home Page Action</th>
+          <th>Marketing Tagline <span class="help-icon" data-tooltip="The catchy phrase shown on the home page (e.g. 'Your sweet new friend').">?</span></th>
+          <th style="width:180px">Etsy Link <span class="help-icon" data-tooltip="The specific URL for the Etsy listing.">?</span></th>
+          <th style="width:120px">Visibility <span class="help-icon" data-tooltip="Control if the creature is 'Revealed' (clear) or 'Secret' (blurred) on the site.">?</span></th>
+          <th style="width:180px">Home Page Action <span class="help-icon" data-tooltip="Mark with a star to feature this creature in the home page storefront.">?</span></th>
         </tr>
       </thead>
       <tbody id="merchtb"><tr class="empty"><td colspan="5">Loading…</td></tr></tbody>
@@ -398,19 +448,19 @@ textarea{resize:vertical;min-height:68px;}
   <div class="fg">
     <div class="fr" style="grid-template-columns: 2fr 1fr 1fr;">
       <div><label class="fl">Creature</label><select id="pc-creature" onchange="loadRecipe()"><option value="">Select…</option></select></div>
-      <div><label class="fl">Batch Qty</label><input id="pc-batch" type="number" value="1" min="1" oninput="calcPrintCost()"/></div>
-      <div><label class="fl">Pkg ($)</label><input id="pc-pkg" type="number" value="0.75" step="0.01" oninput="calcPrintCost()"/></div>
+      <div><label class="fl">Batch Qty <span class="help-icon" data-tooltip="If you sliced multiple items on one plate, enter the quantity here. We'll divide the filament total by this number.">?</span></label><input id="pc-batch" type="number" value="1" min="1" oninput="calcPrintCost()"/></div>
+      <div><label class="fl">Pkg ($) <span class="help-icon" data-tooltip="Packaging costs (box, tissue, stickers) per single creature.">?</span></label><input id="pc-pkg" type="number" value="0.75" step="0.01" oninput="calcPrintCost()"/></div>
     </div>
     
     <div style="margin-top:15px; overflow-x:auto;">
       <table class="recipe-table" style="width:100%; border-collapse:collapse; font-size:11px;">
         <thead>
           <tr style="border-bottom:1px solid var(--border)">
-            <th style="width:100px; text-align:left; padding:8px 0;">Part (Label)</th>
+            <th style="width:100px; text-align:left; padding:8px 0;">Part (Label) <span class="help-icon" data-tooltip="Optional name for this part (e.g. 'Body' or 'Hat').">?</span></th>
             <th style="text-align:left; padding:8px 0;">Filament (Spool)</th>
-            <th style="width:70px">Model (g)</th>
-            <th style="width:70px">Purged (g)</th>
-            <th style="width:70px">Tower (g)</th>
+            <th style="width:70px">Model (g) <span class="help-icon" data-tooltip="The weight of the model itself from Bambu Studio.">?</span></th>
+            <th style="width:70px">Purged (g) <span class="help-icon" data-tooltip="Material wasted during color changes. Look for 'Purged' in Bambu Studio.">?</span></th>
+            <th style="width:70px">Tower (g) <span class="help-icon" data-tooltip="Weight of the prime tower (if used).">?</span></th>
             <th style="width:70px; text-align:right;">Total (g)</th>
             <th style="width:40px"></th>
           </tr>
