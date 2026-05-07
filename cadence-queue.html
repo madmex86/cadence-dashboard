@@ -161,6 +161,12 @@ textarea{resize:vertical;min-height:68px;}
     right: 0;
     transform: translateY(5px);
   }
+  
+  /* Left-edge tooltip adjustment */
+  .help-icon.tip-right[data-tooltip]::after {
+    left: 0;
+    transform: translateY(5px);
+  }
 
   /* Bottom-edge tooltip adjustment */
   .help-icon.tip-bottom[data-tooltip]::after {
@@ -172,6 +178,11 @@ textarea{resize:vertical;min-height:68px;}
   .help-icon.tip-bottom.tip-left[data-tooltip]::after {
     left: auto;
     right: 0;
+    transform: translateY(-5px);
+  }
+  
+  .help-icon.tip-bottom.tip-right[data-tooltip]::after {
+    left: 0;
     transform: translateY(-5px);
   }
 
@@ -494,17 +505,17 @@ textarea{resize:vertical;min-height:68px;}
 <div class="overlay" id="m-printcost"><div class="modal" style="max-width:700px;">
   <div class="modal-t">💎 Intelligence: Bambu Slicing Cost Engine</div>
   <div class="fg">
-    <div class="fr" style="grid-template-columns: 2fr 1fr 1fr;">
+    <div class="fr" style="grid-template-columns: 2fr 1fr 1fr; margin-top: 10px;">
       <div><label class="fl">Creature</label><select id="pc-creature" onchange="loadRecipe()"><option value="">Select…</option></select></div>
-      <div><label class="fl">Batch Qty <span class="help-icon" data-tooltip="If you sliced multiple items on one plate, enter the quantity here. We'll divide the filament total by this number.">?</span></label><input id="pc-batch" type="number" value="1" min="1" oninput="calcPrintCost()"/></div>
-      <div><label class="fl">Pkg ($) <span class="help-icon" data-tooltip="Packaging costs (box, tissue, stickers) per single creature.">?</span></label><input id="pc-pkg" type="number" value="0.75" step="0.01" oninput="calcPrintCost()"/></div>
+      <div><label class="fl">Batch Qty <span class="help-icon tip-bottom" data-tooltip="If you sliced multiple items on one plate, enter the quantity here. We'll divide the filament total by this number.">?</span></label><input id="pc-batch" type="number" value="1" min="1" oninput="calcPrintCost()"/></div>
+      <div><label class="fl">Pkg ($) <span class="help-icon tip-bottom tip-left" data-tooltip="Packaging costs (box, tissue, stickers) per single creature.">?</span></label><input id="pc-pkg" type="number" value="0.75" step="0.01" oninput="calcPrintCost()"/></div>
     </div>
     
-    <div style="margin-top:15px; overflow-x:auto;">
+    <div style="margin-top:25px; overflow-x:visible;">
       <table class="recipe-table" style="width:100%; border-collapse:collapse; font-size:11px;">
         <thead>
           <tr style="border-bottom:1px solid var(--border)">
-            <th style="width:100px; text-align:left; padding:8px 0;">Part (Label) <span class="help-icon tip-bottom" data-tooltip="Optional name for this part (e.g. 'Body' or 'Hat').">?</span></th>
+            <th style="width:100px; text-align:left; padding:8px 0;">Part (Label) <span class="help-icon tip-bottom tip-right" data-tooltip="Optional name for this part (e.g. 'Body' or 'Hat').">?</span></th>
             <th style="text-align:left; padding:8px 0;">Filament (Spool)</th>
             <th style="width:70px">Model (g) <span class="help-icon tip-bottom" data-tooltip="The weight of the model itself from Bambu Studio.">?</span></th>
             <th style="width:70px">Purged (g) <span class="help-icon tip-bottom" data-tooltip="Material wasted during color changes. Look for 'Purged' in Bambu Studio.">?</span></th>
