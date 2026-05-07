@@ -396,9 +396,10 @@ textarea{resize:vertical;min-height:68px;}
 <div class="overlay" id="m-printcost"><div class="modal" style="max-width:700px;">
   <div class="modal-t">💎 Intelligence: Bambu Slicing Cost Engine</div>
   <div class="fg">
-    <div class="fr" style="grid-template-columns: 2fr 1fr;">
+    <div class="fr" style="grid-template-columns: 2fr 1fr 1fr;">
       <div><label class="fl">Creature</label><select id="pc-creature" onchange="loadRecipe()"><option value="">Select…</option></select></div>
-      <div><label class="fl">Packaging/Misc ($)</label><input id="pc-pkg" type="number" value="0.75" step="0.01" oninput="calcPrintCost()"/></div>
+      <div><label class="fl">Batch Qty</label><input id="pc-batch" type="number" value="1" min="1" oninput="calcPrintCost()"/></div>
+      <div><label class="fl">Pkg ($)</label><input id="pc-pkg" type="number" value="0.75" step="0.01" oninput="calcPrintCost()"/></div>
     </div>
     
     <div style="margin-top:15px; overflow-x:auto;">
@@ -1069,20 +1070,28 @@ function loadRecipe() {
   const id = sel.value;
   const c = creatures.find(x => x.id === id);
   const body = document.getElementById('pc-recipe-body');
+  const batchInput = document.getElementById('pc-batch');
   body.innerHTML = '';
   
   if (c && c.print_recipe) {
     try {
-      const recipe = JSON.parse(c.print_recipe);
+      const data = JSON.parse(c.print_recipe);
+      // Handle both old (array only) and new (object with batch) formats
+      const recipe = Array.isArray(data) ? data : data.recipe;
+      const batch = data.batch || 1;
+      
+      batchInput.value = batch;
       recipe.forEach(row => addRecipeRow(row));
-    } catch(e) { addRecipeRow(); }
+    } catch(e) { addRecipeRow(); batchInput.value = 1; }
   } else {
     addRecipeRow();
+    batchInput.value = 1;
   }
   calcPrintCost();
 }
 
 function calcPrintCost(){
+  const batch = parseFloat(document.getElementById('pc-batch').value) || 1;
   const pkg = parseFloat(document.getElementById('pc-pkg').value) || 0.75;
   const sel = document.getElementById('pc-creature');
   const opt = sel.options[sel.selectedIndex];
@@ -1106,12 +1115,13 @@ function calcPrintCost(){
     totalGrams += rowGrams;
   });
 
-  const totalCogs = totalFilCost + pkg;
+  const filPerUnit = totalFilCost / batch;
+  const totalCogs = filPerUnit + pkg;
   const etsyFee = etsysPrice * 0.065;
   const net = etsysPrice - totalCogs - etsyFee;
   const margin = etsysPrice > 0 ? Math.round((net / etsysPrice) * 100) : null;
 
-  document.getElementById('pc-r-fil-total').textContent = fmt$(totalFilCost);
+  document.getElementById('pc-r-fil-total').textContent = fmt$(filPerUnit);
   document.getElementById('pc-r-cogs').textContent = fmt$(totalCogs);
   document.getElementById('pc-r-net').textContent = fmt$(net);
   
@@ -1120,8 +1130,8 @@ function calcPrintCost(){
   mg.style.color = margin === null ? 'var(--cream-faint)' : margin >= 60 ? '#7dc994' : margin >= 40 ? '#E8D08A' : '#e09090';
   
   document.getElementById('pc-r-detail').textContent = etsysPrice > 0 
-    ? `Total Weight: ${totalGrams.toFixed(2)}g · Etsy Price: $${etsysPrice.toFixed(2)}`
-    : `Total Weight: ${totalGrams.toFixed(2)}g · Select a creature to see margin`;
+    ? `Plate Weight: ${totalGrams.toFixed(1)}g · Per Unit: ${(totalGrams/batch).toFixed(1)}g`
+    : `Plate Weight: ${totalGrams.toFixed(1)}g · Batch: ${batch}x`;
 }
 
 async function saveRecipeToCreature(){
@@ -1131,6 +1141,7 @@ async function saveRecipeToCreature(){
   
   const recipe = [];
   let totalFilCost = 0;
+  const batch = parseFloat(document.getElementById('pc-batch').value) || 1;
   const pkg = parseFloat(document.getElementById('pc-pkg').value) || 0.75;
 
   document.querySelectorAll('#pc-recipe-body tr').forEach(row => {
@@ -1146,12 +1157,12 @@ async function saveRecipeToCreature(){
     totalFilCost += ((m + p + t) * (spoolCost / 1000));
   });
 
-  const totalCogs = parseFloat((totalFilCost + pkg).toFixed(2));
+  const totalCogs = parseFloat(((totalFilCost / batch) + pkg).toFixed(2));
 
   sync(true);
   const { error } = await db.from('creatures').update({ 
     cost_to_print: totalCogs,
-    print_recipe: JSON.stringify(recipe)
+    print_recipe: JSON.stringify({ batch, recipe })
   }).eq('id', id);
   
   if (error) { serr(); toast('Save failed', 'err'); return; }
