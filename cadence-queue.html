@@ -162,12 +162,33 @@ textarea{resize:vertical;min-height:68px;}
     transform: translateY(5px);
   }
 
+  /* Bottom-edge tooltip adjustment */
+  .help-icon.tip-bottom[data-tooltip]::after {
+    bottom: auto;
+    top: 120%;
+    transform: translateX(-50%) translateY(-5px);
+  }
+
+  .help-icon.tip-bottom.tip-left[data-tooltip]::after {
+    left: auto;
+    right: 0;
+    transform: translateY(-5px);
+  }
+
   .help-icon:hover::after {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }
   
   .help-icon.tip-left:hover::after {
+    transform: translateY(0);
+  }
+  
+  .help-icon.tip-bottom:hover::after {
+    transform: translateX(-50%) translateY(0);
+  }
+  
+  .help-icon.tip-bottom.tip-left:hover::after {
     transform: translateY(0);
   }
 
@@ -483,11 +504,11 @@ textarea{resize:vertical;min-height:68px;}
       <table class="recipe-table" style="width:100%; border-collapse:collapse; font-size:11px;">
         <thead>
           <tr style="border-bottom:1px solid var(--border)">
-            <th style="width:100px; text-align:left; padding:8px 0;">Part (Label) <span class="help-icon" data-tooltip="Optional name for this part (e.g. 'Body' or 'Hat').">?</span></th>
+            <th style="width:100px; text-align:left; padding:8px 0;">Part (Label) <span class="help-icon tip-bottom" data-tooltip="Optional name for this part (e.g. 'Body' or 'Hat').">?</span></th>
             <th style="text-align:left; padding:8px 0;">Filament (Spool)</th>
-            <th style="width:70px">Model (g) <span class="help-icon" data-tooltip="The weight of the model itself from Bambu Studio.">?</span></th>
-            <th style="width:70px">Purged (g) <span class="help-icon" data-tooltip="Material wasted during color changes. Look for 'Purged' in Bambu Studio.">?</span></th>
-            <th style="width:70px">Tower (g) <span class="help-icon tip-left" data-tooltip="Weight of the prime tower (if used).">?</span></th>
+            <th style="width:70px">Model (g) <span class="help-icon tip-bottom" data-tooltip="The weight of the model itself from Bambu Studio.">?</span></th>
+            <th style="width:70px">Purged (g) <span class="help-icon tip-bottom" data-tooltip="Material wasted during color changes. Look for 'Purged' in Bambu Studio.">?</span></th>
+            <th style="width:70px">Tower (g) <span class="help-icon tip-bottom tip-left" data-tooltip="Weight of the prime tower (if used).">?</span></th>
             <th style="width:70px; text-align:right;">Total (g)</th>
             <th style="width:40px"></th>
           </tr>
