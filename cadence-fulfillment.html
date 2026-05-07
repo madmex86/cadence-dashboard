@@ -180,6 +180,10 @@ input:focus,select:focus{border-color:rgba(201,168,76,.38);}
         <div class="col-header"><span>Packaging</span><span class="col-count" id="cnt-packaging">0</span></div>
         <div class="col-body" id="list-packaging"></div>
       </div>
+      <div class="col" id="col-shipped">
+        <div class="col-header"><span>Recently Shipped</span><span class="col-count" id="cnt-shipped">0</span></div>
+        <div class="col-body" id="list-shipped"></div>
+      </div>
     </div>
   </div>
   
@@ -222,7 +226,7 @@ let orders = [];
 
 async function loadData(){
   try{
-    const {data, error} = await db.from('orders').select('*').in('status', ['queued','printing','printed','packaging']).order('created_at',{ascending:true});
+    const {data, error} = await db.from('orders').select('*').in('status', ['queued','printing','printed','packaging','shipped']).order('shipped_date',{ascending:false}).limit(100);
     if(error) return console.error(error);
     orders = data || [];
     renderBoard();
@@ -236,7 +240,7 @@ function initSortable() {
   sortables = [];
   if(bulkMode) return; 
   
-  ['queued','printing','printed','packaging'].forEach(col => {
+  ['queued','printing','printed','packaging','shipped'].forEach(col => {
     const el = document.getElementById('list-'+col);
     if(!el) return;
     sortables.push(new Sortable(el, {
@@ -264,7 +268,7 @@ function savePriority() {
 }
 
 function renderBoard(){
-  ['queued','printing','printed','packaging'].forEach(st=>{
+  ['queued','printing','printed','packaging','shipped'].forEach(st=>{
     let colOrders = orders.filter(o=>o.status===st);
     
     try {
@@ -302,7 +306,13 @@ function createCard(o){
   if(o.status==='queued') actBtn = `<button class="btn" onclick="moveOrder('${o.id}','printing')">Start Printing →</button>`;
   else if(o.status==='printing') actBtn = `<button class="btn" onclick="moveOrder('${o.id}','printed')">Mark Printed →</button>`;
   else if(o.status==='printed') actBtn = `<button class="btn" onclick="moveOrder('${o.id}','packaging')">To Packaging →</button>`;
-  else if(o.status==='packaging') actBtn = `<button class="btn pri" onclick="openShip('${o.id}')">📦 Ship Order</button>`;
+  else if(o.status==='packaging') actBtn = `
+    <div style="display:grid; gap:8px; width:100%;">
+      <input type="text" id="track-${o.id}" placeholder="Tracking #" style="font-size:11px; padding:6px;" value="${o.tracking_number||''}">
+      <button class="btn pri" onclick="quickShip('${o.id}')">📦 Mark Shipped</button>
+    </div>
+  `;
+  else if(o.status==='shipped') actBtn = `<div style="font-size:10px; color:var(--green); text-transform:uppercase; letter-spacing:0.1em;">✓ Shipped ${o.tracking_number?'('+o.tracking_number+')':''}</div>`;
 
   const isSel = selectedOrders.has(o.id);
   const cardBorder = isSel ? 'border:2px solid var(--goldl);' : (bulkMode ? 'border:2px dashed rgba(201,168,76,0.3);cursor:pointer;' : '');
@@ -348,6 +358,22 @@ async function moveOrder(id, newStatus, skipRender=false){
   
   await db.from('orders').update({status: newStatus}).eq('id', id);
   toast('Moved to ' + newStatus);
+}
+
+async function quickShip(id) {
+  const track = document.getElementById('track-'+id).value;
+  if(!track && !confirm('Ship without tracking?')) return;
+  
+  const {error} = await db.from('orders').update({
+    status: 'shipped',
+    tracking_number: track,
+    shipped_date: new Date().toISOString().slice(0,10)
+  }).eq('id', id);
+  
+  if(error) { toast('Error shipping', 'err'); return; }
+  
+  toast('Order Shipped!', 'ok');
+  loadData();
 }
 
 function openShip(id){
