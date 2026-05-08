@@ -44,6 +44,34 @@
   .img-preview { width:100%; height:120px; object-fit:cover; border-radius:3px; margin-top:6px; display:none; }
   .add-btn { position:fixed; bottom:28px; right:28px; background:var(--gold); color:var(--ink); border:none; border-radius:50%; width:52px; height:52px; font-size:22px; cursor:pointer; box-shadow:0 4px 16px rgba(201,168,76,0.35); transition:background .2s; z-index:100; }
   .add-btn:hover { background:var(--goldl); }
+
+  /* Environment accent */
+  .creature-card { border-top: 2px solid transparent; }
+  .env-forest  { border-top-color: #6B9E6E; }
+  .env-ocean   { border-top-color: #5BBFD4; }
+  .env-fantasy { border-top-color: #9B8AC4; }
+  .env-holiday { border-top-color: #C9614A; }
+  .env-space   { border-top-color: #4A7AA8; }
+
+  /* Inactive dimming */
+  .creature-card.inactive { opacity: .55; }
+  .creature-card.inactive .card-img,
+  .creature-card.inactive .card-img-placeholder { filter: grayscale(55%); }
+
+  /* Image wrap + overlay badges */
+  .card-img-wrap { position: relative; }
+  .img-badge { position: absolute; bottom: 8px; left: 8px; padding: 3px 8px; border-radius: 3px; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; pointer-events: none; }
+  .img-badge.out { background: rgba(200,80,80,0.88); color: #fff; }
+  .img-badge.low { background: rgba(201,168,76,0.9); color: #1a1612; }
+  .img-log-badge { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.55); color: var(--goldl); padding: 3px 8px; border-radius: 3px; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; pointer-events: none; }
+
+  /* Filter bar */
+  .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+  .filter-bar .fi { flex: 1; min-width: 150px; }
+  .filter-count { font-size: 11px; color: var(--dim); white-space: nowrap; letter-spacing: .08em; }
+  .active-tog { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--dim); cursor: pointer; padding: 8px 14px; border: 1px solid rgba(201,168,76,0.15); border-radius: 3px; user-select: none; white-space: nowrap; transition: all .2s; }
+  .active-tog.on { color: #7dc994; border-color: rgba(125,201,148,0.4); background: rgba(125,201,148,0.06); }
+  .active-tog .at-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -75,6 +103,19 @@
       <div class="header">
         <div class="title">Creature Editor</div>
         <div class="subtitle">Manage all creatures — toggles, stock, images, and listings.</div>
+      </div>
+      <div class="filter-bar">
+        <input class="fi" id="f-search" type="text" placeholder="Search by name…" oninput="filterRender()"/>
+        <select class="fi" id="f-env-filter" onchange="filterRender()">
+          <option value="">All environments</option>
+          <option value="forest">Forest</option>
+          <option value="ocean">Ocean</option>
+          <option value="fantasy">Fantasy</option>
+          <option value="holiday">Holiday</option>
+          <option value="space">Space</option>
+        </select>
+        <div class="active-tog" id="active-tog" onclick="toggleActiveFilter()"><span class="at-dot"></span>Active only</div>
+        <div class="filter-count" id="filter-count"></div>
       </div>
       <div class="editor-grid" id="creature-grid">
         <div style="color:var(--dim);font-size:12px;letter-spacing:.12em;text-transform:uppercase;padding:40px;grid-column:1/-1;text-align:center;">Loading creatures…</div>
@@ -144,25 +185,53 @@
     if (error) { serr(); return; }
     creatures = data || [];
     sync(false);
-    render();
+    filterRender();
   }
 
-  function render() {
+  let _activeOnly = false;
+
+  function filterRender() {
+    const search = document.getElementById('f-search').value.trim().toLowerCase();
+    const env = document.getElementById('f-env-filter').value;
+    let list = creatures;
+    if (search) list = list.filter(c => (c.name || '').toLowerCase().includes(search));
+    if (env) list = list.filter(c => c.environment === env);
+    if (_activeOnly) list = list.filter(c => c.active !== false);
+    const cnt = document.getElementById('filter-count');
+    cnt.textContent = (list.length < creatures.length) ? `${list.length} of ${creatures.length} shown` : '';
+    render(list);
+  }
+
+  function toggleActiveFilter() {
+    _activeOnly = !_activeOnly;
+    document.getElementById('active-tog').classList.toggle('on', _activeOnly);
+    filterRender();
+  }
+
+  function render(list) {
+    list = list || creatures;
     const grid = document.getElementById('creature-grid');
-    if (!creatures.length) {
-      grid.innerHTML = '<div style="color:var(--dim);font-size:12px;letter-spacing:.12em;text-transform:uppercase;padding:40px;grid-column:1/-1;text-align:center;">No creatures yet — add one below.</div>';
+    if (!list.length) {
+      grid.innerHTML = '<div style="color:var(--dim);font-size:12px;letter-spacing:.12em;text-transform:uppercase;padding:40px;grid-column:1/-1;text-align:center;">'
+        + (creatures.length ? 'No creatures match these filters.' : 'No creatures yet — add one below.') + '</div>';
       return;
     }
-    grid.innerHTML = creatures.map(c => {
+    grid.innerHTML = list.map(c => {
       const stock = c.qty_on_hand ?? c.inventory_count ?? 0;
       const logStr = c.log_number ? `Log #${String(c.log_number).padStart(3,'0')}` : 'No Log';
-      const img = c.image_url
+      const envClass = c.environment ? `env-${c.environment}` : '';
+      const inactiveClass = c.active === false ? 'inactive' : '';
+      const logBadge = c.log_number ? `<div class="img-log-badge">#${String(c.log_number).padStart(3,'0')}</div>` : '';
+      const stockBadge = stock === 0
+        ? '<div class="img-badge out">Out</div>'
+        : stock <= 15 ? '<div class="img-badge low">Low</div>' : '';
+      const imgInner = c.image_url
         ? `<img class="card-img" src="${esc(c.image_url)}" alt="${esc(c.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
-        + `<div class="card-img-placeholder" style="display:none">No Image</div>`
+          + `<div class="card-img-placeholder" style="display:none">No Image</div>`
         : `<div class="card-img-placeholder">No Image Yet</div>`;
       return `
-        <div class="creature-card">
-          ${img}
+        <div class="creature-card ${envClass} ${inactiveClass}">
+          <div class="card-img-wrap">${imgInner}${logBadge}${stockBadge}</div>
           <div class="card-body">
             <div class="card-name">${esc(c.name)}</div>
             <div class="card-meta">${logStr} · ${c.species || 'Creature'} · ${c.environment || '—'}</div>
@@ -174,12 +243,10 @@
             <div class="stock-row">
               <button class="btn sm" onclick="adjustStock('${c.id}',-1)">−</button>
               <div>
-                <div class="stock-val">${stock}</div>
+                <div class="stock-val" style="${stock === 0 ? 'color:#e87070' : stock <= 15 ? 'color:var(--goldl)' : ''}">${stock}</div>
                 <div class="stock-lbl">In Stock</div>
               </div>
               <button class="btn sm" onclick="adjustStock('${c.id}',1)">+</button>
-              ${stock <= 2 && stock > 0 ? '<span style="font-size:10px;color:#e8a0a0;letter-spacing:.1em;text-transform:uppercase;margin-left:4px;">Low</span>' : ''}
-              ${stock === 0 ? '<span style="font-size:10px;color:rgba(232,160,176,.7);letter-spacing:.1em;text-transform:uppercase;margin-left:4px;">Out</span>' : ''}
             </div>
             <div class="card-actions">
               <button class="btn sm" onclick="openModal('${c.id}')">Edit</button>
