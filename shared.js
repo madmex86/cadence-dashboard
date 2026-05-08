@@ -145,6 +145,12 @@ async function applyRolePermissions() {
       }
       greet.textContent = `User: ${displayName.charAt(0).toUpperCase() + displayName.slice(1)}`;
     }
+
+    // HIDE REVENUE KPI FOR NON-ADMINS
+    const revCard = document.getElementById('kpi-revenue-card');
+    if(revCard && role !== 'admin') {
+      revCard.style.display = 'none';
+    }
   }
   
   const path = window.location.pathname;

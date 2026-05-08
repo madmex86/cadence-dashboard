@@ -602,6 +602,12 @@
       gap: 11px;
     }
 
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+    }
+
     .fr {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -779,7 +785,7 @@
             <div id="kpi-stock-detail"
               style="font-size:11px;color:rgba(196,188,178,0.5);margin-top:8px;line-height:1.4;"></div>
           </div>
-          <div class="kpi-card">
+          <div class="kpi-card" id="kpi-revenue-card">
             <div class="kpi-label">Monthly Revenue</div>
             <div class="kpi-val" id="kpi-revenue">—</div>
           </div>
