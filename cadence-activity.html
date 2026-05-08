@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Cadence Activity Feed</title>
+<title>Cadence Forge | Activity Audit</title>
 <link rel="icon" href="/favicon.ico?v=2" />
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -10,63 +10,99 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared.js"></script>
 <style>
-  /* Activity Specifics */
-  .main { padding: 40px 28px; max-width: 900px; margin: 0 auto; position: relative; z-index: 1; }
-  .log-list { display: flex; flex-direction: column; gap: 1px; background: rgba(201, 168, 76, 0.1); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
-  .log-item { background: #1C1612; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; transition: background 0.2s; border-bottom: 1px solid rgba(201, 168, 76, 0.05); }
-  .log-item:hover { background: rgba(255, 255, 255, 0.02); }
-  .log-main { display: flex; align-items: center; gap: 18px; flex: 1; }
-  .log-user { font-size: 10px; font-weight: 600; color: #C9A84C; background: rgba(201, 168, 76, 0.1); padding: 3px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
-  .log-action { font-size: 13px; color: #FAF6F0; letter-spacing: 0.02em; }
-  .log-time { font-size: 11px; color: #8A7D6E; white-space: nowrap; font-family: 'Lora', serif; }
+  :root {
+    --bg: #0a0f1e;
+    --panel-bg: #11192d;
+    --border: rgba(201, 168, 76, 0.15);
+    --gold: #C9A84C;
+    --gold-light: #E8D08A;
+    --cream: #f4eee0;
+    --cream-dim: #c5bba8;
+    --cream-faint: rgba(197, 187, 168, 0.5);
+    --cyan: #5BBFD4;
+  }
 
-  .empty { padding: 60px; text-align: center; color: #8A7D6E; font-style: italic; font-family: 'Lora', serif; }
+  body { margin: 0; padding: 0; background: var(--bg); color: var(--cream); font-family: 'Lora', serif; overflow-x: hidden; }
+
+  /* Fixed Sidebar Navigation */
+  .dash-nav {
+    position: fixed; left: 0; top: 0; bottom: 0;
+    width: 240px; background: #0d1425;
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    padding: 80px 0 20px 0; z-index: 50;
+  }
+  .dash-nav a { padding: 12px 28px; font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: var(--cream-faint); text-decoration: none; transition: 0.2s; }
+  .dash-nav a:hover { color: var(--gold-light); background: rgba(255,255,255,0.03); }
+
+  /* Topbar */
+  .topbar { 
+    position: fixed; top: 0; right: 0; left: 0; height: 60px;
+    background: rgba(13, 20, 37, 0.95); backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 30px; border-bottom: 1px solid var(--border); z-index: 100;
+  }
+
+  /* Main Offset Content */
+  #app { margin-left: 240px; }
+  .content { padding: 100px 40px 40px 40px; max-width: 1200px; }
+
+  /* Activity List Styling */
+  .log-list { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+  .log-item { 
+    padding: 16px 24px; 
+    display: flex; align-items: center; justify-content: space-between; 
+    border-bottom: 1px solid rgba(255,255,255,0.03); 
+    transition: background 0.2s;
+  }
+  .log-item:hover { background: rgba(201, 168, 76, 0.03); }
+  
+  .log-main { display: flex; align-items: center; gap: 20px; flex: 1; }
+  .log-user { 
+    font-size: 9px; font-weight: 700; color: var(--cyan); 
+    background: rgba(91, 191, 212, 0.1); 
+    padding: 4px 10px; border-radius: 4px; 
+    text-transform: uppercase; letter-spacing: 0.1em;
+    border: 1px solid rgba(91, 191, 212, 0.2);
+  }
+  .log-action { font-size: 13px; color: var(--cream); }
+  .log-time { font-size: 11px; color: var(--cream-faint); font-family: 'Lora', serif; }
+
+  .empty { padding: 80px; text-align: center; color: var(--cream-faint); font-style: italic; }
+
+  @media (max-width: 1024px) { .dash-nav { display: none; } #app { margin-left: 0; } }
 </style>
 </head>
 <body>
 
 <div id="login-screen" style="display:none;"></div>
 
-<div id="app" style="display:none;">
+<div id="app">
   <div class="topbar">
-    <div class="topbar-left">
-      <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))">
-        <path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round"/>
-        <rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C"/>
-        <circle cx="36" cy="4" r="5.5" fill="#E8D08A"/>
-        <circle cx="6" cy="18" r="4" fill="#5BBFD4"/>
-        <circle cx="66" cy="18" r="4" fill="#5BBFD4"/>
-      </svg>
-      <div>
-        <div class="topbar-name">Cadence Creatures</div>
-        <div class="topbar-sub">Activity Feed</div>
-      </div>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <svg width="24" height="24" viewBox="0 0 76 52" fill="none"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" stroke="#C9A84C" stroke-width="3"/></svg>
+      <div style="font-weight:bold; letter-spacing:0.1em; text-transform:uppercase;">System Audit</div>
     </div>
-    <div class="topbar-right">
-      <div id="user-greet"></div>
-      <a class="topbar-link" onclick="signOut()">Sign Out</a>
-    </div>
+    <div id="user-greet" style="font-size:12px; color:var(--cream-dim)"></div>
   </div>
 
   <div class="dash-nav">
-    <a href="index.html">Hub</a>
-    <a href="cadence-queue.html">Queue</a>
+    <a href="index.html">Hub Dashboard</a>
+    <a href="cadence-queue.html">Operational Queue</a>
     <a href="cadence-fulfillment.html">Fulfillment</a>
-    <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
-    <a href="cadence-activity.html">Activity</a>
-    <a href="cadence-admin.html">Admin</a>
+    <a href="cadence-creatures-pl-tracker.html">P&amp;L Analysis</a>
+    <a href="cadence-activity.html" style="color:var(--gold)">System Activity</a>
     <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
-    <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
   </div>
 
-  <div class="main">
-    <div class="header">
-      <h1 class="title">Activity History</h1>
-      <p class="subtitle">A live record of all shop operations and personnel actions.</p>
+  <div class="content">
+    <div style="margin-bottom: 30px;">
+      <p style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 8px;">Audit Trail</p>
+      <h1 style="margin: 0; font-size: 32px; font-weight: bold; tracking: -0.02em;">Activity History</h1>
     </div>
 
     <div id="log-container" class="log-list">
-      <div class="empty">Loading audit trail...</div>
+      <div class="empty">Scanning audit trail...</div>
     </div>
   </div>
 </div>
@@ -88,7 +124,7 @@ async function loadLogs() {
   const { data, error } = await db.from('activity_log').select('*').order('created_at', { ascending: false }).limit(100);
   
   if (error) {
-    container.innerHTML = `<div class="empty" style="color:#e09090">Failed to load logs: ${error.message}</div>`;
+    container.innerHTML = `<div class="empty" style="color:var(--red)">Failed to load logs: ${error.message}</div>`;
     return;
   }
 
@@ -99,7 +135,7 @@ async function loadLogs() {
 
   container.innerHTML = data.map(log => {
     const d = new Date(log.created_at);
-    const timeStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeStr = d.toLocaleDateString() + ' — ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
     return `
       <div class="log-item">
@@ -113,9 +149,7 @@ async function loadLogs() {
   }).join('');
 }
 
-// Refresh logs every 30 seconds
 setInterval(loadLogs, 30000);
 </script>
-</div>
 </body>
 </html>

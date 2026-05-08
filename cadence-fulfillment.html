@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Cadence Creatures — Fulfillment</title>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cadence Forge | Fulfillment Board</title>
 <link rel="icon" href="/favicon.ico?v=2" />
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -13,68 +12,111 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 <script src="shared.js"></script>
 <style>
-  /* Fulfillment Specifics */
-  .board { flex: 1; display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; padding: 24px; }
-  .col { flex: 1; min-width: 300px; display: flex; flex-direction: column; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(201, 168, 76, 0.1); border-radius: 6px; overflow: hidden; }
-  .col-header { padding: 14px 16px; background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(201, 168, 76, 0.1); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold-light); display: flex; justify-content: space-between; align-items: center; }
-  .col-count { background: rgba(201, 168, 76, 0.15); color: var(--gold-light); font-size: 10px; padding: 2px 8px; border-radius: 12px; }
-  .col-body { padding: 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px; min-height: 200px; }
+  :root {
+    --bg: #0a0f1e;
+    --panel-bg: #11192d;
+    --border: rgba(201, 168, 76, 0.15);
+    --gold: #C9A84C;
+    --gold-light: #E8D08A;
+    --cream: #f4eee0;
+    --cream-dim: #c5bba8;
+    --cream-faint: rgba(197, 187, 168, 0.5);
+    --cyan: #5BBFD4;
+    --green: #7dc994;
+  }
 
-  .card { background: rgba(20, 18, 15, 0.9); border: 1px solid rgba(201, 168, 76, 0.2); border-radius: 4px; padding: 16px; display: flex; flex-direction: column; gap: 12px; transition: transform 0.1s; }
-  .dragging-ghost { opacity: 0.3; background: var(--gold-dim); }
-  .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
-  .card-id { font-size: 13px; font-weight: 600; color: var(--gold-light); }
-  .card-buyer { font-size: 12px; color: rgba(196, 188, 178, 0.7); margin-top: 2px; }
-  .card-date { font-size: 10px; color: #8A7D6E; }
+  body { margin: 0; padding: 0; background: var(--bg); color: var(--cream); font-family: 'Lora', serif; overflow-x: hidden; }
 
+  /* Fixed Sidebar Navigation */
+  .dash-nav {
+    position: fixed; left: 0; top: 0; bottom: 0;
+    width: 240px; background: #0d1425;
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    padding: 80px 0 20px 0; z-index: 50;
+  }
+  .dash-nav a { padding: 12px 28px; font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: var(--cream-faint); text-decoration: none; transition: 0.2s; }
+  .dash-nav a:hover { color: var(--gold-light); background: rgba(255,255,255,0.03); }
+
+  /* Topbar */
+  .topbar { 
+    position: fixed; top: 0; right: 0; left: 0; height: 60px;
+    background: rgba(13, 20, 37, 0.95); backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 30px; border-bottom: 1px solid var(--border); z-index: 100;
+  }
+
+  /* Main Offset Content */
+  #app { margin-left: 240px; display: flex; flex-direction: column; min-height: 100vh; }
+  .content { padding: 100px 30px 40px 30px; flex: 1; display: flex; flex-direction: column; }
+
+  /* Board & Column Styling */
+  .board { display: flex; gap: 20px; overflow-x: auto; flex: 1; padding-bottom: 20px; }
+  .col { 
+    flex: 0 0 320px; display: flex; flex-direction: column; 
+    background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); 
+    border-radius: 8px; overflow: hidden; 
+  }
+  .col-header { 
+    padding: 16px; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--border); 
+    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); 
+    display: flex; justify-content: space-between; align-items: center; 
+  }
+  .col-count { background: rgba(201, 168, 76, 0.15); color: var(--gold-light); font-size: 9px; padding: 2px 8px; border-radius: 4px; }
+  .col-body { padding: 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 300px; }
+
+  /* Card Styling */
+  .card { 
+    background: var(--panel-bg); border: 1px solid var(--border); 
+    border-radius: 6px; padding: 16px; display: flex; flex-direction: column; gap: 12px; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: transform 0.1s; 
+  }
+  .card-id { font-size: 13px; font-weight: 700; color: var(--gold-light); }
+  .card-buyer { font-size: 11px; color: var(--cream-faint); margin-top: 2px; }
+  
   .checklist { display: flex; flex-direction: column; gap: 8px; }
-  .chk-item { display: flex; align-items: flex-start; gap: 10px; font-size: 12px; color: #FAF6F0; cursor: pointer; padding: 4px 0; }
-  .chk-box { width: 18px; height: 18px; border: 1px solid rgba(201, 168, 76, 0.3); border-radius: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .chk-item.done .chk-box { background: var(--gold); border-color: var(--gold); }
-  .chk-item.done .chk-box::after { content: '✓'; color: #1C1612; font-size: 13px; font-weight: bold; }
+  .chk-item { display: flex; align-items: flex-start; gap: 10px; font-size: 12px; cursor: pointer; padding: 4px 0; }
+  .chk-box { width: 16px; height: 16px; border: 1px solid var(--border); border-radius: 3px; flex-shrink: 0; }
+  .chk-item.done .chk-box { background: var(--gold); }
   .chk-item.done span { text-decoration: line-through; opacity: 0.4; }
 
-  @media (max-width: 768px) {
+  @media (max-width: 1024px) { 
+    .dash-nav { display: none; } 
+    #app { margin-left: 0; } 
     .board { flex-direction: column; }
-    .col { min-width: 100%; }
+    .col { flex: 1 0 auto; width: 100%; }
   }
 </style>
 </head>
 <body>
 
-<!-- LOGIN (Hidden by default, handled by shared.js) -->
 <div id="login-screen" style="display:none"></div>
 
-<div id="app" style="display:none">
-<div class="topbar">
-  <div class="topbar-left">
-    <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round"/><rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C"/><circle cx="36" cy="4" r="5.5" fill="#E8D08A"/><circle cx="6" cy="18" r="4" fill="#5BBFD4"/><circle cx="66" cy="18" r="4" fill="#5BBFD4"/></svg>
-    <div><div class="topbar-name">Cadence Creatures</div><div class="topbar-sub">Back Office</div></div>
-  </div>
-  <div class="topbar-right">
-    <div id="user-greet"></div>
-    <a class="topbar-link" onclick="signOut()">Sign Out</a>
-  </div>
-</div>
-  
-  <div class="dash-nav">
-    <a href="index.html">Hub</a>
-    <a href="cadence-queue.html">Queue</a>
-    <a href="cadence-fulfillment.html">Fulfillment</a>
-    <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
-    <a href="cadence-activity.html">Activity</a>
-    <a href="cadence-admin.html">Admin</a>
-    <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
-    <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
+<div id="app">
+  <div class="topbar">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <svg width="24" height="24" viewBox="0 0 76 52" fill="none"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" stroke="#C9A84C" stroke-width="3"/></svg>
+      <div style="font-weight:bold; letter-spacing:0.1em; text-transform:uppercase;">Shipment Forge</div>
+    </div>
+    <div id="user-greet" style="font-size:12px; color:var(--cream-dim)"></div>
   </div>
 
-  <div class="main">
-    <div class="header" style="justify-content:space-between; flex-direction:row; align-items:flex-end;">
+  <div class="dash-nav">
+    <a href="index.html">Hub Dashboard</a>
+    <a href="cadence-queue.html">Operational Queue</a>
+    <a href="cadence-fulfillment.html" style="color:var(--gold)">Fulfillment Board</a>
+    <a href="cadence-creatures-pl-tracker.html">P&amp;L Analysis</a>
+    <a href="cadence-activity.html">System Activity</a>
+    <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
+  </div>
+
+  <div class="content">
+    <div class="header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 30px;">
       <div>
-        <div class="title">Fulfillment Board</div>
-        <div class="subtitle">Check off items as they print and move orders through the pipeline.</div>
+        <p style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 8px;">Order Logistics</p>
+        <h1 style="margin: 0; font-size: 32px; font-weight: bold;">Fulfillment Pipeline</h1>
       </div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;">
+      <div style="display:flex; gap:12px;">
         <button class="btn" onclick="toggleBulkMode()">⚡ Batch Actions</button>
         <button class="btn" onclick="printPullList()">🖨 Print Packing Slip</button>
       </div>
@@ -98,318 +140,9 @@
         <div class="col-body" id="list-packaging"></div>
       </div>
       <div class="col" id="col-shipped">
-        <div class="col-header"><span>Recently Shipped</span><span class="col-count" id="cnt-shipped">0</span></div>
+        <div class="col-header"><span>Shipped</span><span class="col-count" id="cnt-shipped">0</span></div>
         <div class="col-body" id="list-shipped"></div>
       </div>
     </div>
   </div>
-  
-  <!-- Bulk Action Bar -->
-  <div id="bulk-bar" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(201,168,76,0.15);border:1px solid var(--gold);padding:14px 24px;border-radius:8px;backdrop-filter:blur(8px);z-index:100;align-items:center;gap:16px;">
-    <div style="color:var(--goldl);font-weight:500;"><span id="bulk-count">0</span> Selected</div>
-    <select id="bulk-status" class="login-field" style="width:160px;margin:0;padding:8px;font-size:12px;">
-      <option value="printing">Move to Printing</option>
-      <option value="printed">Move to Printed</option>
-      <option value="packaging">Move to Packaging</option>
-    </select>
-    <button class="btn pri" onclick="bulkMoveOrders()">Apply</button>
-    <button class="btn" onclick="toggleBulkMode()">Cancel</button>
-  </div>
-</div>
 
-<!-- SHIPPING MODAL -->
-<div class="overlay" id="m-ship"><div class="modal">
-  <div class="modal-t">📦 Ship Order</div>
-  <input type="hidden" id="s-id"/>
-  <div class="fg">
-    <div><label class="fl">Tracking Number</label><input id="s-track" placeholder="e.g. 9400111899223397"/></div>
-    <div><label class="fl">Carrier</label><select id="s-carrier"><option value="">Auto-detect</option><option value="usps">USPS</option><option value="ups">UPS</option><option value="fedex">FedEx</option></select></div>
-    <div><label class="fl">Shipping Note</label><input id="s-note"/></div>
-  </div>
-  <div class="modal-act"><button class="btn" onclick="document.getElementById('m-ship').classList.remove('open')">Cancel</button><button class="btn pri" onclick="saveShipping()">Mark Shipped</button></div>
-</div></div>
-
-<div class="toast" id="tst"></div>
-
-<!-- shared.js moved to head -->
-<script>
-let orders = [];
-let creatures = [];
-let selectedOrders = new Set();
-let bulkMode = false;
-
-function showApp(){
-  document.getElementById('app').style.display = 'flex';
-  loadData();
-}
-
-async function loadData(){
-  try{
-    const {data, error} = await db.from('orders').select('*').in('status', ['queued','printing','printed','packaging','shipped']).order('shipped_date',{ascending:false}).limit(100);
-    if(error) return console.error(error);
-    orders = data || [];
-    renderBoard();
-    initSortable();
-  }catch(e){console.error(e);}
-}
-
-let sortables = [];
-function initSortable() {
-  sortables.forEach(s => s.destroy());
-  sortables = [];
-  if(bulkMode) return; 
-  
-  ['queued','printing','printed','packaging','shipped'].forEach(col => {
-    const el = document.getElementById('list-'+col);
-    if(!el) return;
-    sortables.push(new Sortable(el, {
-      group: 'shared',
-      animation: 150,
-      ghostClass: 'dragging-ghost',
-      onEnd: async function (evt) {
-        if(evt.from !== evt.to) {
-          const newStatus = evt.to.parentElement.id.replace('col-','');
-          const orderId = evt.item.dataset.id;
-          await moveOrder(orderId, newStatus, true);
-        }
-        savePriority();
-      }
-    }));
-  });
-}
-
-function savePriority() {
-  const customOrder = [];
-  document.querySelectorAll('.card').forEach(c => {
-    if(c.dataset.id) customOrder.push(c.dataset.id);
-  });
-  localStorage.setItem('cc_board_priority', JSON.stringify(customOrder));
-}
-
-function renderBoard(){
-  ['queued','printing','printed','packaging','shipped'].forEach(st=>{
-    let colOrders = orders.filter(o=>o.status===st);
-    
-    try {
-      const p = JSON.parse(localStorage.getItem('cc_board_priority')||'[]');
-      if(p.length) {
-        colOrders.sort((a,b) => {
-          let ia = p.indexOf(a.id);
-          let ib = p.indexOf(b.id);
-          if(ia===-1) ia=9999;
-          if(ib===-1) ib=9999;
-          return ia - ib;
-        });
-      }
-    }catch(e){}
-    
-    const div = document.getElementById('list-'+st);
-    div.innerHTML = colOrders.map(createCard).join('');
-    document.getElementById('cnt-'+st).textContent = colOrders.length;
-  });
-  if(!bulkMode) initSortable();
-}
-
-function createCard(o){
-  const items = Array.isArray(o.items) ? o.items : [];
-  const itemsHtml = items.map((itm, i) => {
-    const isDone = itm.startsWith('[x] ');
-    const rawText = isDone ? itm.slice(4) : itm;
-    return `<div class="chk-item ${isDone?'done':''}" onclick="if(!bulkMode) toggleItem('${o.id}', ${i})">
-      <div class="chk-box"></div>
-      <span>${rawText}</span>
-    </div>`;
-  }).join('');
-  
-  let actBtn = '';
-  if(o.status==='queued') actBtn = `<button class="btn" onclick="moveOrder('${o.id}','printing')">Start Printing →</button>`;
-  else if(o.status==='printing') actBtn = `<button class="btn" onclick="moveOrder('${o.id}','printed')">Mark Printed →</button>`;
-  else if(o.status==='printed') actBtn = `<button class="btn" onclick="moveOrder('${o.id}','packaging')">To Packaging →</button>`;
-  else if(o.status==='packaging') actBtn = `
-    <div style="display:grid; gap:8px; width:100%;">
-      <input type="text" id="track-${o.id}" placeholder="Tracking #" style="font-size:11px; padding:6px;" value="${o.tracking_number||''}">
-      <button class="btn pri" onclick="quickShip('${o.id}')">📦 Mark Shipped</button>
-    </div>
-  `;
-  else if(o.status==='shipped') actBtn = `<div style="font-size:10px; color:var(--green); text-transform:uppercase; letter-spacing:0.1em;">✓ Shipped ${o.tracking_number?'('+o.tracking_number+')':''}</div>`;
-
-  const isSel = selectedOrders.has(o.id);
-  const cardBorder = isSel ? 'border:2px solid var(--goldl);' : (bulkMode ? 'border:2px dashed rgba(201,168,76,0.3);cursor:pointer;' : '');
-
-  return `
-    <div class="card" data-id="${o.id}" style="${cardBorder}" ${bulkMode ? `onclick="toggleOrderSelection('${o.id}')"` : ''}>
-      <div class="card-top">
-        <div>
-          <div class="card-id">#${o.etsy_order_id||o.id.slice(0,8)}</div>
-          <div class="card-buyer">${o.buyer_name||'No Name'}</div>
-        </div>
-        <div class="card-date">${o.order_date?new Date(o.order_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):''}</div>
-      </div>
-      <div class="checklist">
-        ${itemsHtml}
-      </div>
-      <div class="card-act" style="${bulkMode ? 'display:none;' : ''}">
-        ${actBtn}
-      </div>
-    </div>
-  `;
-}
-
-async function toggleItem(orderId, itemIndex){
-  const order = orders.find(o=>o.id===orderId);
-  if(!order) return;
-  const newItems = [...order.items];
-  const itm = newItems[itemIndex];
-  if(itm.startsWith('[x] ')) newItems[itemIndex] = itm.slice(4);
-  else newItems[itemIndex] = '[x] ' + itm;
-  
-  order.items = newItems;
-  renderBoard(); // optimistic update
-  
-  await db.from('orders').update({items: newItems}).eq('id', orderId);
-}
-
-async function moveOrder(id, newStatus, skipRender=false){
-  const order = orders.find(o=>o.id===id);
-  if(!order) return;
-  order.status = newStatus;
-  if(!skipRender) renderBoard(); // optimistic
-  
-  await db.from('orders').update({status: newStatus}).eq('id', id);
-  logActivity(`Moved #${order.etsy_order_id || id.slice(0,8)} to ${newStatus}`, id);
-  toast('Moved to ' + newStatus);
-}
-
-async function quickShip(id) {
-  const track = document.getElementById('track-'+id).value;
-  if(!track && !confirm('Ship without tracking?')) return;
-  
-  const order = orders.find(o => o.id === id);
-  if(!order) return;
-
-  const btn = document.querySelector(`button[onclick="quickShip('${id}')"]`);
-  const originalHtml = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<span>⌛</span> Shipping...';
-
-  const {error} = await db.from('orders').update({
-    status: 'shipped',
-    tracking_number: track,
-    shipped_date: new Date().toISOString().slice(0,10)
-  }).eq('id', id);
-  
-  if(error) { 
-    toast('Error shipping', 'err'); 
-    btn.disabled = false;
-    btn.innerHTML = originalHtml;
-    return; 
-  }
-  
-  toast('Order Shipped!', 'ok');
-  logActivity(`Shipped #${order.etsy_order_id || id.slice(0,8)} with tracking: ${track}`, id);
-  sendFulfillmentEmail({ ...order, tracking_number: track });
-  loadData();
-}
-
-function openShip(id){
-  document.getElementById('s-id').value = id;
-  const order = orders.find(o=>o.id===id);
-  document.getElementById('s-track').value = order?.tracking_number || '';
-  document.getElementById('s-carrier').value = order?.carrier || '';
-  document.getElementById('s-note').value = order?.shipping_note || '';
-  document.getElementById('m-ship').classList.add('open');
-}
-
-async function saveShipping(){
-  const id = document.getElementById('s-id').value;
-  const tracking_number = document.getElementById('s-track').value;
-  const carrier = document.getElementById('s-carrier').value;
-  const shipping_note = document.getElementById('s-note').value;
-  
-  const order = orders.find(o=>o.id===id);
-  if(order){
-    order.tracking_number = tracking_number;
-    order.carrier = carrier;
-    order.shipping_note = shipping_note;
-    order.status = 'shipped';
-  }
-  
-  document.getElementById('m-ship').classList.remove('open');
-  
-  const {error} = await db.from('orders').update({
-    status: 'shipped',
-    shipped_date: new Date().toISOString().slice(0,10),
-    tracking_number, carrier, shipping_note
-  }).eq('id', id);
-  
-  if(error){toast('Error','err'); return;}
-  
-  toast('Order Shipped!','ok');
-  logActivity(`Shipped #${order.etsy_order_id || id.slice(0,8)} via Modal`, id);
-  sendFulfillmentEmail(order);
-  // Remove from local array since it's no longer in the 4 board columns
-  orders = orders.filter(o=>o.id!==id);
-  renderBoard();
-}
-
-function toggleBulkMode() {
-  bulkMode = !bulkMode;
-  selectedOrders.clear();
-  renderBoard();
-  document.getElementById('bulk-bar').style.display = bulkMode ? 'flex' : 'none';
-}
-
-function toggleOrderSelection(id) {
-  if(!bulkMode) return;
-  if(selectedOrders.has(id)) selectedOrders.delete(id);
-  else selectedOrders.add(id);
-  renderBoard();
-  document.getElementById('bulk-count').textContent = selectedOrders.size;
-}
-
-async function bulkMoveOrders() {
-  const newStatus = document.getElementById('bulk-status').value;
-  if(selectedOrders.size === 0) return;
-  
-  const ids = Array.from(selectedOrders);
-  ids.forEach(id => {
-    const o = orders.find(x => x.id === id);
-    if(o) o.status = newStatus;
-  });
-  
-  toggleBulkMode();
-  
-  const {error} = await db.from('orders').update({status: newStatus}).in('id', ids);
-  if(error) toast('Error updating orders', 'err');
-  else toast('Moved ' + ids.length + ' orders', 'ok');
-}
-
-function printPullList() {
-  const pkgs = orders.filter(o => o.status === 'packaging');
-  if(pkgs.length === 0) return toast('No orders in Packaging column!', 'err');
-  
-  let html = '<html><head><title>Packing Slip</title><style>body{font-family:sans-serif;padding:20px;} h2{margin-bottom:5px;font-size:18px;} .order{border-bottom:1px solid #ccc;padding-bottom:15px;margin-bottom:15px;} ul{list-style:none;padding-left:0;} li{margin-bottom:8px;font-size:14px;} .check{display:inline-block;width:16px;height:16px;border:1.5px solid #000;margin-right:12px;position:relative;top:3px;border-radius:3px;}</style></head><body>';
-  html += '<h1>📦 Cadence Creatures — Packing List</h1><p>Date: ' + new Date().toLocaleDateString() + '</p><hr/>';
-  
-  pkgs.forEach(o => {
-    html += '<div class="order">';
-    html += '<h2>Order #' + (o.etsy_order_id||o.id.slice(0,8)) + ' - ' + (o.buyer_name||'No Name') + '</h2>';
-    html += '<ul>';
-    (o.items||[]).forEach(itm => {
-      const isDone = itm.startsWith('[x] ');
-      const text = isDone ? itm.slice(4) : itm;
-      html += '<li><div class="check"></div>' + text + '</li>';
-    });
-    html += '</ul></div>';
-  });
-  html += '</body></html>';
-  
-  const w = window.open('','_blank');
-  w.document.write(html);
-  w.document.close();
-  setTimeout(()=>w.print(), 500);
-}
-</script>
-</div>
-</body>
-</html>

@@ -1,485 +1,140 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cadence Creatures — Dashboard Hub</title>
-  <link rel="icon" href="/favicon.ico?v=2" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;500;600&display=swap"
-    rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="shared.js"></script>
-  <style>
-    /* Hub Specifics */
-    .kpi-section { margin-bottom: 28px; }
-    .notifications-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-    .notification-panel { border: 1px solid rgba(201, 168, 76, 0.12); background: rgba(255, 255, 255, 0.02); padding: 18px 20px; border-radius: 6px; }
-    .notif-item { font-size: 13px; line-height: 1.5; color: var(--cream); padding: 12px 14px; border: 1px solid rgba(201, 168, 76, 0.08); border-radius: 4px; background: rgba(255, 255, 255, 0.015); margin-bottom: 8px; }
-    .notif-item.critical { border-color: rgba(224, 144, 144, 0.22); background: rgba(224, 144, 144, 0.08); }
-    .notif-empty { font-size: 12px; color: var(--dim); padding: 12px 14px; border: 1px dashed rgba(201, 168, 76, 0.14); border-radius: 4px; }
-    .hub-header { text-align: center; margin-bottom: 24px; }
-    .hub-date { font-family: var(--fc); font-size: 17px; color: var(--dim); }
-  </style>
-</head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cadence Forge | Dashboard Hub</title>
+<link rel="icon" href="/favicon.ico?v=2" />
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared.js"></script>
+<style>
+  :root {
+    --bg: #0a0f1e;
+    --panel-bg: #11192d;
+    --border: rgba(201, 168, 76, 0.15);
+    --gold: #C9A84C;
+    --gold-light: #E8D08A;
+    --cream: #f4eee0;
+    --cream-dim: #c5bba8;
+    --cream-faint: rgba(197, 187, 168, 0.5);
+    --cyan: #5BBFD4;
+    --red: #e09090;
+  }
 
+  body { margin: 0; padding: 0; background: var(--bg); color: var(--cream); font-family: 'Lora', serif; overflow-x: hidden; }
+
+  /* Fixed Sidebar Navigation */
+  .dash-nav {
+    position: fixed; left: 0; top: 0; bottom: 0;
+    width: 240px; background: #0d1425;
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    padding: 80px 0 20px 0; z-index: 50;
+  }
+  .dash-nav a { padding: 12px 28px; font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: var(--cream-faint); text-decoration: none; transition: 0.2s; }
+  .dash-nav a:hover { color: var(--gold-light); background: rgba(255,255,255,0.03); }
+
+  /* Topbar */
+  .topbar { 
+    position: fixed; top: 0; right: 0; left: 0; height: 60px;
+    background: rgba(13, 20, 37, 0.95); backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 30px; border-bottom: 1px solid var(--border); z-index: 100;
+  }
+
+  /* Main Layout Offset */
+  #app { margin-left: 240px; }
+  .content { padding: 100px 30px 40px 30px; max-width: 1400px; }
+
+  /* KPI Grid */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 32px; }
+  .kpi-card { background: var(--panel-bg); border: 1px solid var(--border); padding: 24px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+  .kpi-label { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); opacity: 0.7; margin-bottom: 10px; }
+  .kpi-val { font-size: 32px; font-weight: bold; color: #fff; tracking: -0.02em; }
+
+  /* Panels */
+  .notifications-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; }
+  .notification-panel { background: var(--panel-bg); border: 1px solid var(--border); padding: 24px; border-radius: 8px; }
+  .notification-panel h2 { font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold-light); margin: 0 0 20px 0; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px; }
+  
+  .notif-item { font-size: 13px; padding: 12px; border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; background: rgba(0,0,0,0.2); margin-bottom: 10px; }
+  .notif-item.critical { border-color: rgba(224, 144, 144, 0.3); background: rgba(224, 144, 144, 0.05); color: var(--red); }
+  
+  @media (max-width: 1024px) { .dash-nav { display: none; } #app { margin-left: 0; } }
+</style>
+</head>
 <body>
 
-  <!-- LOGIN -->
-  <div id="login-screen" style="display:none">
-    <div class="login-box">
-      <svg class="login-crown" width="64" height="50" viewBox="0 -2 76 52" fill="none">
-        <path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5"
-          stroke-linejoin="round" />
-        <rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C" />
-        <circle cx="36" cy="4" r="5.5" fill="#E8D08A" />
-        <circle cx="6" cy="18" r="4" fill="#5BBFD4" />
-        <circle cx="66" cy="18" r="4" fill="#5BBFD4" />
-      </svg>
-      <div class="login-title">Cadence Creatures</div>
-      <div class="login-sub">Back Office · Private</div>
-      <div class="login-field" style="margin-bottom:8px;">
-        <input type="email" id="em-input" placeholder="Email Address" />
-      </div>
-      <div class="login-field">
-        <input type="password" id="pw-input" placeholder="Password" onkeydown="if(event.key==='Enter')tryLogin()" />
-      </div>
-      <button class="login-btn" onclick="tryLogin()">Enter</button>
-      <div class="login-err" id="login-err"></div>
+<div id="login-screen" style="display:none"></div>
+
+<div id="app">
+  <div class="topbar">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <svg width="24" height="24" viewBox="0 0 76 52" fill="none"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" stroke="#C9A84C" stroke-width="3"/></svg>
+      <div style="font-weight:bold; letter-spacing:0.1em; text-transform:uppercase;">Forge Hub</div>
     </div>
+    <div id="user-greet" style="font-size:12px; color:var(--cream-dim)"></div>
   </div>
 
-  <!-- APP -->
-  <div id="app">
-    <div class="topbar">
-      <div class="topbar-left">
-        <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))">
-          <path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round" />
-          <rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C" />
-          <circle cx="36" cy="4" r="5.5" fill="#E8D08A" />
-          <circle cx="6" cy="18" r="4" fill="#5BBFD4" />
-          <circle cx="66" cy="18" r="4" fill="#5BBFD4" />
-        </svg>
-        <div>
-          <div class="topbar-name">Cadence Creatures</div>
-          <div class="topbar-sub">Back Office</div>
-        </div>
+  <div class="dash-nav">
+    <a href="index.html" style="color:var(--gold)">Hub Dashboard</a>
+    <a href="cadence-queue.html">Operational Queue</a>
+    <a href="cadence-fulfillment.html">Fulfillment Board</a>
+    <a href="cadence-creatures-pl-tracker.html">P&amp;L Analysis</a>
+    <a href="cadence-activity.html">System Activity</a>
+    <a href="cadence-admin.html">Admin Control</a>
+    <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
+  </div>
+
+  <div class="content">
+    <div style="text-align:center; margin-bottom: 40px;">
+      <p id="hub-date" style="font-family: 'Caveat', cursive; font-size: 20px; color: var(--gold-light); margin-bottom: 8px;"></p>
+      <h1 style="margin: 0; font-size: 36px; font-weight: bold; letter-spacing: -0.03em;">Back Office Command</h1>
+    </div>
+
+    <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:16px; margin-bottom:40px;">
+      <button class="btn pri" onclick="openPrintModal()">📥 Log Finished Prints</button>
+      <button class="btn" onclick="oModal()">➕ Add Order</button>
+      <button class="btn" onclick="window.location.href='cadence-queue.html'">🗂 View Queue</button>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Unfulfilled Orders</div>
+        <div class="kpi-val" id="kpi-orders">—</div>
       </div>
-      <div class="topbar-right">
-        <div id="user-greet"></div>
-        <a class="topbar-link" onclick="signOut()">Sign Out</a>
+      <div class="kpi-card">
+        <div class="kpi-label">Available for Sale</div>
+        <div class="kpi-val" id="kpi-stock">—</div>
+        <div id="kpi-stock-detail" style="font-size:11px; color:var(--cream-faint); margin-top:8px;"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Monthly Revenue</div>
+        <div class="kpi-val" id="kpi-revenue">—</div>
       </div>
     </div>
 
-    <div class="dash-nav">
-      <a href="index.html">Hub</a>
-      <a href="cadence-queue.html">Queue</a>
-      <a href="cadence-fulfillment.html">Fulfillment</a>
-      <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
-      <a href="cadence-activity.html">Activity</a>
-      <a href="cadence-admin.html">Admin</a>
-      <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
-      <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
-    </div>
-
-    <div class="main">
-      <div class="main-content">
-        <div class="hub-header">
-          <svg class="hub-crown" width="44" height="34" viewBox="0 -2 76 52" fill="none">
-            <path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2"
-              stroke-linejoin="round" />
-            <rect x="4" y="42" width="64" height="2.5" rx="1.25" fill="#C9A84C" />
-            <circle cx="36" cy="4" r="4.5" fill="#E8D08A" />
-            <circle cx="6" cy="18" r="3.5" fill="#5BBFD4" />
-            <circle cx="66" cy="18" r="3.5" fill="#5BBFD4" />
-          </svg>
-          <div class="hub-title">Dashboard Hub</div>
-          <div class="hub-date" id="hub-date"></div>
-        </div>
-
-
-
-
+    <div class="notifications-section">
+      <div class="notification-panel">
+        <h2>🖨 Live Printing</h2>
+        <div id="hub-printers"><div class="notif-empty">Scanning fleet...</div></div>
       </div>
-
-      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin-bottom:28px;">
-        <button class="btn pri" onclick="openPrintModal()">📥 Log Finished Prints</button>
-        <button class="btn" onclick="oModal()">➕ Add Order</button>
-        <button class="btn" onclick="window.location.href='cadence-queue.html'">🗂 View Queue</button>
+      <div class="notification-panel">
+        <h2>🔜 Next Up to Print</h2>
+        <div id="hub-next-up"><div class="notif-empty">Queue clear.</div></div>
       </div>
-
-      <div class="kpi-section">
-        <div class="kpi-grid">
-          <div class="kpi-card">
-            <div class="kpi-label">Unfulfilled Orders</div>
-            <div class="kpi-val" id="kpi-orders">—</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-label">Available for Sale</div>
-            <div class="kpi-val" id="kpi-stock">—</div>
-            <div id="kpi-stock-detail"
-              style="font-size:11px;color:rgba(196,188,178,0.5);margin-top:8px;line-height:1.4;"></div>
-          </div>
-          <div class="kpi-card" id="kpi-revenue-card">
-            <div class="kpi-label">Monthly Revenue</div>
-            <div class="kpi-val" id="kpi-revenue">—</div>
-          </div>
-        </div>
+      <div class="notification-panel">
+        <h2>🛠 Batching Assistant</h2>
+        <div id="hub-batching"><div class="notif-empty">Analysis idle.</div></div>
       </div>
-
-      <div class="notifications-section" style="margin-bottom:20px;">
-        <div class="notification-panel">
-          <h2>🖨 Live Printing</h2>
-          <div id="hub-printers">
-            <div class="notif-empty">Loading printers...</div>
-          </div>
-        </div>
-        <div class="notification-panel">
-          <h2>🔜 Next Up to Print</h2>
-          <div id="hub-next-up">
-            <div class="notif-empty">Loading...</div>
-          </div>
-        </div>
-      </div>
-      <div class="notifications-section" style="margin-bottom:20px;">
-        <div class="notification-panel">
-          <h2>🛠 Batching Assistant</h2>
-          <div id="hub-batching">
-            <div class="notif-empty">Loading...</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="notifications-section">
-        <div class="notification-panel">
-          <h2>🧵 Filament Alerts</h2>
-          <div id="hub-notif-filament">
-            <div class="notif-empty">All spools good.</div>
-          </div>
-        </div>
-        <div class="notification-panel">
-          <h2>🦎 Creature Stock</h2>
-          <div id="hub-notif-creatures">
-            <div class="notif-empty">All creatures stocked.</div>
-          </div>
-        </div>
+      <div class="notification-panel">
+        <h2>🧵 Status Alerts</h2>
+        <div id="hub-notif-filament" style="margin-bottom:10px;"></div>
+        <div id="hub-notif-creatures"></div>
       </div>
     </div>
+  </div>
+</div>
 
-    <!-- MODALS -->
-    <div class="overlay" id="m-print">
-      <div class="modal">
-        <div class="modal-t">📥 Log Finished Prints</div>
-        <div class="fg">
-          <div><label class="fl">Creature</label><select id="qp-creature">
-              <option>Loading...</option>
-            </select></div>
-          <div><label class="fl">Quantity Produced</label><input type="number" id="qp-qty" min="1" value="1" /></div>
-        </div>
-        <p style="font-size:11px;color:var(--dim);margin-top:14px;line-height:1.4;">This will add the quantity to your
-          <strong>Total On-Hand</strong> inventory, automatically increasing what's <em>Available for Sale</em>.</p>
-        <div class="modal-act"><button class="btn"
-            onclick="document.getElementById('m-print').classList.remove('open')">Cancel</button><button class="btn pri"
-            onclick="saveFinishedPrints()">Add to Stock</button></div>
-      </div>
-    </div>
-
-    <div class="overlay" id="m-order">
-      <div class="modal">
-        <div class="modal-t" id="ot">Add Order</div>
-        <input type="hidden" id="o-id" />
-        <div class="fg">
-          <div class="fr">
-            <div><label class="fl">Etsy Order ID</label><input id="o-eid" placeholder="e.g. 1234567890" /></div>
-            <div><label class="fl">Buyer Name</label><input id="o-buyer" /></div>
-          </div>
-          <div><label class="fl">Items (one per line)</label><textarea id="o-items"
-              placeholder="S'mores — Forest Gecko&#10;Bandit — Raccoon"
-              style="resize:vertical;min-height:80px;"></textarea></div>
-          <div class="fr">
-            <div><label class="fl">Status</label><select id="o-st">
-                <option value="queued">Queued</option>
-                <option value="printing">Printing</option>
-                <option value="printed">Printed</option>
-                <option value="packaging">Packaging</option>
-                <option value="shipped">Shipped</option>
-                <option value="complete">Complete</option>
-              </select></div>
-            <div><label class="fl">Printer</label><select id="o-printer">
-                <option value="Vision">Vision</option>
-                <option value="In Stock">In Stock / No Print</option>
-              </select></div>
-          </div>
-          <div class="fr">
-            <div><label class="fl">Total ($)</label><input id="o-amt" type="number" step="0.01" /></div>
-            <div><label class="fl">Order Date</label><input id="o-dt" type="date" /></div>
-          </div>
-          <div class="fr">
-            <div><label class="fl">Tracking Number</label><input id="o-track" placeholder="9400111899223397" /></div>
-            <div><label class="fl">Carrier</label><select id="o-carrier">
-                <option value="">Auto-detect</option>
-                <option value="usps">USPS</option>
-                <option value="ups">UPS</option>
-                <option value="fedex">FedEx</option>
-              </select></div>
-          </div>
-          <div><label class="fl">Shipping Note</label><input id="o-note" /></div>
-        </div>
-        <div class="modal-act"><button class="btn"
-            onclick="document.getElementById('m-order').classList.remove('open')">Cancel</button><button class="btn pri"
-            onclick="saveOrder()">Save</button></div>
-      </div>
-    </div>
-
-    <div class="overlay" id="m-search">
-      <div class="modal" style="max-width:500px;">
-        <div class="modal-t">Search Results</div>
-        <div id="search-results" style="display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto;">
-        </div>
-        <div class="modal-act"><button class="btn"
-            onclick="document.getElementById('m-search').classList.remove('open')">Close</button></div>
-      </div>
-    </div>
-
-    <div class="toast" id="tst"></div>
-
-    <!-- shared.js moved to head -->
-    <script>
-      function showApp() {
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('app').style.display = 'block';
-        document.getElementById('hub-date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-
-        loadDashboardData();
-      }
-      // ── DASHBOARD DATA ──
-      let allCreatures = [];
-      async function loadDashboardData() {
-        try {
-          const [invRes, creRes, ordersRes, finRes, prRes] = await Promise.all([
-            db.from('inventory').select('spool_name,brand,color,spool_count,reorder_spool_threshold'),
-            db.from('creatures').select('id,name,species,qty_on_hand,inventory_count'),
-            db.from('orders').select('*').in('status', ['queued', 'printing']).order('created_at', { ascending: true }),
-            db.from('finance').select('amount,entry_date,entry_type').eq('entry_type', 'income'),
-            db.from('printers').select('*')
-          ]);
-
-          if (invRes.error || creRes.error) return;
-          allCreatures = creRes.data || [];
-          const printers = prRes.data || [];
-
-          // ── PRINTER STATUS ──
-          const prPanel = document.getElementById('hub-printers');
-          const prDisplay = document.getElementById('printer-display');
-          if (prPanel) {
-            if (!printers.length) {
-              prPanel.innerHTML = '<div class="notif-empty">No printers configured.</div>';
-            } else {
-              prPanel.innerHTML = printers.map(p => {
-                const curC = p.current_creature_id ? allCreatures.find(c => c.id === p.current_creature_id) : null;
-                const statusHtml = curC 
-                  ? `<span style="color:var(--goldl);font-weight:600">Printing ${curC.name}</span>` 
-                  : '<span style="color:var(--dim)">Idle</span>';
-                
-                // Update top bar for default printer
-                if (p.is_default && prDisplay) {
-                   prDisplay.innerHTML = `🖨 ${p.name}: ${curC ? curC.name : 'Idle'}`;
-                   prDisplay.style.color = curC ? 'var(--goldl)' : 'var(--teal)';
-                }
-
-                return `<div class="notif-item"><strong>${p.name}:</strong> ${statusHtml}</div>`;
-              }).join('');
-            }
-          }
-
-          const queuedOrders = (ordersRes.data || []).filter(o => o.status === 'queued');
-
-
-          // ── KPIS ──
-          if (ordersRes.data) document.getElementById('kpi-orders').textContent = ordersRes.data.length;
-
-          if (allCreatures.length > 0) {
-            let totalAvail = 0;
-            let availList = [];
-            allCreatures.forEach(c => {
-              let onHand = c.qty_on_hand ?? c.inventory_count ?? 0;
-              let queuedForThis = 0;
-              queuedOrders.forEach(o => {
-                if (Array.isArray(o.items)) {
-                  queuedForThis += o.items.filter(i => i.toLowerCase().includes(c.name.toLowerCase())).length;
-                }
-              });
-              let avail = onHand - queuedForThis;
-              if (avail < 0) avail = 0;
-              totalAvail += avail;
-              if (avail > 0) availList.push({ name: c.name, avail });
-            });
-
-            document.getElementById('kpi-stock').textContent = totalAvail;
-
-            const detailEl = document.getElementById('kpi-stock-detail');
-            if (detailEl) {
-              if (availList.length > 0) {
-                availList.sort((a, b) => b.avail - a.avail);
-                const top = availList.slice(0, 2).map(x => `<strong>${x.avail}x</strong> ${x.name}`).join(', ');
-                detailEl.innerHTML = `Across <strong>${availList.length}</strong> unique models<br/><span style="opacity:0.7">Top: ${top}</span>`;
-              } else {
-                detailEl.textContent = 'Everything is sold out.';
-              }
-            }
-          }
-
-          if (finRes.data) {
-            const now = new Date();
-            const moRev = finRes.data.filter(e => {
-              const d = new Date(e.entry_date);
-              return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-            }).reduce((sum, e) => sum + Number(e.amount), 0);
-            document.getElementById('kpi-revenue').textContent = '$' + Number(moRev).toLocaleString('en-US', { minimumFractionDigits: 2 });
-          }
-
-          // ── NEXT UP TO PRINT ──
-          const nextUpPanel = document.getElementById('hub-next-up');
-          if (nextUpPanel) {
-            const next = queuedOrders.slice(0, 4);
-            nextUpPanel.innerHTML = next.length
-              ? next.map(o => `<div class="notif-item">▶ ${o.buyer_name || 'Order ' + o.id.slice(0, 5)}: ${(o.items || []).join(', ')}</div>`).join('')
-              : '<div class="notif-empty">Queue is clear!</div>';
-          }
-
-          // ── BATCHING ASSISTANT ──
-          const batchPanel = document.getElementById('hub-batching');
-          if (batchPanel) {
-            const counts = {};
-            queuedOrders.forEach(o => {
-              if (Array.isArray(o.items)) o.items.forEach(i => { counts[i] = (counts[i] || 0) + 1; });
-            });
-            const b = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-            batchPanel.innerHTML = b.length
-              ? b.map(([name, qty]) => `<div class="notif-item">🖨 Print <strong>${qty}x</strong> ${name}</div>`).join('')
-              : '<div class="notif-empty">No items queued.</div>';
-          }
-
-          // ── FILAMENT PANEL ──
-          const filPanel = document.getElementById('hub-notif-filament');
-          if (invRes.data) {
-            const lowInv = invRes.data.filter(s => (s.spool_count ?? 0) <= (s.reorder_spool_threshold ?? 1));
-            if (filPanel) {
-              filPanel.innerHTML = lowInv.length
-                ? lowInv.map(s => {
-                  const label = [s.brand, s.color, s.spool_name].filter(Boolean).join(' ').trim() || s.spool_name || 'Unnamed spool';
-                  const rem = s.spool_count != null ? ` — ${s.spool_count} left` : '';
-                  return `<div class="notif-item critical">⚠ ${label}${rem}</div>`;
-                }).join('')
-                : '<div class="notif-empty">All spools good.</div>';
-            }
-          }
-
-          // ── CREATURES PANEL ──
-          const crePanel = document.getElementById('hub-notif-creatures');
-          if (allCreatures.length > 0 && crePanel) {
-            const lowCre = allCreatures.filter(c => (c.qty_on_hand ?? c.inventory_count ?? 0) <= 2);
-            crePanel.innerHTML = lowCre.length
-              ? lowCre.map(c => {
-                const onHand = c.qty_on_hand ?? c.inventory_count ?? 0;
-                return `<div class="notif-item critical">⚠ ${c.name} — ${onHand} on hand</div>`;
-              }).join('')
-              : '<div class="notif-empty">All creatures stocked.</div>';
-          }
-        } catch (e) { console.error('loadDashboardData error:', e); }
-      }
-
-      // ── QUICK ACTIONS ──
-      function openPrintModal() {
-        const sel = document.getElementById('qp-creature');
-        sel.innerHTML = allCreatures.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-        document.getElementById('qp-qty').value = 1;
-        document.getElementById('m-print').classList.add('open');
-      }
-      async function saveFinishedPrints() {
-        const id = document.getElementById('qp-creature').value;
-        const qty = parseInt(document.getElementById('qp-qty').value) || 1;
-        const creature = allCreatures.find(c => c.id === id);
-        if (!creature) return;
-        const newQty = (creature.qty_on_hand ?? creature.inventory_count ?? 0) + qty;
-
-        const { error } = await db.from('creatures').update({ qty_on_hand: newQty }).eq('id', id);
-        if (error) { toast('Error updating stock', 'err'); return; }
-
-        document.getElementById('m-print').classList.remove('open');
-        toast(`Added ${qty} ${creature.name} to stock`, 'ok');
-        loadDashboardData();
-      }
-
-      function oModal() {
-        document.getElementById('o-id').value = '';
-        document.getElementById('ot').textContent = 'Add Order';
-        ['o-eid', 'o-buyer', 'o-items', 'o-amt', 'o-note', 'o-track'].forEach(x => document.getElementById(x).value = '');
-        document.getElementById('o-carrier').value = '';
-        document.getElementById('o-st').value = 'queued';
-        document.getElementById('o-dt').value = new Date().toISOString().slice(0, 10);
-        document.getElementById('o-printer').value = 'Vision';
-        document.getElementById('m-order').classList.add('open');
-      }
-      async function saveOrder() {
-        const eid = document.getElementById('o-eid').value;
-        const b = document.getElementById('o-buyer').value;
-        const items = document.getElementById('o-items').value.split('\n').map(s => s.trim()).filter(Boolean);
-        const st = document.getElementById('o-st').value;
-        const printer = document.getElementById('o-printer').value;
-        const amt = document.getElementById('o-amt').value;
-        const dt = document.getElementById('o-dt').value;
-        const track = document.getElementById('o-track').value;
-        const carrier = document.getElementById('o-carrier').value;
-        const snote = document.getElementById('o-note').value;
-
-        const { error } = await db.from('orders').insert([{
-          etsy_order_id: eid,
-          buyer_name: b,
-          items,
-          status: st,
-          printer,
-          total_amt: amt,
-          order_date: dt || null,
-          tracking_number: track,
-          carrier,
-          shipping_note: snote
-        }]);
-
-        if (error) { toast('Save failed', 'err'); return; }
-        toast('Order added', 'ok');
-        document.getElementById('m-order').classList.remove('open');
-        loadDashboardData();
-      }
-
-      async function handleGlobalSearch() {
-        const term = document.getElementById('global-search').value.trim();
-        if (!term) return;
-
-        const { data, error } = await db.from('orders')
-          .select('*')
-          .or(`etsy_order_id.ilike.%${term}%,buyer_name.ilike.%${term}%`);
-
-        const res = document.getElementById('search-results');
-        if (error || !data || data.length === 0) {
-          res.innerHTML = '<div style="color:var(--dim);font-size:11px;">No orders found matching "' + term + '".</div>';
-        } else {
-          res.innerHTML = data.map(o => `
-      <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(201,168,76,0.1);padding:10px;border-radius:4px;">
-        <div style="color:var(--goldl);font-size:13px;font-weight:500;">Order #${o.etsy_order_id || o.id.slice(0, 8)} - ${o.buyer_name || 'No Name'}</div>
-        <div style="color:var(--teal);font-size:11px;text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;">Status: ${o.status}</div>
-        <div style="color:var(--dim);font-size:11px;margin-top:6px;">Items: ${o.items ? o.items.join(', ') : 'None'}</div>
-      </div>
-    `).join('');
-        }
-        document.getElementById('m-search').classList.add('open');
-      }
-
-      // ── INIT ──
-    </script>
-</body>
-
-</html>
