@@ -143,9 +143,9 @@ async function applyRolePermissions() {
       if(!greet) {
         greet = document.createElement('div');
         greet.id = 'user-greet';
-        greet.style = 'font-size:11px; color:var(--goldl); font-weight:500; margin-right:15px; border-right:1px solid rgba(201,168,76,0.2); padding-right:15px;';
         right.insertBefore(greet, right.firstChild);
       }
+      greet.style = 'font-family:"Lora",serif; font-size:11px; color:#E8D08A; letter-spacing:0.05em; font-weight:500; margin-right:15px; border-right:1px solid rgba(201,168,76,0.15); padding-right:15px; display:flex; align-items:center; height:100%;';
       greet.textContent = `User: ${displayName.charAt(0).toUpperCase() + displayName.slice(1)}`;
     }
 

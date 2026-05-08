@@ -712,11 +712,9 @@
   <!-- APP -->
   <div id="app">
     <div class="topbar">
-      <div class="topbar-brand">
-        <svg width="22" height="17" viewBox="0 -2 76 52" fill="none"
-          style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))">
-          <path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5"
-            stroke-linejoin="round" />
+      <div class="topbar-left">
+        <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))">
+          <path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round" />
           <rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C" />
           <circle cx="36" cy="4" r="5.5" fill="#E8D08A" />
           <circle cx="6" cy="18" r="4" fill="#5BBFD4" />
@@ -728,10 +726,9 @@
         </div>
       </div>
       <div class="topbar-right">
+        <div id="user-greet"></div>
         <div id="printer-display" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:4px 10px;border:1px solid rgba(91,191,212,0.25);color:var(--teal);border-radius:12px;margin-right:8px;background:rgba(91,191,212,0.04)">🖨 Vision: Idle</div>
-        <input type="text" id="global-search" placeholder="🔍 Search Orders..."
-          style="background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.18);color:var(--cream);padding:6px 12px;border-radius:3px;font-size:11px;outline:none;"
-          onkeyup="if(event.key==='Enter')handleGlobalSearch()" />
+        <input type="text" id="global-search" placeholder="🔍 Search Orders..." style="background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.18);color:var(--cream);padding:6px 12px;border-radius:3px;font-size:11px;outline:none;" onkeyup="if(event.key==='Enter')handleGlobalSearch()" />
         <a class="topbar-link" onclick="signOut()">Sign Out</a>
       </div>
     </div>
