@@ -266,6 +266,7 @@ function initEmail() {
 const styleShield = document.createElement('style');
 styleShield.textContent = `
   /* Global Dashboard Reset */
+  html { font-size: 14px; }
   body { 
     background: #0E0C09 !important; 
     color: #FAF6F0 !important; 
@@ -274,6 +275,14 @@ styleShield.textContent = `
     font-family: 'Lora', serif;
     font-size: 13px;
     line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  #app {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 100vh !important;
+    width: 100% !important;
   }
 
   .topbar { 
@@ -284,9 +293,8 @@ styleShield.textContent = `
     padding: 0 28px !important; 
     background: rgba(28, 22, 18, 0.98) !important;
     border-bottom: 1px solid rgba(201, 168, 76, 0.15) !important;
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 1000 !important;
+    flex-shrink: 0 !important;
+    width: 100% !important;
   }
   .topbar-left { display: flex !important; align-items: center !important; gap: 12px !important; }
   .topbar-right { display: flex !important; align-items: center !important; gap: 20px !important; }
