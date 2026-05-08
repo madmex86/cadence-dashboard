@@ -267,7 +267,19 @@
   <input type="hidden" id="c-id"/>
   <div class="fg">
     <div class="fr"><div><label class="fl">Log #<span class="help-tip">?<span class="tip-text">Sequential creature number starting at 1. Shows as #001 on the card badge and log page.</span></span></label><input id="c-log" placeholder="001"/></div><div><label class="fl">Name</label><input id="c-name" placeholder="S'mores"/></div></div>
-    <div class="fr"><div><label class="fl">SKU<span class="help-tip">?<span class="tip-text">Stock-keeping unit. Format: CC-[Log#]-[NAME IN CAPS]. Example: CC-001-SMORES</span></span></label><input id="c-sku" placeholder="CC-001-SMORES"/></div><div><label class="fl">Species</label><input id="c-species" placeholder="Gecko"/></div></div>
+    <div class="fr"><div>
+      <label class="fl">SKU<span class="help-tip">?<span class="tip-text">Auto-generated from Species + Name. Format: SPE-NAM with no keychain, or SPE-NAM-KCH with a keychain variant.</span></span></label>
+      <div style="display:flex;gap:5px;align-items:center;">
+        <input id="c-sku" placeholder="GEC-SMO" maxlength="11" style="flex:1;text-transform:uppercase;font-family:monospace;letter-spacing:.06em;"/>
+        <button type="button" class="btn" onclick="genQueueSKU()" style="white-space:nowrap;padding:5px 10px;font-size:11px;flex-shrink:0;">↺</button>
+      </div>
+      <div style="margin-top:5px;display:flex;align-items:center;gap:8px;">
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:rgba(196,188,178,0.5);cursor:pointer;user-select:none;">
+          <input type="checkbox" id="c-has-kch" onchange="toggleQueueKch()"/> Keychain variant
+        </label>
+        <input id="c-kch-suffix" placeholder="KCH" maxlength="3" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'');genQueueSKU()" style="width:52px;text-transform:uppercase;font-family:monospace;display:none;padding:3px 6px;font-size:12px;"/>
+      </div>
+    </div><div><label class="fl">Species</label><input id="c-species" placeholder="Gecko"/></div></div>
     <div class="fr"><div><label class="fl">Environment<span class="help-tip">?<span class="tip-text">Sets the card accent color and habitat filter on the site. Forest = green, Ocean = teal, Fantasy = purple, Holiday = red, Space = blue.</span></span></label><select id="c-env"><option value="forest">Forest</option><option value="sea">Ocean</option><option value="fantasy">Fantasy</option><option value="holiday">Holiday</option><option value="space">Space</option></select></div><div><label class="fl">Qty On Hand<span class="help-tip">?<span class="tip-text">How many finished, ready-to-ship copies exist right now.</span></span></label><input id="c-qty" type="number" min="0" placeholder="0"/></div></div>
     <div class="fr3"><div><label class="fl">Retail ($)<span class="help-tip">?<span class="tip-text">Price for direct sales — website, in-person, events. Before any platform fees.</span></span></label><input id="c-retail" type="number" step="0.01"/></div><div><label class="fl">Etsy ($)<span class="help-tip">?<span class="tip-text">Listing price on Etsy. Set ~8–10% higher than retail to cover Etsy's 6.5% transaction fee plus listing fees.</span></span></label><input id="c-etsy" type="number" step="0.01"/></div><div><label class="fl">Cost ($)<span class="help-tip">?<span class="tip-text">Your total production cost — filament, time, paint, materials. Used in P&amp;L to calculate your profit margin.</span></span></label><input id="c-cost" type="number" step="0.01"/></div></div>
     <div class="fr"><div><label class="fl">Active<span class="help-tip">?<span class="tip-text">Active = visible on the live site. Set to Inactive to hide without deleting.</span></span></label><select id="c-active"><option value="true">Active</option><option value="false">Inactive</option></select></div><div><label class="fl">Notes</label><input id="c-notes"/></div></div>
@@ -859,6 +871,31 @@ async function uploadCreatureImage(e){
     e.target.value = '';
   }
 }
+function qSkuSeg(s) {
+  return (s||'').toUpperCase().replace(/[^A-Z]/g,'').substring(0,3).padEnd(3,'X');
+}
+function genQueueSKU() {
+  const species = qSkuSeg(document.getElementById('c-species').value);
+  const name    = qSkuSeg(document.getElementById('c-name').value);
+  if (species === 'XXX' && name === 'XXX') return;
+  let sku = species + '-' + name;
+  if (document.getElementById('c-has-kch').checked) {
+    sku += '-' + qSkuSeg(document.getElementById('c-kch-suffix').value);
+  }
+  document.getElementById('c-sku').value = sku;
+}
+function toggleQueueKch() {
+  const on = document.getElementById('c-has-kch').checked;
+  document.getElementById('c-kch-suffix').style.display = on ? 'inline-block' : 'none';
+  genQueueSKU();
+}
+function initQueueKch(sku) {
+  const parts = (sku || '').split('-');
+  const hasKch = parts.length === 3;
+  document.getElementById('c-has-kch').checked = hasKch;
+  document.getElementById('c-kch-suffix').style.display = hasKch ? 'inline-block' : 'none';
+  document.getElementById('c-kch-suffix').value = hasKch ? parts[2] : '';
+}
 function cModal(id=''){
   document.getElementById('c-id').value=id;document.getElementById('cmt').textContent=id?'Edit Creature':'Add Creature';
   // populate filament multi-select from inventory
@@ -870,6 +907,7 @@ function cModal(id=''){
     else{Array.from(fsel.options).forEach(o=>o.selected=false);}
   }
   else{['c-log','c-name','c-sku','c-species','c-retail','c-etsy','c-cost','c-notes','c-qty','c-image-url'].forEach(x=>document.getElementById(x).value='');document.getElementById('c-env').value='forest';document.getElementById('c-active').value='true';Array.from(fsel.options).forEach(o=>o.selected=false);}
+  initQueueKch(document.getElementById('c-sku').value);
   openModal('m-creature');
 }
 async function saveCreature(){

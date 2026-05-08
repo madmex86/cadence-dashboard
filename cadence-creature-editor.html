@@ -133,6 +133,19 @@
     <div class="form-grid">
       <div><label class="fl">Name</label><input class="fi" id="f-name" placeholder="S'mores"/></div>
       <div><label class="fl">Species</label><input class="fi" id="f-species" placeholder="Gecko"/></div>
+      <div class="form-full">
+        <label class="fl">SKU<span class="help-tip">?<span class="tip-text">Auto-generated from Species + Name. Format: SPE-NAM with no keychain, or SPE-NAM-KCH with a keychain variant.</span></span></label>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input class="fi" id="f-sku" placeholder="GEC-SMO" maxlength="11" style="flex:1;text-transform:uppercase;font-family:monospace;letter-spacing:.08em;"/>
+          <button type="button" class="btn" onclick="genSKU()" style="white-space:nowrap;padding:7px 14px;font-size:11px;flex-shrink:0;">↺ Generate</button>
+        </div>
+        <div style="margin-top:6px;display:flex;align-items:center;gap:10px;">
+          <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);cursor:pointer;user-select:none;">
+            <input type="checkbox" id="f-has-kch" onchange="toggleKch()"/> Has keychain variant
+          </label>
+          <input class="fi" id="f-kch-suffix" placeholder="KCH" maxlength="3" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'');genSKU()" style="width:58px;text-transform:uppercase;font-family:monospace;letter-spacing:.08em;display:none;padding:5px 8px;"/>
+        </div>
+      </div>
       <div><label class="fl">Log #<span class="help-tip">?<span class="tip-text">Sequential creature number starting at 1. Shows as #001 on the card badge and on the creature's log page.</span></span></label><input class="fi" type="number" id="f-log" placeholder="1"/></div>
       <div><label class="fl">Environment<span class="help-tip">?<span class="tip-text">Sets the card accent color and habitat filter on the site. Forest = green, Ocean = teal, Fantasy = purple, Holiday = red, Space = blue.</span></span></label>
         <select class="fi" id="f-env">
@@ -293,6 +306,12 @@
     document.getElementById('del-btn').style.display = id ? 'block' : 'none';
     document.getElementById('f-name').value = c?.name || '';
     document.getElementById('f-species').value = c?.species || '';
+    const skuParts = (c?.sku || '').split('-');
+    document.getElementById('f-sku').value = c?.sku || '';
+    const hasKch = skuParts.length === 3;
+    document.getElementById('f-has-kch').checked = hasKch;
+    document.getElementById('f-kch-suffix').style.display = hasKch ? 'inline-block' : 'none';
+    document.getElementById('f-kch-suffix').value = hasKch ? skuParts[2] : '';
     document.getElementById('f-log').value = c?.log_number || '';
     document.getElementById('f-env').value = c?.environment || 'forest';
     document.getElementById('f-price-retail').value = c?.price_retail || '';
@@ -323,6 +342,7 @@
     const payload = {
       name: document.getElementById('f-name').value.trim(),
       species: document.getElementById('f-species').value.trim(),
+      sku: document.getElementById('f-sku').value.trim().toUpperCase() || null,
       log_number: parseInt(document.getElementById('f-log').value) || null,
       environment: document.getElementById('f-env').value,
       price_retail: parseFloat(document.getElementById('f-price-retail').value) || null,
@@ -356,6 +376,28 @@
     toast('Deleted');
     closeModal();
     await init();
+  }
+
+  function skuSegment(str) {
+    return (str || '').toUpperCase().replace(/[^A-Z]/g, '').substring(0, 3).padEnd(3, 'X');
+  }
+
+  function genSKU() {
+    const species = skuSegment(document.getElementById('f-species').value);
+    const name    = skuSegment(document.getElementById('f-name').value);
+    if (species === 'XXX' && name === 'XXX') return;
+    let sku = species + '-' + name;
+    if (document.getElementById('f-has-kch').checked) {
+      const kch = skuSegment(document.getElementById('f-kch-suffix').value);
+      sku += '-' + kch;
+    }
+    document.getElementById('f-sku').value = sku;
+  }
+
+  function toggleKch() {
+    const on = document.getElementById('f-has-kch').checked;
+    document.getElementById('f-kch-suffix').style.display = on ? 'inline-block' : 'none';
+    genSKU();
   }
 
   async function uploadImage(e) {
