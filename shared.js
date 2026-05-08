@@ -77,6 +77,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   const { data: { session } } = await db.auth.getSession();
   if(session) {
     currentUser = session.user;
+    
+    // Auto-create profile if missing
+    const { data: hasProfile } = await db.from('profiles').select('id').eq('id', currentUser.id).single();
+    if(!hasProfile) {
+      await db.from('profiles').insert({ 
+        id: currentUser.id, 
+        email: currentUser.email, 
+        role: currentUser.user_metadata?.role || 'fulfillment' 
+      });
+    }
+
     applyRolePermissions();
     if(typeof showApp === 'function') showApp();
   } else {
@@ -112,15 +123,23 @@ function applyRolePermissions() {
       if((href.includes('cadence-fulfillment.html') || href.includes('cadence-queue.html')) && role === 'finance') a.style.display = 'none';
     });
 
-    // DISPLAY USER NAME
-    const name = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
+    // DISPLAY USER NAME (Prioritize Profile Table)
+    let displayName = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
+    
+    // Check Profiles table for a custom name
+    const { data: profile } = await db.from('profiles').select('full_name').eq('id', currentUser.id).single();
+    if(profile && profile.full_name) displayName = profile.full_name;
+
     const right = document.querySelector('.topbar-right');
-    if(right && !document.getElementById('user-greet')) {
-      const greet = document.createElement('div');
-      greet.id = 'user-greet';
-      greet.style = 'font-size:11px; color:var(--goldl); font-weight:500; margin-right:15px; border-right:1px solid rgba(201,168,76,0.2); padding-right:15px;';
-      greet.textContent = `User: ${name.charAt(0).toUpperCase() + name.slice(1)}`;
-      right.insertBefore(greet, right.firstChild);
+    if(right) {
+      let greet = document.getElementById('user-greet');
+      if(!greet) {
+        greet = document.createElement('div');
+        greet.id = 'user-greet';
+        greet.style = 'font-size:11px; color:var(--goldl); font-weight:500; margin-right:15px; border-right:1px solid rgba(201,168,76,0.2); padding-right:15px;';
+        right.insertBefore(greet, right.firstChild);
+      }
+      greet.textContent = `User: ${displayName.charAt(0).toUpperCase() + displayName.slice(1)}`;
     }
   }
   
@@ -183,7 +202,12 @@ async function sendFulfillmentEmail(order) {
 
 async function logActivity(action, orderId = null, details = null) {
   if(!currentUser) return;
-  const name = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
+  
+  // Get best name
+  let name = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
+  const { data: profile } = await db.from('profiles').select('full_name').eq('id', currentUser.id).single();
+  if(profile && profile.full_name) name = profile.full_name;
+
   try {
     await db.from('activity_log').insert({
       user_id: currentUser.id,

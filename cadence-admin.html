@@ -66,7 +66,9 @@ input:focus, select:focus{border-color:var(--gold);}
   <a href="index.html">Hub</a>
   <a href="cadence-queue.html">Queue</a>
   <a href="cadence-fulfillment.html">Fulfillment</a>
+  <a href="cadence-activity.html">Activity</a>
   <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
+  <a href="cadence-admin.html" class="active">Admin</a>
   <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
   <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
 </div>
@@ -95,6 +97,14 @@ input:focus, select:focus{border-color:var(--gold);}
     </div>
     
     <button class="btn" onclick="inviteUser()">Create Account</button>
+  </div>
+
+  <div class="card" style="margin-top:24px;">
+    <div class="title" style="font-size:16px;">Current Team</div>
+    <div class="subtitle" style="margin-bottom:16px;">Manage display names and roles for your shop personnel.</div>
+    <div id="team-list" style="display:grid; gap:12px;">
+      <div class="subtitle" style="text-align:center; padding:20px;">Loading team members...</div>
+    </div>
   </div>
 </div>
 
@@ -125,8 +135,49 @@ async function inviteUser() {
     toast('Success! Verification email sent.', 'ok');
     document.getElementById('new-email').value = '';
     document.getElementById('new-pw').value = '';
+    // Also create a profile entry immediately
+    await db.from('profiles').insert({ id: data.user.id, email, role, full_name: '' });
+    loadTeam();
   }
 }
+
+async function loadTeam() {
+  const container = document.getElementById('team-list');
+  const { data, error } = await db.from('profiles').select('*').order('email');
+  
+  if(error) return container.innerHTML = '<div class="subtitle">Error loading team</div>';
+  
+  container.innerHTML = data.map(p => `
+    <div style="display:flex; align-items:center; gap:12px; background:rgba(0,0,0,0.15); padding:12px; border-radius:4px; border:1px solid rgba(201,168,76,0.1);">
+      <div style="flex:1;">
+        <div style="font-size:11px; color:var(--goldl); opacity:0.7;">${p.email}</div>
+        <input type="text" id="name-${p.id}" value="${p.full_name || ''}" placeholder="Enter Name" style="margin-top:6px; border:none; background:transparent; padding:0; height:auto; font-weight:600; font-size:14px;"/>
+      </div>
+      <div style="width:120px;">
+        <select id="role-${p.id}" style="padding:4px 8px; font-size:11px;">
+          <option value="fulfillment" ${p.role==='fulfillment'?'selected':''}>Packer</option>
+          <option value="finance" ${p.role==='finance'?'selected':''}>Finance</option>
+          <option value="admin" ${p.role==='admin'?'selected':''}>Admin</option>
+        </select>
+      </div>
+      <button class="btn" style="padding:6px 12px; font-size:10px;" onclick="updateProfile('${p.id}')">Save</button>
+    </div>
+  `).join('');
+}
+
+async function updateProfile(id) {
+  const full_name = document.getElementById('name-'+id).value;
+  const role = document.getElementById('role-'+id).value;
+  
+  const { error } = await db.from('profiles').update({ full_name, role }).eq('id', id);
+  if(error) toast('Error updating profile', 'err');
+  else toast('Profile updated!', 'ok');
+}
+
+// Load team on startup
+window.addEventListener('load', () => {
+  setTimeout(loadTeam, 1000);
+});
 </script>
 </body>
 </html>
