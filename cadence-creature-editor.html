@@ -149,8 +149,14 @@
       <div class="form-full"><label class="fl">Tagline</label><input class="fi" id="f-tagline" placeholder="Found wandering the forest floor…"/></div>
       <div class="form-full"><label class="fl">Etsy Listing URL</label><input class="fi" id="f-etsy-url" placeholder="https://etsy.com/listing/…"/></div>
       <div class="form-full">
-        <label class="fl">Image URL</label>
-        <input class="fi" id="f-image-url" placeholder="https://… or /images/…" oninput="previewImg()"/>
+        <label class="fl">Image URL <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">Paste a link or upload a photo</span></label>
+        <div style="display:flex;gap:6px;">
+          <input class="fi" id="f-image-url" placeholder="https://… or /images/…" oninput="previewImg()" style="flex:1;"/>
+          <label class="btn" style="cursor:pointer;margin:0;padding:9px 14px;font-size:11px;display:flex;align-items:center;gap:5px;white-space:nowrap;">
+            <span id="upload-lbl">Upload</span>
+            <input type="file" accept="image/*" style="display:none;" onchange="uploadImage(event)"/>
+          </label>
+        </div>
         <img id="img-preview" class="img-preview" alt="preview"/>
       </div>
       <div class="form-full"><label class="fl">Notes</label><textarea class="fi" id="f-notes" style="min-height:70px;resize:vertical;" placeholder="Internal notes…"></textarea></div>
@@ -348,6 +354,31 @@
     toast('Deleted');
     closeModal();
     await init();
+  }
+
+  async function uploadImage(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const lbl = document.getElementById('upload-lbl');
+    lbl.textContent = 'Uploading…';
+    try {
+      const ext = file.name.split('.').pop();
+      const fileName = 'creature_' + Date.now() + '.' + ext;
+      const { error } = await db.storage.from('creature-images').upload(fileName, file);
+      if (error) throw error;
+      const { data } = db.storage.from('creature-images').getPublicUrl(fileName);
+      if (data?.publicUrl) {
+        document.getElementById('f-image-url').value = data.publicUrl;
+        previewImg();
+        toast('Image uploaded');
+      }
+    } catch(err) {
+      console.error(err);
+      toast('Upload failed — check the creature-images bucket in Supabase.', 'err');
+    } finally {
+      lbl.textContent = 'Upload';
+      e.target.value = '';
+    }
   }
 
   function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
