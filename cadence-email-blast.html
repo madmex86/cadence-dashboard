@@ -343,7 +343,7 @@ function saveHistory(subject, sent, from) {
 
 /* ── SUBSCRIBERS ── */
 async function loadSubscribers() {
-  var res = await db.from('subscribers').select('id', { count: 'exact', head: true }).eq('subscribed', true);
+  var res = await db.from('subscribers').select('*', { count: 'exact', head: true }).eq('subscribed', true);
   if (res.error) { setStatus('Error loading subscribers: ' + res.error.message, true); return; }
   _subCount = res.count || 0;
   document.getElementById('sub-count').textContent = _subCount;
