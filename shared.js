@@ -180,6 +180,12 @@ async function applyRolePermissions() {
   db.channel('master-printers')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'printers' }, () => updateMasterPrinterStatus())
     .subscribe();
+  const path = window.location.pathname;
+  if((path.includes('cadence-admin.html') || path.includes('cadence-activity.html')) && role !== 'admin') {
+    window.location.href = 'index.html';
+  }
+  if(path.includes('cadence-creatures-pl-tracker.html') && role === 'fulfillment') window.location.href='index.html';
+  if((path.includes('cadence-fulfillment.html') || path.includes('cadence-queue.html')) && role === 'finance') window.location.href='index.html';
 }
 
 async function updateMasterPrinterStatus() {
@@ -192,14 +198,6 @@ async function updateMasterPrinterStatus() {
     pill.style.borderColor = data.status === 'printing' ? 'rgba(91,191,212,0.4)' : 'rgba(91,191,212,0.2)';
     pill.style.background = data.status === 'printing' ? 'rgba(91,191,212,0.1)' : 'rgba(91,191,212,0.05)';
   }
-}
-  
-  const path = window.location.pathname;
-  if((path.includes('cadence-admin.html') || path.includes('cadence-activity.html')) && role !== 'admin') {
-    window.location.href = 'index.html';
-  }
-  if(path.includes('cadence-creatures-pl-tracker.html') && role === 'fulfillment') window.location.href='index.html';
-  if((path.includes('cadence-fulfillment.html') || path.includes('cadence-queue.html')) && role === 'finance') window.location.href='index.html';
 }
 
 // EMAIL AUTOMATION (EmailJS)
