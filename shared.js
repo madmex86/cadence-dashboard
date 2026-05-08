@@ -105,20 +105,30 @@ async function applyRolePermissions() {
   const nav = document.querySelector('.dash-nav');
   if(nav) {
     if(role === 'admin') {
+      if(!nav.querySelector('a[href="cadence-activity.html"]')) {
+        const actTab = document.createElement('a');
+        actTab.href = 'cadence-activity.html';
+        actTab.textContent = 'Activity';
+        nav.appendChild(actTab);
+      }
       if(!nav.querySelector('a[href="cadence-admin.html"]')) {
         const adminTab = document.createElement('a');
         adminTab.href = 'cadence-admin.html';
         adminTab.textContent = 'Admin';
-        if(window.location.pathname.includes('cadence-admin.html')) adminTab.className = 'active';
-        const liveSite = nav.querySelector('a[href*="cadencecreatures.com"]');
-        if(liveSite) nav.insertBefore(adminTab, liveSite);
-        else nav.appendChild(adminTab);
+        nav.appendChild(adminTab);
       }
     }
     
+    const path = window.location.pathname;
     const links = nav.querySelectorAll('a');
     links.forEach(a => {
       const href = a.getAttribute('href');
+      // Set Active
+      if(path.includes(href) && href !== 'index.html') a.className = 'active';
+      if(path.endsWith('/') || path.endsWith('index.html')) {
+         if(href === 'index.html') a.className = 'active';
+      }
+
       // ADMIN ONLY TABS
       if((href.includes('cadence-admin.html') || href.includes('cadence-activity.html')) && role !== 'admin') {
         a.style.display = 'none';
