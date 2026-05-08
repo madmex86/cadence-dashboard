@@ -236,8 +236,6 @@ function showApp(){
   loadData();
 }
 
-let orders = [];
-
 async function loadData(){
   try{
     const {data, error} = await db.from('orders').select('*').in('status', ['queued','printing','printed','packaging','shipped']).order('shipped_date',{ascending:false}).limit(100);
