@@ -15,6 +15,8 @@
 
   .ep { background: rgba(255,255,255,0.02); border: 1px solid rgba(201,168,76,0.12); border-radius: 6px; padding: 24px; }
   .ep-title { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); margin-bottom: 16px; }
+  .ep-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .ep-title-row .ep-title { margin-bottom: 0; }
 
   .stat-bar { display: flex; gap: 24px; margin-bottom: 24px; }
   .stat-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(201,168,76,0.1); border-radius: 6px; padding: 14px 20px; flex: 1; }
@@ -24,18 +26,28 @@
   .fl { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .12em; color: var(--cream-faint); margin-bottom: 6px; }
   .fi { width: 100%; background: rgba(0,0,0,0.25); border: 1px solid rgba(201,168,76,0.18); color: var(--cream); padding: 9px 12px; font-family: inherit; font-size: 13px; border-radius: 3px; outline: none; transition: border-color .2s; box-sizing: border-box; }
   .fi:focus { border-color: rgba(201,168,76,0.5); }
-  textarea.fi { resize: vertical; min-height: 220px; line-height: 1.6; }
-  .send-row { display: flex; align-items: center; gap: 14px; margin-top: 18px; flex-wrap: wrap; }
-  .send-status { font-size: 12px; color: var(--dim); flex: 1; min-width: 180px; }
+  textarea.fi { resize: vertical; min-height: 200px; line-height: 1.6; }
+  .send-row { display: flex; align-items: center; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .send-status { font-size: 12px; flex: 1; min-width: 160px; }
 
   .sending-indicator { display: none; align-items: center; gap: 10px; margin-top: 12px; font-size: 12px; color: var(--dim); }
   .sending-indicator.active { display: flex; }
   .spin { width: 14px; height: 14px; border: 2px solid rgba(201,168,76,.2); border-top-color: var(--gold); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* Templates */
+  .tpl-empty { font-size: 12px; color: var(--dim); font-style: italic; }
+  .tpl-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(201,168,76,0.08); }
+  .tpl-item:last-child { border-bottom: none; }
+  .tpl-info { flex: 1; min-width: 0; }
+  .tpl-name { font-size: 13px; color: var(--cream); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tpl-subject { font-size: 11px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tpl-from-badge { font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: rgba(201,168,76,.55); background: rgba(201,168,76,.07); padding: 1px 6px; border-radius: 2px; white-space: nowrap; flex-shrink: 0; }
+  .tpl-actions { display: flex; gap: 5px; flex-shrink: 0; }
+
   /* Preview */
-  .preview-email { background: #fff; border-radius: 4px; padding: 24px; color: #333; font-size: 13px; line-height: 1.65; min-height: 180px; }
-  .preview-from { font-size: 11px; color: #888; margin-bottom: 4px; }
+  .preview-email { background: #fff; border-radius: 4px; padding: 20px; color: #333; font-size: 13px; line-height: 1.65; min-height: 180px; }
+  .preview-from { font-size: 11px; color: #888; margin-bottom: 2px; }
   .preview-subject { font-size: 15px; font-weight: 700; color: #111; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
   .preview-body { white-space: pre-wrap; word-break: break-word; }
   .preview-footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid #eee; font-size: 10px; color: #aaa; }
@@ -43,9 +55,9 @@
 
   /* History */
   .history-empty { font-size: 12px; color: var(--dim); font-style: italic; }
-  .history-item { padding: 12px 0; border-bottom: 1px solid rgba(201,168,76,0.08); }
+  .history-item { padding: 10px 0; border-bottom: 1px solid rgba(201,168,76,0.08); }
   .history-item:last-child { border-bottom: none; }
-  .hi-subject { color: var(--cream); font-size: 13px; margin-bottom: 3px; }
+  .hi-subject { color: var(--cream); font-size: 13px; margin-bottom: 2px; }
   .hi-meta { font-size: 11px; color: var(--dim); letter-spacing: .06em; }
 
   .hint { font-size: 11px; color: var(--cream-faint); margin-top: 6px; }
@@ -90,27 +102,49 @@
       </div>
 
       <div class="blast-layout">
-        <!-- COMPOSE -->
-        <div>
-          <div class="ep" style="margin-bottom:24px;">
+        <!-- LEFT COLUMN -->
+        <div style="display:flex;flex-direction:column;gap:24px;">
+
+          <!-- COMPOSE -->
+          <div class="ep">
             <div class="ep-title">Compose</div>
+
+            <div style="margin-bottom:14px;">
+              <label class="fl">From</label>
+              <select class="fi" id="blast-from" onchange="updatePreview()">
+                <option value="news@cadencecreatures.com">Newsletter — news@cadencecreatures.com</option>
+                <option value="hello@cadencecreatures.com">General — hello@cadencecreatures.com</option>
+              </select>
+            </div>
+
             <div style="margin-bottom:14px;">
               <label class="fl">Subject Line</label>
               <input type="text" class="fi" id="blast-subject" placeholder="New Creatures Spotted!" oninput="updatePreview()"/>
             </div>
+
             <div style="margin-bottom:4px;">
               <label class="fl">Message Body</label>
               <textarea class="fi" id="blast-body" placeholder="Hi {{name}},&#10;&#10;Write your message here…" oninput="updatePreview()"></textarea>
             </div>
             <div class="hint">Use <code style="background:rgba(201,168,76,.1);padding:1px 5px;border-radius:2px;font-size:11px;">{{name}}</code> to personalize with each subscriber's first name.</div>
+
             <div class="send-row">
               <button class="btn pri" id="send-btn" onclick="sendBlast()">Send to All Subscribers</button>
+              <button class="btn" onclick="saveTemplate()" title="Save current compose as a reusable template">Save as Template</button>
               <div class="send-status" id="send-status"></div>
             </div>
             <div class="sending-indicator" id="sending-indicator">
               <div class="spin"></div>
               <span id="sending-label">Sending…</span>
             </div>
+          </div>
+
+          <!-- TEMPLATES -->
+          <div class="ep">
+            <div class="ep-title-row">
+              <div class="ep-title">Templates</div>
+            </div>
+            <div id="template-list"><div class="tpl-empty">No templates saved yet.</div></div>
           </div>
 
           <!-- HISTORY -->
@@ -124,7 +158,7 @@
         <div class="ep" style="position:sticky;top:80px;">
           <div class="ep-title">Preview</div>
           <div class="preview-email">
-            <div class="preview-from">From: Cadence Creatures &lt;hello@cadencecreatures.com&gt;</div>
+            <div class="preview-from" id="prev-from">From: Cadence Creatures &lt;news@cadencecreatures.com&gt;</div>
             <div class="preview-subject" id="prev-subject"><span class="preview-placeholder">Your subject line</span></div>
             <div class="preview-body" id="prev-body"><span class="preview-placeholder">Your message will appear here…</span></div>
             <div class="preview-footer">
@@ -142,15 +176,18 @@
 <script>
 var _subCount = 0;
 var _isSending = false;
+var _templates = [];
 
+/* ── PREVIEW ── */
 function updatePreview() {
+  var from  = document.getElementById('blast-from').value;
   var subject = document.getElementById('blast-subject').value.trim();
-  var body = document.getElementById('blast-body').value;
-  var ps = document.getElementById('prev-subject');
-  var pb = document.getElementById('prev-body');
-  ps.innerHTML = subject || '<span class="preview-placeholder">Your subject line</span>';
-  var previewBody = body ? escHtml(body).replace(/\{\{name\}\}/g, '<em>Sarah</em>') : '<span class="preview-placeholder">Your message will appear here…</span>';
-  pb.innerHTML = previewBody;
+  var body  = document.getElementById('blast-body').value;
+  document.getElementById('prev-from').textContent = 'From: Cadence Creatures <' + from + '>';
+  document.getElementById('prev-subject').innerHTML = subject || '<span class="preview-placeholder">Your subject line</span>';
+  document.getElementById('prev-body').innerHTML = body
+    ? escHtml(body).replace(/\{\{name\}\}/g, '<em>Sarah</em>')
+    : '<span class="preview-placeholder">Your message will appear here…</span>';
 }
 
 function escHtml(s) {
@@ -163,6 +200,117 @@ function setStatus(msg, isErr) {
   el.style.color = isErr ? 'rgba(232,112,112,.9)' : 'var(--dim)';
 }
 
+/* ── SEND ── */
+async function sendBlast() {
+  if (_isSending) return;
+  var from    = document.getElementById('blast-from').value;
+  var subject = document.getElementById('blast-subject').value.trim();
+  var body    = document.getElementById('blast-body').value.trim();
+  if (!subject) { toast('Please enter a subject line.', 'err'); setStatus('Please enter a subject line.', true); return; }
+  if (!body)    { toast('Please write a message body.', 'err'); setStatus('Please write a message body.', true); return; }
+  if (!_subCount) { toast('No subscribers found.', 'err'); setStatus('No subscribers found — check Supabase.', true); return; }
+  if (!confirm('Send from ' + from + ' to ' + _subCount + ' subscriber' + (_subCount !== 1 ? 's' : '') + '?')) return;
+
+  _isSending = true;
+  var btn = document.getElementById('send-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  setStatus('');
+  document.getElementById('sending-indicator').classList.add('active');
+  document.getElementById('sending-label').textContent = 'Sending to ' + _subCount + ' subscriber' + (_subCount !== 1 ? 's' : '') + '…';
+
+  var result, fnError;
+  try {
+    var res = await db.functions.invoke('send-blast', {
+      body: { subject: subject, message: body, from_address: from }
+    });
+    result = res.data; fnError = res.error;
+  } catch(e) { fnError = e; }
+
+  _isSending = false;
+  btn.disabled = false; btn.textContent = 'Send to All Subscribers';
+  document.getElementById('sending-indicator').classList.remove('active');
+
+  if (fnError) {
+    var em = fnError.message || String(fnError);
+    toast('Send failed: ' + em, 'err'); setStatus('Error: ' + em, true); return;
+  }
+
+  var sent   = result ? (result.sent   || 0) : 0;
+  var failed = result ? (result.failed || 0) : 0;
+  var msg = 'Sent ' + sent + ' email' + (sent !== 1 ? 's' : '');
+  if (failed) msg += ', ' + failed + ' failed';
+  toast(msg + '.', sent ? 'ok' : 'err');
+  setStatus('');
+
+  if (sent > 0) {
+    saveHistory(subject, sent, from);
+    document.getElementById('blast-subject').value = '';
+    document.getElementById('blast-body').value = '';
+    updatePreview();
+  }
+}
+
+/* ── TEMPLATES ── */
+async function loadTemplates() {
+  var res = await db.from('email_templates').select('*').order('created_at', { ascending: false });
+  if (res.error) { console.error('Template load failed:', res.error); return; }
+  _templates = res.data || [];
+  renderTemplates();
+}
+
+function renderTemplates() {
+  var el = document.getElementById('template-list');
+  if (!_templates.length) { el.innerHTML = '<div class="tpl-empty">No templates saved yet.</div>'; return; }
+  el.innerHTML = _templates.map(function(t) {
+    var fromLabel = t.from_address === 'hello@cadencecreatures.com' ? 'hello@' : 'news@';
+    return '<div class="tpl-item">'
+      + '<div class="tpl-info">'
+      + '<div class="tpl-name">' + escHtml(t.name) + '</div>'
+      + '<div class="tpl-subject">' + escHtml(t.subject) + '</div>'
+      + '</div>'
+      + '<span class="tpl-from-badge">' + fromLabel + '</span>'
+      + '<div class="tpl-actions">'
+      + '<button class="btn sm" onclick="loadTemplate(\'' + t.id + '\')">Load</button>'
+      + '<button class="btn sm red" onclick="deleteTemplate(\'' + t.id + '\')">✕</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+async function saveTemplate() {
+  var subject = document.getElementById('blast-subject').value.trim();
+  var body    = document.getElementById('blast-body').value.trim();
+  var from    = document.getElementById('blast-from').value;
+  if (!subject && !body) { toast('Nothing to save — fill in subject or body first.', 'err'); return; }
+  var name = prompt('Template name:');
+  if (!name || !name.trim()) return;
+  var res = await db.from('email_templates').insert({
+    name: name.trim(), subject: subject, body: body, from_address: from
+  });
+  if (res.error) { toast('Save failed: ' + res.error.message, 'err'); return; }
+  toast('Template saved.', 'ok');
+  await loadTemplates();
+}
+
+function loadTemplate(id) {
+  var t = _templates.find(function(x) { return x.id === id; });
+  if (!t) return;
+  document.getElementById('blast-from').value    = t.from_address || 'news@cadencecreatures.com';
+  document.getElementById('blast-subject').value = t.subject;
+  document.getElementById('blast-body').value    = t.body;
+  updatePreview();
+  toast('Template loaded.', 'ok');
+}
+
+async function deleteTemplate(id) {
+  if (!confirm('Delete this template?')) return;
+  var res = await db.from('email_templates').delete().eq('id', id);
+  if (res.error) { toast('Delete failed: ' + res.error.message, 'err'); return; }
+  toast('Template deleted.', 'ok');
+  await loadTemplates();
+}
+
+/* ── HISTORY ── */
 function loadHistory() {
   var raw = localStorage.getItem('cc_blast_history');
   var history = raw ? JSON.parse(raw) : [];
@@ -177,89 +325,34 @@ function loadHistory() {
     var d = new Date(b.timestamp);
     var fmt = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
       + ' · ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    var fromStr = b.from ? ' &nbsp;·&nbsp; ' + b.from.replace('@cadencecreatures.com','@…') : '';
     return '<div class="history-item">'
       + '<div class="hi-subject">' + escHtml(b.subject) + '</div>'
-      + '<div class="hi-meta">Sent to ' + b.sent + ' subscriber' + (b.sent !== 1 ? 's' : '') + ' &nbsp;·&nbsp; ' + fmt + '</div>'
+      + '<div class="hi-meta">Sent to ' + b.sent + ' subscriber' + (b.sent !== 1 ? 's' : '') + fromStr + ' &nbsp;·&nbsp; ' + fmt + '</div>'
       + '</div>';
   }).join('');
 }
 
-function saveHistory(subject, sent) {
+function saveHistory(subject, sent, from) {
   var raw = localStorage.getItem('cc_blast_history');
   var history = raw ? JSON.parse(raw) : [];
-  history.push({ subject: subject, sent: sent, timestamp: new Date().toISOString() });
+  history.push({ subject: subject, sent: sent, from: from, timestamp: new Date().toISOString() });
   localStorage.setItem('cc_blast_history', JSON.stringify(history));
   loadHistory();
 }
 
-async function sendBlast() {
-  if (_isSending) return;
-  var subject = document.getElementById('blast-subject').value.trim();
-  var body = document.getElementById('blast-body').value.trim();
-  if (!subject) { toast('Please enter a subject line.', 'err'); setStatus('Please enter a subject line.', true); return; }
-  if (!body) { toast('Please write a message body.', 'err'); setStatus('Please write a message body.', true); return; }
-  if (!_subCount) { toast('No subscribers found.', 'err'); setStatus('No subscribers found — check Supabase.', true); return; }
-  if (!confirm('Send this email to ' + _subCount + ' subscriber' + (_subCount !== 1 ? 's' : '') + '?')) return;
-
-  _isSending = true;
-  var btn = document.getElementById('send-btn');
-  btn.disabled = true;
-  btn.textContent = 'Sending…';
-  setStatus('');
-  document.getElementById('sending-indicator').classList.add('active');
-  document.getElementById('sending-label').textContent = 'Sending to ' + _subCount + ' subscriber' + (_subCount !== 1 ? 's' : '') + '…';
-
-  var result, fnError;
-  try {
-    var res = await db.functions.invoke('send-blast', {
-      body: { subject: subject, message: body }
-    });
-    result = res.data;
-    fnError = res.error;
-  } catch(e) {
-    fnError = e;
-  }
-
-  _isSending = false;
-  btn.disabled = false;
-  btn.textContent = 'Send to All Subscribers';
-  document.getElementById('sending-indicator').classList.remove('active');
-
-  if (fnError) {
-    var errMsg = fnError.message || String(fnError);
-    toast('Send failed: ' + errMsg, 'err');
-    setStatus('Error: ' + errMsg, true);
-    return;
-  }
-
-  var sent = result ? (result.sent || 0) : 0;
-  var failed = result ? (result.failed || 0) : 0;
-  var msg = 'Sent ' + sent + ' email' + (sent !== 1 ? 's' : '');
-  if (failed) msg += ', ' + failed + ' failed';
-  toast(msg + '.', sent ? 'ok' : 'err');
-  setStatus('');
-
-  if (sent > 0) {
-    saveHistory(subject, sent);
-    document.getElementById('blast-subject').value = '';
-    document.getElementById('blast-body').value = '';
-    updatePreview();
-  }
-}
-
+/* ── SUBSCRIBERS ── */
 async function loadSubscribers() {
   var res = await db.from('subscribers').select('id', { count: 'exact', head: true }).eq('subscribed', true);
-  if (res.error) {
-    setStatus('Error loading subscribers: ' + res.error.message, true);
-    return;
-  }
+  if (res.error) { setStatus('Error loading subscribers: ' + res.error.message, true); return; }
   _subCount = res.count || 0;
   document.getElementById('sub-count').textContent = _subCount;
 }
 
+/* ── INIT ── */
 async function showApp() {
   document.getElementById('app').style.display = 'block';
-  await loadSubscribers();
+  await Promise.all([loadSubscribers(), loadTemplates()]);
   loadHistory();
 }
 </script>
