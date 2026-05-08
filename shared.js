@@ -396,10 +396,14 @@ styleShield.textContent = `
     height: 64px !important; 
     padding: 0 28px !important; 
     background: rgba(28, 22, 18, 0.98) !important;
+    backdrop-filter: blur(10px) !important;
     border-bottom: 1px solid rgba(201, 168, 76, 0.15) !important;
     flex-shrink: 0 !important;
     width: 100% !important;
     box-sizing: border-box !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 1001 !important;
   }
   .topbar-left { display: flex !important; align-items: center !important; gap: 12px !important; }
   .topbar-right { display: flex !important; align-items: center !important; gap: 20px !important; }
@@ -421,6 +425,7 @@ styleShield.textContent = `
   .dash-nav { 
     display: flex !important; 
     background: rgba(20, 18, 15, 0.95) !important; 
+    backdrop-filter: blur(10px) !important;
     padding: 0 16px !important; 
     gap: 0 !important;
     border-bottom: 1px solid rgba(201, 168, 76, 0.1) !important;
