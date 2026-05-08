@@ -138,7 +138,8 @@ async function loadTeam() {
 
 async function showApp() {
   const role = currentUser.user_metadata?.role || 'user';
-  if(role !== 'admin') {
+  const isOwner = currentUser.email === 'stevenportugal86@gmail.com';
+  if(role !== 'admin' && !isOwner) {
     window.location.href = 'index.html';
     return;
   }

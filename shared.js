@@ -227,9 +227,11 @@ async function applyRolePermissions() {
     .subscribe();
 
   const path = window.location.pathname;
-  if((path.includes('cadence-admin.html') || path.includes('cadence-activity.html')) && role !== 'admin') window.location.href = 'index.html';
-  if(path.includes('cadence-creatures-pl-tracker.html') && role === 'fulfillment') window.location.href='index.html';
-  if((path.includes('cadence-fulfillment.html') || path.includes('cadence-queue.html')) && role === 'finance') window.location.href='index.html';
+  const isOwner = currentUser.email === 'stevenportugal86@gmail.com';
+  
+  if((path.includes('cadence-admin.html') || path.includes('cadence-activity.html')) && role !== 'admin' && !isOwner) window.location.href = 'index.html';
+  if(path.includes('cadence-creatures-pl-tracker.html') && role === 'fulfillment' && !isOwner) window.location.href='index.html';
+  if((path.includes('cadence-fulfillment.html') || path.includes('cadence-queue.html')) && role === 'finance' && !isOwner) window.location.href='index.html';
 }
 
 async function updateMasterPrinterStatus() {
