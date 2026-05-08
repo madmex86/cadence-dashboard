@@ -50,7 +50,7 @@ async function tryLogin(){
     if(inp){inp.classList.remove('shake');void inp.offsetWidth;inp.classList.add('shake');inp.value='';}
   } else {
     currentUser = data.user;
-    applyRolePermissions();
+    await applyRolePermissions();
     if(typeof showApp === 'function') showApp();
   }
 }
@@ -88,7 +88,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
-    applyRolePermissions();
+    await applyRolePermissions();
     if(typeof showApp === 'function') showApp();
   } else {
     // Force redirect to Hub if they are on a protected page without a session
@@ -132,8 +132,10 @@ async function applyRolePermissions() {
 
     // DISPLAY USER NAME
     let displayName = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
-    const { data: profile } = await db.from('profiles').select('full_name').eq('id', currentUser.id).single();
-    if(profile && profile.full_name) displayName = profile.full_name;
+    try {
+      const { data: profile } = await db.from('profiles').select('full_name').eq('id', currentUser.id).single();
+      if(profile && profile.full_name) displayName = profile.full_name;
+    } catch(e) { console.warn('Profile fetch failed, using default name'); }
 
     const right = document.querySelector('.topbar-right');
     if(right) {
