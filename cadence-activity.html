@@ -10,36 +10,17 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared.js"></script>
 <style>
-:root{--ink:#1C1612;--gold:#C9A84C;--gold-light:#E8D08A;--gold-dim:rgba(201,168,76,0.14);--teal:#5BBFD4;--green:#4a8c5c;--red:#a84444;--cream:#FAF6F0;--cream-dim:#c4bcb2;--cream-faint:#7a6f62;--border:rgba(201,168,76,0.12);--border-h:rgba(201,168,76,0.30);}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--ink);color:var(--cream);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;font-size:14px;}
-body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:160px;opacity:0.04;pointer-events:none;z-index:9998;}
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;border-bottom:1px solid var(--border);position:relative;z-index:10;}
-.topbar-brand{display:flex;align-items:center;gap:12px;}
-.topbar-name{font-family:'Lora',Georgia,serif;font-size:13px;font-weight:500;color:#E8D08A;letter-spacing:0.04em;}
-.topbar-sub{font-family:'Lora',Georgia,serif;font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(201,168,76,0.35);margin-top:1px;}
-.topbar-right{display:flex;align-items:center;gap:16px;}
-.topbar-link{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--cream-faint);text-decoration:none;transition:color 0.2s;cursor:pointer;}
-.topbar-link:hover{color:var(--gold-light);}
-.dash-nav{display:flex;align-items:center;gap:0;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.1);padding:0 16px;overflow-x:auto;position:relative;z-index:9;}
-.dash-nav a{font-family:'Lora',Georgia,serif;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(196,188,178,0.5);text-decoration:none;padding:10px 14px;white-space:nowrap;border-bottom:2px solid transparent;transition:color 0.2s,border-color 0.2s;}
-.dash-nav a:hover{color:#E8D08A;}
-.dash-nav a.active{color:#E8D08A;border-bottom-color:#C9A84C;}
+  /* Activity Specifics */
+  .main { padding: 40px 28px; max-width: 900px; margin: 0 auto; position: relative; z-index: 1; }
+  .log-list { display: flex; flex-direction: column; gap: 1px; background: rgba(201, 168, 76, 0.1); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .log-item { background: #1C1612; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; transition: background 0.2s; border-bottom: 1px solid rgba(201, 168, 76, 0.05); }
+  .log-item:hover { background: rgba(255, 255, 255, 0.02); }
+  .log-main { display: flex; align-items: center; gap: 18px; flex: 1; }
+  .log-user { font-size: 10px; font-weight: 600; color: #C9A84C; background: rgba(201, 168, 76, 0.1); padding: 3px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .log-action { font-size: 13px; color: #FAF6F0; letter-spacing: 0.02em; }
+  .log-time { font-size: 11px; color: #8A7D6E; white-space: nowrap; font-family: 'Lora', serif; }
 
-.main{padding:40px 28px;max-width:900px;margin:0 auto;position:relative;z-index:1;}
-.header{margin-bottom:32px;}
-.title{font-family:'Lora',serif;font-size:24px;color:var(--gold-light);margin-bottom:8px;}
-.subtitle{font-size:12px;color:var(--cream-faint);letter-spacing:0.05em;}
-
-.log-list{display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:4px;overflow:hidden;}
-.log-item{background:var(--ink);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:20px;transition:background 0.2s;}
-.log-item:hover{background:rgba(255,255,255,0.02);}
-.log-main{display:flex;align-items:center;gap:15px;flex:1;}
-.log-user{font-size:11px;font-weight:600;color:var(--gold);background:var(--gold-dim);padding:2px 8px;border-radius:12px;text-transform:uppercase;letter-spacing:0.05em;}
-.log-action{font-size:14px;color:var(--cream);}
-.log-time{font-size:11px;color:var(--cream-faint);white-space:nowrap;}
-
-.empty{padding:40px;text-align:center;color:var(--cream-faint);font-style:italic;}
+  .empty { padding: 60px; text-align: center; color: #8A7D6E; font-style: italic; font-family: 'Lora', serif; }
 </style>
 </head>
 <body>
@@ -106,7 +87,7 @@ async function loadLogs() {
   const { data, error } = await db.from('activity_log').select('*').order('created_at', { ascending: false }).limit(100);
   
   if (error) {
-    container.innerHTML = `<div class="empty" style="color:var(--red)">Failed to load logs: ${error.message}</div>`;
+    container.innerHTML = `<div class="empty" style="color:#e09090">Failed to load logs: ${error.message}</div>`;
     return;
   }
 
@@ -134,6 +115,6 @@ async function loadLogs() {
 // Refresh logs every 30 seconds
 setInterval(loadLogs, 30000);
 </script>
-
+</div>
 </body>
 </html>
