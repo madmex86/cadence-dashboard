@@ -266,7 +266,7 @@ function initEmail() {
 const styleShield = document.createElement('style');
 styleShield.textContent = `
   /* Global Dashboard Reset */
-  html { font-size: 14px; }
+  html { font-size: 16px; }
   body { 
     background: #0E0C09 !important; 
     color: #FAF6F0 !important; 
@@ -279,10 +279,27 @@ styleShield.textContent = `
   }
 
   #app {
+    display: flex !important;
+    flex-direction: column !important;
     min-height: 100vh !important;
     width: 100% !important;
-    display: block !important;
+    background: #0E0C09 !important;
   }
+
+  /* Core UI Components */
+  .main { flex: 1; display: flex; flex-direction: column; }
+  .main-content { padding: 32px 28px; max-width: 1200px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+  
+  .tabs { display: flex; padding: 0 28px; border-bottom: 1px solid rgba(201, 168, 76, 0.15); gap: 2px; background: rgba(0,0,0,0.2); }
+  .tab { font-family: 'Lora', serif; padding: 14px 20px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: rgba(196, 188, 178, 0.5); cursor: pointer; border: none; background: none; border-bottom: 3px solid transparent; transition: all 0.2s; }
+  .tab:hover { color: #E8D08A; background: rgba(201, 168, 76, 0.03); }
+  .tab.active { color: #E8D08A; border-bottom-color: #C9A84C; background: rgba(201, 168, 76, 0.05); }
+
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 24px; }
+  .kpi { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(201, 168, 76, 0.12); padding: 22px; border-radius: 4px; text-align: center; }
+  .kpi-l { font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: rgba(201, 168, 76, 0.5); margin-bottom: 10px; }
+  .kpi-v { font-size: 24px; font-weight: 600; color: #FAF6F0; }
+  .kpi-s { font-size: 10px; color: #8A7D6E; margin-top: 8px; }
 
   .topbar { 
     display: flex !important; 
@@ -294,6 +311,7 @@ styleShield.textContent = `
     border-bottom: 1px solid rgba(201, 168, 76, 0.15) !important;
     flex-shrink: 0 !important;
     width: 100% !important;
+    box-sizing: border-box !important;
   }
   .topbar-left { display: flex !important; align-items: center !important; gap: 12px !important; }
   .topbar-right { display: flex !important; align-items: center !important; gap: 20px !important; }
