@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script src="shared.js"></script>
 <style>
   .blast-layout { display: grid; grid-template-columns: 1fr 360px; gap: 24px; align-items: start; }
@@ -29,10 +28,10 @@
   .send-row { display: flex; align-items: center; gap: 14px; margin-top: 18px; flex-wrap: wrap; }
   .send-status { font-size: 12px; color: var(--dim); flex: 1; min-width: 180px; }
 
-  .progress-wrap { margin-top: 12px; display: none; }
-  .progress-bg { background: rgba(0,0,0,0.3); border-radius: 3px; height: 5px; overflow: hidden; }
-  .progress-fill { height: 100%; background: linear-gradient(to right, var(--gold), var(--teal)); border-radius: 3px; width: 0%; transition: width .25s; }
-  .progress-label { font-size: 11px; color: var(--dim); margin-top: 6px; }
+  .sending-indicator { display: none; align-items: center; gap: 10px; margin-top: 12px; font-size: 12px; color: var(--dim); }
+  .sending-indicator.active { display: flex; }
+  .spin { width: 14px; height: 14px; border: 2px solid rgba(201,168,76,.2); border-top-color: var(--gold); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   /* Preview */
   .preview-email { background: #fff; border-radius: 4px; padding: 24px; color: #333; font-size: 13px; line-height: 1.65; min-height: 180px; }
@@ -48,6 +47,8 @@
   .history-item:last-child { border-bottom: none; }
   .hi-subject { color: var(--cream); font-size: 13px; margin-bottom: 3px; }
   .hi-meta { font-size: 11px; color: var(--dim); letter-spacing: .06em; }
+
+  .hint { font-size: 11px; color: var(--cream-faint); margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -99,15 +100,16 @@
             </div>
             <div style="margin-bottom:4px;">
               <label class="fl">Message Body</label>
-              <textarea class="fi" id="blast-body" placeholder="Write your message here…&#10;&#10;Each subscriber will receive a personalized copy with their name." oninput="updatePreview()"></textarea>
+              <textarea class="fi" id="blast-body" placeholder="Hi {{name}},&#10;&#10;Write your message here…" oninput="updatePreview()"></textarea>
             </div>
+            <div class="hint">Use <code style="background:rgba(201,168,76,.1);padding:1px 5px;border-radius:2px;font-size:11px;">{{name}}</code> to personalize with each subscriber's first name.</div>
             <div class="send-row">
-              <button class="btn" id="send-btn" onclick="sendBlast()">Send to All Subscribers</button>
+              <button class="btn pri" id="send-btn" onclick="sendBlast()">Send to All Subscribers</button>
               <div class="send-status" id="send-status"></div>
             </div>
-            <div class="progress-wrap" id="progress-wrap">
-              <div class="progress-bg"><div class="progress-fill" id="progress-fill"></div></div>
-              <div class="progress-label" id="progress-label"></div>
+            <div class="sending-indicator" id="sending-indicator">
+              <div class="spin"></div>
+              <span id="sending-label">Sending…</span>
             </div>
           </div>
 
@@ -138,7 +140,7 @@
 </div>
 
 <script>
-var _subs = [];
+var _subCount = 0;
 var _isSending = false;
 
 function updatePreview() {
@@ -147,11 +149,18 @@ function updatePreview() {
   var ps = document.getElementById('prev-subject');
   var pb = document.getElementById('prev-body');
   ps.innerHTML = subject || '<span class="preview-placeholder">Your subject line</span>';
-  pb.innerHTML = body ? escHtml(body) : '<span class="preview-placeholder">Your message will appear here…</span>';
+  var previewBody = body ? escHtml(body).replace(/\{\{name\}\}/g, '<em>Sarah</em>') : '<span class="preview-placeholder">Your message will appear here…</span>';
+  pb.innerHTML = previewBody;
 }
 
 function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function setStatus(msg, isErr) {
+  var el = document.getElementById('send-status');
+  el.textContent = msg;
+  el.style.color = isErr ? 'rgba(232,112,112,.9)' : 'var(--dim)';
 }
 
 function loadHistory() {
@@ -187,54 +196,48 @@ async function sendBlast() {
   if (_isSending) return;
   var subject = document.getElementById('blast-subject').value.trim();
   var body = document.getElementById('blast-body').value.trim();
-  if (!subject) { toast('Please enter a subject line.', 'err'); document.getElementById('send-status').textContent = 'Please enter a subject line.'; return; }
-  if (!body) { toast('Please write a message body.', 'err'); document.getElementById('send-status').textContent = 'Please write a message body.'; return; }
-  if (!_subs.length) { toast('No subscribers found.', 'err'); document.getElementById('send-status').textContent = 'No subscribers found — check Supabase.'; return; }
-  if (!confirm('Send this email to ' + _subs.length + ' subscriber' + (_subs.length !== 1 ? 's' : '') + '?')) return;
+  if (!subject) { toast('Please enter a subject line.', 'err'); setStatus('Please enter a subject line.', true); return; }
+  if (!body) { toast('Please write a message body.', 'err'); setStatus('Please write a message body.', true); return; }
+  if (!_subCount) { toast('No subscribers found.', 'err'); setStatus('No subscribers found — check Supabase.', true); return; }
+  if (!confirm('Send this email to ' + _subCount + ' subscriber' + (_subCount !== 1 ? 's' : '') + '?')) return;
 
   _isSending = true;
   var btn = document.getElementById('send-btn');
-  var status = document.getElementById('send-status');
-  var pw = document.getElementById('progress-wrap');
-  var pf = document.getElementById('progress-fill');
-  var pl = document.getElementById('progress-label');
   btn.disabled = true;
-  pw.style.display = 'block';
+  btn.textContent = 'Sending…';
+  setStatus('');
+  document.getElementById('sending-indicator').classList.add('active');
+  document.getElementById('sending-label').textContent = 'Sending to ' + _subCount + ' subscriber' + (_subCount !== 1 ? 's' : '') + '…';
 
-  emailjs.init('Kf28oWCMQdU-MdlL2');
-
-  var sent = 0;
-  var failed = 0;
-  for (var i = 0; i < _subs.length; i++) {
-    var sub = _subs[i];
-    var pct = Math.round(((i + 1) / _subs.length) * 100);
-    pl.textContent = 'Sending ' + (i + 1) + ' of ' + _subs.length + '…';
-    pf.style.width = pct + '%';
-    try {
-      await emailjs.send('service_4z4fm6m', 'template_newsletter', {
-        to_email: sub.email,
-        to_name: sub.first_name || 'Friend',
-        subject: subject,
-        message: body,
-        unsubscribe_url: 'https://cadencecreatures.com/unsubscribe.html?email=' + encodeURIComponent(sub.email)
-      });
-      sent++;
-    } catch(e) {
-      console.error('Email failed for', sub.email, e);
-      failed++;
-    }
-    await new Promise(function(r) { setTimeout(r, 150); });
+  var result, fnError;
+  try {
+    var res = await db.functions.invoke('send-blast', {
+      body: { subject: subject, message: body }
+    });
+    result = res.data;
+    fnError = res.error;
+  } catch(e) {
+    fnError = e;
   }
 
   _isSending = false;
   btn.disabled = false;
-  pw.style.display = 'none';
-  pf.style.width = '0%';
+  btn.textContent = 'Send to All Subscribers';
+  document.getElementById('sending-indicator').classList.remove('active');
 
+  if (fnError) {
+    var errMsg = fnError.message || String(fnError);
+    toast('Send failed: ' + errMsg, 'err');
+    setStatus('Error: ' + errMsg, true);
+    return;
+  }
+
+  var sent = result ? (result.sent || 0) : 0;
+  var failed = result ? (result.failed || 0) : 0;
   var msg = 'Sent ' + sent + ' email' + (sent !== 1 ? 's' : '');
   if (failed) msg += ', ' + failed + ' failed';
   toast(msg + '.', sent ? 'ok' : 'err');
-  status.textContent = '';
+  setStatus('');
 
   if (sent > 0) {
     saveHistory(subject, sent);
@@ -245,10 +248,13 @@ async function sendBlast() {
 }
 
 async function loadSubscribers() {
-  var res = await db.from('subscribers').select('email,first_name,subscribed').eq('subscribed', true);
-  if (res.error) { console.error('Subscriber load failed:', res.error); document.getElementById('send-status').textContent = 'Error loading subscribers: ' + res.error.message; return; }
-  _subs = (res.data || []).filter(function(s) { return s.subscribed !== false; });
-  document.getElementById('sub-count').textContent = _subs.length;
+  var res = await db.from('subscribers').select('id', { count: 'exact', head: true }).eq('subscribed', true);
+  if (res.error) {
+    setStatus('Error loading subscribers: ' + res.error.message, true);
+    return;
+  }
+  _subCount = res.count || 0;
+  document.getElementById('sub-count').textContent = _subCount;
 }
 
 async function showApp() {
