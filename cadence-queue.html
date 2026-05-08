@@ -74,6 +74,7 @@
     <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
     <a href="cadence-activity.html">Activity</a>
     <a href="cadence-admin.html">Admin</a>
+    <a href="cadence-site.html">Site</a>
     <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
     <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
   </div>
@@ -81,10 +82,7 @@
 <div class="tabs">
   <button class="tab active" onclick="go('orders')">Orders <span class="badge" id="b-orders" style="display:none"></span></button>
   <button class="tab" onclick="go('stock')">Stock &amp; Queue</button>
-  <button class="tab" onclick="go('creatures')">Creatures <span class="badge" id="b-creatures" style="display:none"></span></button>
-
   <button class="tab" onclick="go('inventory')">Filament <span class="badge" id="b-inv" style="display:none"></span></button>
-  <button class="tab" onclick="go('finance')">Finance</button>
   <button class="tab" onclick="go('mileage')">Mileage</button>
   <button class="tab" onclick="go('printers')">Printers</button>
   <button class="tab" onclick="go('printcost')">💎 Cost Engine</button>
@@ -134,23 +132,11 @@
     <a class="btn sm" href="cadence-creature-editor.html" style="text-decoration:none;">Manage Creatures ↗</a>
   </div>
   <div style="overflow-x:auto">
-    <table><thead><tr><th>Log</th><th>Name</th><th>SKU</th><th>Species</th><th>Env</th><th>Qty On Hand</th><th>Currently Printing</th><th>Queued</th><th>Net Available</th></tr></thead>
+    <table><thead><tr><th>Log</th><th>Name</th><th>SKU</th><th>Species</th><th>Env</th><th>Qty On Hand</th><th>Currently Printing</th><th>Queued</th><th>Net Available</th><th></th></tr></thead>
     <tbody id="sttb"><tr class="empty"><td colspan="9">Loading…</td></tr></tbody></table>
   </div>
 </div>
 
-<!-- CREATURES -->
-<div class="panel" id="panel-creatures">
-  <div id="creature-alert-box"></div>
-  <div class="sec-hdr">
-    <span class="sec-title">Creature Lineup · read-only reference</span>
-    <a class="btn sm" href="cadence-creature-editor.html" style="text-decoration:none;">Add / Edit in Creature Editor ↗</a>
-  </div>
-  <div style="overflow-x:auto">
-    <table><thead><tr><th>Log</th><th>Name</th><th>SKU</th><th>Species</th><th>Env</th><th>Retail $</th><th>Etsy $</th><th>Cost $</th><th>Margin</th><th>On Hand</th><th>Filaments</th><th>Status</th><th></th></tr></thead>
-    <tbody id="ctb"><tr class="empty"><td colspan="12">Loading…</td></tr></tbody></table>
-  </div>
-</div>
 
 
 <!-- INVENTORY -->
@@ -165,26 +151,6 @@
   </div>
 </div>
 
-<!-- FINANCE -->
-<div class="panel" id="panel-finance">
-  <div class="kpis">
-    <div class="kpi"><div class="kpi-l">Revenue</div><div class="kpi-v" id="k-rev">—</div></div>
-    <div class="kpi"><div class="kpi-l">Expenses</div><div class="kpi-v" id="k-exp">—</div></div>
-    <div class="kpi"><div class="kpi-l">Net</div><div class="kpi-v" id="k-net">—</div></div>
-    <div class="kpi"><div class="kpi-l">This month</div><div class="kpi-v" id="k-mo">—</div></div>
-  </div>
-  <div class="sec-hdr">
-    <span class="sec-title">Finance entries · shared with P&amp;L Tracker</span>
-    <div style="display:flex;gap:8px">
-      <button class="btn sm grn" onclick="exportShipped()">Export shipped → P&amp;L</button>
-      <button class="btn sm pri" onclick="fModal()">+ Add entry</button>
-    </div>
-  </div>
-  <div style="overflow-x:auto">
-    <table><thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Description</th><th>Invoice</th><th>Amount</th><th></th></tr></thead>
-    <tbody id="ftb"><tr class="empty"><td colspan="6">Loading…</td></tr></tbody></table>
-  </div>
-</div>
 
 <!-- MILEAGE -->
 <div class="panel" id="panel-mileage">
@@ -259,18 +225,6 @@
   <div class="modal-act"><button class="btn" onclick="closeModal('m-inv')">Cancel</button><button class="btn pri" onclick="saveInv()">Save</button></div>
 </div></div>
 
-<!-- FINANCE MODAL -->
-<div class="overlay" id="m-fin"><div class="modal">
-  <div class="modal-t" id="ft">Add Finance Entry</div>
-  <input type="hidden" id="f-id"/>
-  <div class="fg">
-    <div class="fr"><div><label class="fl">Type</label><select id="f-type"><option value="income">Income</option><option value="expense">Expense</option></select></div><div><label class="fl">Amount ($)</label><input id="f-amt" type="number" step="0.01"/></div></div>
-    <div class="fr"><div><label class="fl">Category<span class="help-tip">?<span class="tip-text">Label for grouping entries. Examples: Etsy Sale, Direct Sale, Filament, Packaging, Shipping Supplies, Equipment, Fees.</span></span></label><input id="f-cat" placeholder="Etsy Sale, Filament…"/></div><div><label class="fl">Date</label><input id="f-dt" type="date"/></div></div>
-    <div><label class="fl">Description</label><input id="f-desc"/></div>
-    <div class="fr"><div><label class="fl">Invoice # (optional)<span class="help-tip">?<span class="tip-text">Optional reference number for your own records. Useful for tracking filament orders, shipping receipts, or Etsy payouts.</span></span></label><input id="f-invoice" placeholder="INV-001"/></div><div><label class="fl">Notes</label><input id="f-fnotes" placeholder="optional"/></div></div>
-  </div>
-  <div class="modal-act"><button class="btn" onclick="closeModal('m-fin')">Cancel</button><button class="btn pri" onclick="saveFin()">Save</button></div>
-</div></div>
 
 <!-- IMPORT MODAL -->
 <div class="overlay" id="m-import"><div class="modal">
@@ -417,9 +371,7 @@ function go(tab){
   document.getElementById('panel-'+tab).classList.add('active');
   if(tab==='orders')render_orders();
   if(tab==='stock')render_stock();
-  if(tab==='creatures')render_creatures();
   if(tab==='inventory')render_inv();
-  if(tab==='finance'){render_fin();update_fin_kpis();}
   if(tab==='mileage'){render_mileage();update_mileage_kpis();}
   if(tab==='printers')render_printers();
   if(tab==='customers')load_customers();
@@ -602,7 +554,6 @@ async function quickStock(id, delta) {
   const next = Math.max(0, current + delta);
   c.qty_on_hand = next;
   render_stock();
-  render_creatures();
   update_badges();
   const {error} = await db.from('creatures').update({qty_on_hand: next}).eq('id', id);
   if(error) { toast('Failed to update stock', 'err'); }
@@ -647,55 +598,16 @@ function render_stock(){
       <td>${printingCell}</td>
       <td>${queued>0?`<span class="pill p-queued">${queued} queued</span>`:'<span style="color:var(--cream-faint);font-size:11px">—</span>'}</td>
       <td style="font-size:18px;font-weight:600;color:${netCol}">${net}</td>
+      <td style="white-space:nowrap">
+        <button class="btn sm" title="Print this creature" onclick="openAssign('${c.id}')">🖨</button>
+        <button class="btn sm" style="margin-left:4px" title="Print label" onclick="openCreatureLabel('${c.id}')">🏷</button>
+      </td>
     </tr>`;
   }).join('');
 }
 
 
-async function load_creatures(){sync(true);const{data,error}=await db.from('creatures').select('*').order('log_number');if(error){serr();return;}creatures=data;sync(false);render_creatures();render_stock();update_stats_widget();}
-function render_creatures(){
-  const tb=document.getElementById('ctb');
-  if(!creatures.length){tb.innerHTML='<tr class="empty"><td colspan="13">No creatures yet.</td></tr>';return;}
-  tb.innerHTML=creatures.map(c=>{
-    const margin=c.price_etsy&&c.cost_to_print?Math.round((c.price_etsy-c.cost_to_print)/c.price_etsy*100):null;
-    const mCol=margin===null?'var(--cream-faint)':margin>=60?'#7dc994':margin>=40?'#E8D08A':'#e09090';
-    const onHand=c.qty_on_hand??c.inventory_count??0;
-    // filament color swatches
-    let filDots='<span style="color:var(--cream-faint);font-size:11px">—</span>';
-    if(c.filament_colors){
-      try{
-        const cols=JSON.parse(c.filament_colors);
-        if(cols.length){
-          filDots=cols.map(id=>{
-            const s=inv.find(x=>x.id===id);
-            if(!s)return'';
-            const col=colorFromName(s.color||s.spool_name);
-            return`<span title="${s.spool_name}" style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${col};border:1px solid rgba(255,255,255,.15);margin-right:3px"></span>`;
-          }).join('');
-        }
-      }catch{}
-    }
-    return`<tr>
-      <td style="color:var(--cream-faint)">${c.log_number||'—'}</td>
-      <td style="font-weight:500;color:var(--gold-light)">${c.name}</td>
-      <td style="font-size:11px;color:var(--cream-faint);letter-spacing:.04em">${c.sku||'—'}</td>
-      <td>${c.species||'—'}</td>
-      <td style="color:var(--cream-faint);font-size:12px;text-transform:capitalize">${c.environment||'—'}</td>
-      <td>${c.price_retail?fmt$(c.price_retail):'—'}</td>
-      <td>${c.price_etsy?fmt$(c.price_etsy):'—'}</td>
-      <td style="color:var(--cream-faint)">${c.cost_to_print?fmt$(c.cost_to_print):'—'}</td>
-      <td style="font-weight:500;color:${mCol}">${margin!==null?margin+'%':'—'}</td>
-      <td style="font-size:16px;font-weight:600;color:${onHand===0?'var(--cream-faint)':onHand<=2?'#e09090':'#7dc994'}">${onHand}</td>
-      <td>${filDots}</td>
-      <td><span class="pill ${c.active?'p-active':'p-inactive'}">${c.active?'Active':'Inactive'}</span></td>
-      <td style="white-space:nowrap">
-        <a class="btn sm" href="cadence-creature-editor.html" style="text-decoration:none;">Edit ↗</a>
-        <button class="btn sm" style="margin-left:4px" title="Print this creature" onclick="openAssign('${c.id}')">🖨</button>
-        <button class="btn sm" style="margin-left:4px" title="Print label" onclick="openCreatureLabel('${c.id}')">🏷</button>
-      </td></tr>`;
-  }).join('');
-}
-
+async function load_creatures(){sync(true);const{data,error}=await db.from('creatures').select('*').order('log_number');if(error){serr();return;}creatures=data;sync(false);render_stock();update_stats_widget();}
 // Map color names to approximate CSS colors for swatches
 function colorFromName(name){
   const n=(name||'').toLowerCase();
@@ -788,7 +700,6 @@ async function saveInv(){
   if(logFin&&cost){
     const totalCost=cost*(count||1);
     await db.from('finance').insert({entry_type:'expense',category:'Filament',description:`Filament — ${p.spool_name}${count>1?' × '+count+' spools':''}`,amount:totalCost,entry_date:new Date().toISOString().slice(0,10)});
-    await load_fin();
     toast(`Added + logged $${totalCost.toFixed(2)} expense to Finance`,'ok');
   }else{
     toast(id?'Updated':'Added','ok');
@@ -797,42 +708,7 @@ async function saveInv(){
 }
 async function delInv(id){if(!confirm('Delete spool?'))return;sync(true);const{error}=await db.from('inventory').delete().eq('id',id);if(error){serr();toast('Failed','err');return;}toast('Deleted');await load_inv();}
 
-async function load_fin(){sync(true);const{data,error}=await db.from('finance').select('*').order('entry_date',{ascending:false});if(error){serr();return;}fin=data;sync(false);render_fin();update_fin_kpis();}
-function render_fin(){
-  const tb=document.getElementById('ftb');
-  if(!fin.length){tb.innerHTML='<tr class="empty"><td colspan="6">No entries yet.</td></tr>';return;}
-  tb.innerHTML=fin.map(e=>{
-    const dt=new Date(e.entry_date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-    const inc=e.entry_type==='income';
-    return`<tr><td style="font-size:12px;color:var(--cream-faint)">${dt}</td><td><span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${inc?'rgba(74,140,92,.15)':'rgba(168,68,68,.15)'};color:${inc?'#7dc994':'#e09090'}">${e.entry_type}</span></td><td style="font-size:12px;color:var(--cream-faint)">${e.category||'—'}</td><td>${e.description||'—'}</td><td style="font-size:11px;color:var(--cream-faint)">${e.invoice_number||''}</td><td style="font-weight:500;color:${inc?'#7dc994':'#e09090'}">${inc?'+':'-'}${fmt$(Math.abs(e.amount))}</td><td style="white-space:nowrap"><button class="btn sm" onclick="fModal('${e.id}')">Edit</button><button class="btn sm red" style="margin-left:4px" onclick="delFin('${e.id}')">✕</button></td></tr>`;
-  }).join('');
-}
-function update_fin_kpis(){
-  const rev=fin.filter(e=>e.entry_type==='income').reduce((s,e)=>s+Number(e.amount),0);
-  const exp=fin.filter(e=>e.entry_type==='expense').reduce((s,e)=>s+Number(e.amount),0);
-  const net=rev-exp;
-  const now=new Date();
-  const mo=fin.filter(e=>{const d=new Date(e.entry_date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).reduce((s,e)=>s+(e.entry_type==='income'?1:-1)*Number(e.amount),0);
-  document.getElementById('k-rev').textContent=fmt$(rev);
-  document.getElementById('k-exp').textContent=fmt$(exp);
-  const ne=document.getElementById('k-net');ne.textContent=(net>=0?'+':'')+fmt$(net);ne.style.color=net>=0?'#7dc994':'#e09090';
-  const me=document.getElementById('k-mo');me.textContent=(mo>=0?'+':'')+fmt$(mo);me.style.color=mo>=0?'#7dc994':'#e09090';
-}
-function fModal(id=''){
-  document.getElementById('f-id').value=id;document.getElementById('ft').textContent=id?'Edit Entry':'Add Entry';
-  if(id){const e=fin.find(x=>x.id===id);if(!e)return;document.getElementById('f-type').value=e.entry_type;document.getElementById('f-amt').value=e.amount||'';document.getElementById('f-cat').value=e.category||'';document.getElementById('f-dt').value=e.entry_date||'';document.getElementById('f-desc').value=e.description||'';}
-  else{['f-amt','f-cat','f-desc'].forEach(x=>document.getElementById(x).value='');document.getElementById('f-type').value='income';document.getElementById('f-dt').value=new Date().toISOString().slice(0,10);}
-  openModal('m-fin');
-}
-async function saveFin(){
-  const id=g('f-id');
-  const p={entry_type:document.getElementById('f-type').value,amount:parseFloat(g('f-amt'))||0,category:g('f-cat')||null,entry_date:g('f-dt')||new Date().toISOString().slice(0,10),description:g('f-desc')||null};
-  sync(true);closeModal('m-fin');
-  const{error}=id?await db.from('finance').update(p).eq('id',id):await db.from('finance').insert(p);
-  if(error){serr();toast('Save failed','err');return;}
-  toast(id?'Updated':'Added','ok');await load_fin();
-}
-async function delFin(id){if(!confirm('Delete entry?'))return;sync(true);const{error}=await db.from('finance').delete().eq('id',id);if(error){serr();toast('Failed','err');return;}toast('Deleted');await load_fin();}
+async function load_fin(){sync(true);const{data,error}=await db.from('finance').select('*').order('entry_date',{ascending:false});if(error){serr();return;}fin=data;sync(false);}
 
 const CARRIERS={usps:{name:'USPS',color:'#3875CF',icon:'📬',url:n=>`https://tools.usps.com/go/TrackConfirmAction?tLabels=${n}`},ups:{name:'UPS',color:'#FFB500',icon:'📦',url:n=>`https://www.ups.com/track?tracknum=${n}`},fedex:{name:'FedEx',color:'#FF6200',icon:'📮',url:n=>`https://www.fedex.com/fedextrack/?trknbr=${n}`}};
 function detectCarrier(num){if(!num)return null;const n=num.replace(/\s/g,'').toUpperCase();if(/^1Z/i.test(n))return'ups';if(/^[A-Z]{2}[0-9]{9}US$/.test(n))return'usps';if(n.length>=20&&/^[0-9]+$/.test(n))return'usps';if(/^[0-9]{12}$/.test(n)||/^[0-9]{15}$/.test(n))return'fedex';return null;}
@@ -1224,7 +1100,7 @@ async function saveCustomer(){
 function showApp() {
   document.getElementById('app').style.display = 'block';
   Promise.all([
-    load_printers(),load_orders(),load_creatures(),load_inv(),load_fin(),load_mileage(),load_customers()
+    load_printers(),load_orders(),load_creatures(),load_inv(),load_mileage(),load_customers()
   ]).then(() => {
     const params = new URLSearchParams(window.location.search);
     if(params.get('cost') === 'true') openPrintCost();
@@ -1235,7 +1111,6 @@ db.channel('queue-rt')
   .on('postgres_changes',{event:'*',schema:'public',table:'orders'},()=>load_orders())
   .on('postgres_changes',{event:'*',schema:'public',table:'creatures'},()=>load_creatures())
   .on('postgres_changes',{event:'*',schema:'public',table:'inventory'},()=>load_inv())
-  .on('postgres_changes',{event:'*',schema:'public',table:'finance'},()=>load_fin())
   .on('postgres_changes',{event:'*',schema:'public',table:'mileage'},()=>load_mileage())
   .on('postgres_changes',{event:'*',schema:'public',table:'cc_customers'},()=>load_customers())
   .subscribe();

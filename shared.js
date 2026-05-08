@@ -123,14 +123,22 @@ window.addEventListener('DOMContentLoaded', async () => {
   if(session) {
     currentUser = session.user;
     
-    // Auto-create profile if missing
-    const { data: hasProfile } = await db.from('profiles').select('id').eq('id', currentUser.id).single();
+    // Auto-create profile if missing, otherwise check deactivated + stamp last_seen
+    const { data: hasProfile } = await db.from('profiles').select('id,deactivated').eq('id', currentUser.id).single();
     if(!hasProfile) {
-      await db.from('profiles').insert({ 
-        id: currentUser.id, 
-        email: currentUser.email, 
-        role: currentUser.user_metadata?.role || 'fulfillment' 
+      await db.from('profiles').insert({
+        id: currentUser.id,
+        email: currentUser.email,
+        role: currentUser.user_metadata?.role || 'fulfillment',
+        last_seen: new Date().toISOString()
       });
+    } else {
+      if(hasProfile.deactivated) {
+        await db.auth.signOut();
+        window.location.href = 'index.html';
+        return;
+      }
+      db.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', currentUser.id);
     }
 
     await applyRolePermissions();

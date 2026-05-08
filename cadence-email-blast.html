@@ -14,8 +14,8 @@
   .blast-layout { display: grid; grid-template-columns: 1fr 360px; gap: 24px; align-items: start; }
   @media (max-width: 900px) { .blast-layout { grid-template-columns: 1fr; } }
 
-  .panel { background: rgba(255,255,255,0.02); border: 1px solid rgba(201,168,76,0.12); border-radius: 6px; padding: 24px; }
-  .panel-title { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); margin-bottom: 16px; }
+  .ep { background: rgba(255,255,255,0.02); border: 1px solid rgba(201,168,76,0.12); border-radius: 6px; padding: 24px; }
+  .ep-title { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); margin-bottom: 16px; }
 
   .stat-bar { display: flex; gap: 24px; margin-bottom: 24px; }
   .stat-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(201,168,76,0.1); border-radius: 6px; padding: 14px 20px; flex: 1; }
@@ -71,6 +71,7 @@
     <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
     <a href="cadence-activity.html">Activity</a>
     <a href="cadence-admin.html">Admin</a>
+    <a href="cadence-site.html">Site</a>
     <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
     <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
   </div>
@@ -90,8 +91,8 @@
       <div class="blast-layout">
         <!-- COMPOSE -->
         <div>
-          <div class="panel" style="margin-bottom:24px;">
-            <div class="panel-title">Compose</div>
+          <div class="ep" style="margin-bottom:24px;">
+            <div class="ep-title">Compose</div>
             <div style="margin-bottom:14px;">
               <label class="fl">Subject Line</label>
               <input type="text" class="fi" id="blast-subject" placeholder="New Creatures Spotted!" oninput="updatePreview()"/>
@@ -111,15 +112,15 @@
           </div>
 
           <!-- HISTORY -->
-          <div class="panel">
-            <div class="panel-title">Blast History</div>
+          <div class="ep">
+            <div class="ep-title">Blast History</div>
             <div id="history-list"><div class="history-empty">No blasts sent yet.</div></div>
           </div>
         </div>
 
         <!-- PREVIEW -->
-        <div class="panel" style="position:sticky;top:80px;">
-          <div class="panel-title">Preview</div>
+        <div class="ep" style="position:sticky;top:80px;">
+          <div class="ep-title">Preview</div>
           <div class="preview-email">
             <div class="preview-from">From: Cadence Creatures &lt;hello@cadencecreatures.com&gt;</div>
             <div class="preview-subject" id="prev-subject"><span class="preview-placeholder">Your subject line</span></div>
@@ -212,6 +213,7 @@ async function sendBlast() {
     try {
       await emailjs.send('service_4z4fm6m', 'template_newsletter', {
         to_email: sub.email,
+        to_name: sub.first_name || 'Friend',
         subject: subject,
         message: body,
         unsubscribe_url: 'https://cadencecreatures.com/unsubscribe.html?email=' + encodeURIComponent(sub.email)
@@ -242,17 +244,18 @@ async function sendBlast() {
   }
 }
 
-async function sync() {
+async function loadSubscribers() {
   var res = await db.from('subscribers').select('email,first_name');
-  if (res.error) { serr(res.error); return; }
+  if (res.error) { console.error('Subscriber load failed:', res.error); return; }
   _subs = res.data || [];
   document.getElementById('sub-count').textContent = _subs.length;
 }
 
-showApp(async function() {
-  await sync();
+async function showApp() {
+  document.getElementById('app').style.display = 'block';
+  await loadSubscribers();
   loadHistory();
-});
+}
 </script>
 </div>
 </body>

@@ -57,6 +57,7 @@
   <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
   <a href="cadence-activity.html">Activity</a>
   <a href="cadence-admin.html">Admin</a>
+    <a href="cadence-site.html">Site</a>
   <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
   <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
 </div>
@@ -108,7 +109,7 @@
     <button class="btn sm pri" onclick="fModal('income')">+ Add income</button>
   </div>
   <div style="overflow-x:auto">
-    <table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th></th></tr></thead>
+    <table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Invoice #</th><th>Amount</th><th></th></tr></thead>
     <tbody id="inc-tb"><tr class="empty"><td colspan="5">Loading…</td></tr></tbody></table>
   </div>
 </div>
@@ -120,7 +121,7 @@
     <button class="btn sm pri" onclick="fModal('expense')">+ Add expense</button>
   </div>
   <div style="overflow-x:auto">
-    <table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th></th></tr></thead>
+    <table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Invoice #</th><th>Amount</th><th></th></tr></thead>
     <tbody id="exp-tb"><tr class="empty"><td colspan="5">Loading…</td></tr></tbody></table>
   </div>
 </div>
@@ -162,6 +163,7 @@
   <div class="fg">
     <div class="fr"><div><label class="fl">Amount ($)</label><input id="f-amt" type="number" step="0.01" placeholder="0.00"/></div><div><label class="fl">Date</label><input id="f-dt" type="date"/></div></div>
     <div class="fr"><div><label class="fl">Category</label><input id="f-cat" placeholder="Etsy Sale, Filament, Shipping…"/></div><div><label class="fl">Description</label><input id="f-desc"/></div></div>
+    <div class="fr"><div><label class="fl">Invoice # (optional)</label><input id="f-inv" placeholder="INV-001"/></div><div></div></div>
   </div>
   <div class="modal-act"><button class="btn" onclick="closeM('m-fin')">Cancel</button><button class="btn pri" onclick="saveFin()">Save</button></div>
 </div></div>
@@ -287,7 +289,7 @@ function render_rows(type,tbId){
   if(!rows.length){tb.innerHTML=`<tr class="empty"><td colspan="5">No ${type} entries yet.</td></tr>`;return;}
   tb.innerHTML=rows.map(e=>{
     const dt=new Date(e.entry_date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-    return`<tr><td style="font-size:12px;color:var(--cream-faint)">${dt}</td><td style="font-size:12px;color:var(--cream-faint)">${e.category||'—'}</td><td>${e.description||'—'}</td><td style="font-weight:500;color:${type==='income'?'#7dc994':'#e09090'}">${type==='income'?'+':'-'}${fmt$(e.amount)}</td><td style="white-space:nowrap"><button class="btn sm" onclick="fModal('${type}','${e.id}')">Edit</button><button class="btn sm red" style="margin-left:4px" onclick="delFin('${e.id}')">✕</button></td></tr>`;
+    return`<tr><td style="font-size:12px;color:var(--cream-faint)">${dt}</td><td style="font-size:12px;color:var(--cream-faint)">${e.category||'—'}</td><td>${e.description||'—'}</td><td style="font-size:11px;color:var(--cream-faint)">${e.invoice_number||''}</td><td style="font-weight:500;color:${type==='income'?'#7dc994':'#e09090'}">${type==='income'?'+':'-'}${fmt$(e.amount)}</td><td style="white-space:nowrap"><button class="btn sm" onclick="fModal('${type}','${e.id}')">Edit</button><button class="btn sm red" style="margin-left:4px" onclick="delFin('${e.id}')">✕</button></td></tr>`;
   }).join('');
 }
 function render_inc(){render_rows('income','inc-tb');}
@@ -340,13 +342,13 @@ function render_tax(){
 function fModal(type,id=''){
   document.getElementById('f-id').value=id;document.getElementById('f-type-hidden').value=type;
   document.getElementById('ft-title').textContent=id?`Edit ${type}`:`Add ${type}`;
-  if(id){const e=fin.find(x=>x.id===id);if(!e)return;document.getElementById('f-amt').value=e.amount||'';document.getElementById('f-dt').value=e.entry_date||'';document.getElementById('f-cat').value=e.category||'';document.getElementById('f-desc').value=e.description||'';}
-  else{['f-amt','f-cat','f-desc'].forEach(x=>document.getElementById(x).value='');document.getElementById('f-dt').value=new Date().toISOString().slice(0,10);}
+  if(id){const e=fin.find(x=>x.id===id);if(!e)return;document.getElementById('f-amt').value=e.amount||'';document.getElementById('f-dt').value=e.entry_date||'';document.getElementById('f-cat').value=e.category||'';document.getElementById('f-desc').value=e.description||'';document.getElementById('f-inv').value=e.invoice_number||'';}
+  else{['f-amt','f-cat','f-desc','f-inv'].forEach(x=>document.getElementById(x).value='');document.getElementById('f-dt').value=new Date().toISOString().slice(0,10);}
   openM('m-fin');
 }
 async function saveFin(){
   const id=g('f-id');
-  const p={entry_type:document.getElementById('f-type-hidden').value,amount:parseFloat(g('f-amt'))||0,category:g('f-cat')||null,entry_date:g('f-dt')||new Date().toISOString().slice(0,10),description:g('f-desc')||null};
+  const p={entry_type:document.getElementById('f-type-hidden').value,amount:parseFloat(g('f-amt'))||0,category:g('f-cat')||null,entry_date:g('f-dt')||new Date().toISOString().slice(0,10),description:g('f-desc')||null,invoice_number:g('f-inv')||null};
   sync(true);closeM('m-fin');
   const{error}=id?await db.from('finance').update(p).eq('id',id):await db.from('finance').insert(p);
   if(error){sync(false);toast('Save failed','err');return;}

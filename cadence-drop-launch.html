@@ -69,6 +69,7 @@
     <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
     <a href="cadence-activity.html">Activity</a>
     <a href="cadence-admin.html">Admin</a>
+    <a href="cadence-site.html">Site</a>
     <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
     <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
   </div>
@@ -105,12 +106,12 @@
 <script>
 var _creatures = [];
 
-async function sync() {
+async function loadLaunchData() {
   const [cRes, sRes] = await Promise.all([
     db.from('creatures').select('id,name,image_url,etsy_url,is_featured,is_revealed,qty_on_hand').order('log_number'),
     db.from('subscribers').select('id', { count: 'exact', head: true })
   ]);
-  if (cRes.error) { serr(cRes.error); return; }
+  if (cRes.error) { console.error('Launch load failed:', cRes.error); return; }
   _creatures = cRes.data || [];
   document.getElementById('stat-subs').textContent = sRes.count || 0;
   renderGrid();
@@ -199,11 +200,12 @@ function resetLaunch() {
   location.reload();
 }
 
-showApp(async function() {
+async function showApp() {
+  document.getElementById('app').style.display = 'block';
   var launched = localStorage.getItem('cc_drop1_launched');
   if (launched) { showLaunchedView(launched); return; }
-  await sync();
-});
+  await loadLaunchData();
+}
 </script>
 </div>
 </body>

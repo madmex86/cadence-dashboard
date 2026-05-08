@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cadence Creatures — Site Content</title>
+<link rel="icon" href="/favicon.ico?v=2"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared.js"></script>
+<style>
+  .sc-card { background: rgba(255,255,255,.02); border: 1px solid var(--border); border-radius: 6px; padding: 28px; margin-bottom: 24px; }
+  .sc-card-title { font-size: 15px; font-weight: 500; color: var(--goldl); margin-bottom: 4px; }
+  .sc-card-sub { font-size: 11px; color: var(--dim); margin-bottom: 20px; }
+
+  .notif-preview { background: rgba(28,22,18,.95); border: 1px solid rgba(201,168,76,.18); border-radius: 4px; padding: 12px 20px; margin-top: 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .np-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); animation: pulse 2s infinite; flex-shrink: 0; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .np-text { font-size: 12px; color: var(--cream); flex: 1; }
+  .np-cta { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--gold); border: 1px solid rgba(201,168,76,.35); padding: 4px 12px; border-radius: 2px; text-decoration: none; white-space: nowrap; }
+  .np-label { font-size: 9px; letter-spacing: .15em; text-transform: uppercase; color: var(--dim); margin-bottom: 6px; }
+  .np-hidden { opacity: .35; }
+  .np-hidden-lbl { font-size: 10px; color: var(--red); margin-left: auto; letter-spacing: .08em; text-transform: uppercase; }
+
+  .faq-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(0,0,0,.12); border: 1px solid rgba(201,168,76,.08); border-radius: 3px; margin-bottom: 6px; }
+  .faq-row-q { flex: 1; font-size: 12px; color: var(--cream); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .faq-row-acts { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .faq-row.inactive .faq-row-q { opacity: .4; }
+  .ord-btn { background: none; border: 1px solid rgba(201,168,76,.15); color: var(--dim); padding: 3px 7px; font-size: 10px; cursor: pointer; border-radius: 2px; transition: all .15s; }
+  .ord-btn:hover { border-color: rgba(201,168,76,.4); color: var(--goldl); }
+  .tog-active { font-size: 10px; padding: 3px 10px; border-radius: 10px; cursor: pointer; border: 1px solid rgba(125,201,148,.25); color: #7dc994; background: rgba(125,201,148,.08); letter-spacing: .08em; text-transform: uppercase; transition: all .15s; }
+  .tog-active.off { border-color: rgba(138,125,110,.2); color: var(--dim); background: transparent; }
+</style>
+</head>
+<body>
+<div id="login-screen" style="display:none"></div>
+<div id="app" style="display:none">
+  <div class="topbar">
+    <div class="topbar-left">
+      <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round"/><rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C"/><circle cx="36" cy="4" r="5.5" fill="#E8D08A"/><circle cx="6" cy="18" r="4" fill="#5BBFD4"/><circle cx="66" cy="18" r="4" fill="#5BBFD4"/></svg>
+      <div><div class="topbar-name">Cadence Creatures</div><div class="topbar-sub">Back Office</div></div>
+    </div>
+    <div class="topbar-right"><div id="user-greet"></div><a class="topbar-link" onclick="signOut()">Sign Out</a></div>
+  </div>
+  <div class="dash-nav">
+    <a href="index.html">Hub</a>
+    <a href="cadence-queue.html">Queue</a>
+    <a href="cadence-fulfillment.html">Fulfillment</a>
+    <a href="cadence-customers.html">Customers</a>
+    <a href="cadence-creature-editor.html">Creatures</a>
+    <a href="cadence-email-blast.html">Email Blast</a>
+    <a href="cadence-drop-launch.html">🚀 Launch</a>
+    <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
+    <a href="cadence-activity.html">Activity</a>
+    <a href="cadence-admin.html">Admin</a>
+    <a href="cadence-site.html" class="active">Site</a>
+    <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
+    <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
+  </div>
+  <div class="main">
+    <div class="main-content">
+      <div class="header">
+        <div class="title">Site Content</div>
+        <div class="subtitle">Control what visitors see on cadencecreatures.com without touching code.</div>
+      </div>
+
+      <!-- Notification Bar -->
+      <div class="sc-card">
+        <div class="sc-card-title">Notification Bar</div>
+        <div class="sc-card-sub">The banner shown at the top of every page on the live site.</div>
+        <div class="fg">
+          <div>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11px;color:var(--cream-faint);">
+              <input type="checkbox" id="notif-visible" onchange="updateNotifPreview()"/>
+              Show notification bar on site
+            </label>
+          </div>
+          <div class="fr">
+            <div><label class="fl">Long Text (desktop)</label><input id="notif-text" placeholder="First Drop Coming Soon — Cadence is still searching." oninput="updateNotifPreview()"/></div>
+            <div><label class="fl">Short Text (mobile)</label><input id="notif-short" placeholder="First Drop Coming Soon" oninput="updateNotifPreview()"/></div>
+          </div>
+          <div class="fr">
+            <div><label class="fl">CTA Button Label</label><input id="notif-cta-label" placeholder="Join the List" oninput="updateNotifPreview()"/></div>
+            <div><label class="fl">CTA URL</label><input id="notif-cta-url" placeholder="/#waitlist"/></div>
+          </div>
+        </div>
+        <div style="margin-top:20px;display:flex;align-items:center;gap:14px;">
+          <button class="btn pri" onclick="saveNotif()">Save Notification Bar</button>
+          <span id="notif-save-status" style="font-size:11px;color:var(--dim)"></span>
+        </div>
+        <div style="margin-top:16px;">
+          <div class="np-label">Preview</div>
+          <div class="notif-preview" id="notif-preview">
+            <span class="np-dot"></span>
+            <span class="np-text" id="np-text">—</span>
+            <a class="np-cta" id="np-cta">—</a>
+            <span class="np-hidden-lbl" id="np-hidden-lbl" style="display:none">Hidden</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- FAQ Manager -->
+      <div class="sc-card">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;">
+          <div>
+            <div class="sc-card-title">FAQ Manager</div>
+            <div class="sc-card-sub">Questions shown on the main page. Use arrows to reorder.</div>
+          </div>
+          <button class="btn" onclick="openFaqModal()">+ Add FAQ</button>
+        </div>
+        <div id="faq-list"><div style="color:var(--dim);font-size:12px;font-style:italic;">Loading…</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FAQ Modal -->
+<div class="overlay" id="faq-overlay" onclick="if(event.target===this)closeFaqModal()">
+  <div class="modal">
+    <div class="modal-t" id="faq-modal-title">Add FAQ</div>
+    <input type="hidden" id="faq-edit-id"/>
+    <div class="fg">
+      <div><label class="fl">Question</label><input id="faq-q" placeholder="What is a flexi toy?"/></div>
+      <div><label class="fl">Answer</label><textarea id="faq-a" style="min-height:120px;resize:vertical;" placeholder="Write the answer here…"></textarea></div>
+    </div>
+    <div class="modal-act">
+      <button class="btn" onclick="closeFaqModal()">Cancel</button>
+      <button class="btn pri" onclick="saveFaq()">Save FAQ</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="tst"></div>
+
+<script>
+var _faqs = [];
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function showApp() {
+  const role = currentUser.user_metadata?.role || 'user';
+  const isOwner = currentUser.email === 'stevenportugal86@gmail.com';
+  if (role !== 'admin' && !isOwner) { window.location.href = 'index.html'; return; }
+  document.getElementById('app').style.display = 'block';
+  await Promise.all([loadNotif(), loadFaqs()]);
+}
+
+/* ── Notification Bar ── */
+async function loadNotif() {
+  const { data } = await db.from('site_settings').select('*').eq('id', 1).single();
+  if (!data) return;
+  document.getElementById('notif-visible').checked = !!data.notif_visible;
+  document.getElementById('notif-text').value = data.notif_text || '';
+  document.getElementById('notif-short').value = data.notif_short || '';
+  document.getElementById('notif-cta-label').value = data.notif_cta_label || '';
+  document.getElementById('notif-cta-url').value = data.notif_cta_url || '';
+  updateNotifPreview();
+}
+
+function updateNotifPreview() {
+  const visible = document.getElementById('notif-visible').checked;
+  const text = document.getElementById('notif-text').value || '—';
+  const cta = document.getElementById('notif-cta-label').value || '—';
+  const preview = document.getElementById('notif-preview');
+  const hiddenLbl = document.getElementById('np-hidden-lbl');
+  document.getElementById('np-text').textContent = text;
+  document.getElementById('np-cta').textContent = cta;
+  preview.classList.toggle('np-hidden', !visible);
+  hiddenLbl.style.display = visible ? 'none' : 'inline';
+}
+
+async function saveNotif() {
+  const payload = {
+    id: 1,
+    notif_visible: document.getElementById('notif-visible').checked,
+    notif_text: document.getElementById('notif-text').value.trim(),
+    notif_short: document.getElementById('notif-short').value.trim(),
+    notif_cta_label: document.getElementById('notif-cta-label').value.trim(),
+    notif_cta_url: document.getElementById('notif-cta-url').value.trim(),
+    updated_at: new Date().toISOString()
+  };
+  const { error } = await db.from('site_settings').upsert(payload);
+  if (error) { toast('Save failed: ' + error.message, 'err'); return; }
+  toast('Notification bar saved!', 'ok');
+  logActivity('Updated site notification bar');
+}
+
+/* ── FAQs ── */
+async function loadFaqs() {
+  const { data, error } = await db.from('faqs').select('*').order('sort_order');
+  if (error) { toast('Failed to load FAQs', 'err'); return; }
+  _faqs = data || [];
+  renderFaqs();
+}
+
+function renderFaqs() {
+  const el = document.getElementById('faq-list');
+  if (!_faqs.length) {
+    el.innerHTML = '<div style="color:var(--dim);font-size:12px;font-style:italic;padding:16px 0;">No FAQs yet — add one above.</div>';
+    return;
+  }
+  el.innerHTML = _faqs.map(function(f, i) {
+    return '<div class="faq-row' + (f.active ? '' : ' inactive') + '">'
+      + '<div class="faq-row-q" title="' + esc(f.question) + '">' + esc(f.question) + '</div>'
+      + '<div class="faq-row-acts">'
+      + '<button class="ord-btn" onclick="moveFaq(\'' + f.id + '\',-1)"' + (i===0?' disabled':'') + '>↑</button>'
+      + '<button class="ord-btn" onclick="moveFaq(\'' + f.id + '\',1)"' + (i===_faqs.length-1?' disabled':'') + '>↓</button>'
+      + '<button class="tog-active' + (f.active ? '' : ' off') + '" onclick="toggleFaqActive(\'' + f.id + '\',' + !f.active + ')">'
+        + (f.active ? 'Live' : 'Hidden') + '</button>'
+      + '<button class="btn sm" onclick="openFaqModal(\'' + f.id + '\')">Edit</button>'
+      + '<button class="btn sm red" onclick="deleteFaq(\'' + f.id + '\')">Delete</button>'
+      + '</div></div>';
+  }).join('');
+}
+
+function openFaqModal(id) {
+  const faq = id ? _faqs.find(function(f){ return f.id === id; }) : null;
+  document.getElementById('faq-modal-title').textContent = faq ? 'Edit FAQ' : 'Add FAQ';
+  document.getElementById('faq-edit-id').value = id || '';
+  document.getElementById('faq-q').value = faq ? faq.question : '';
+  document.getElementById('faq-a').value = faq ? faq.answer : '';
+  document.getElementById('faq-overlay').classList.add('open');
+  setTimeout(function(){ document.getElementById('faq-q').focus(); }, 80);
+}
+
+function closeFaqModal() { document.getElementById('faq-overlay').classList.remove('open'); }
+
+async function saveFaq() {
+  const id = document.getElementById('faq-edit-id').value;
+  const question = document.getElementById('faq-q').value.trim();
+  const answer = document.getElementById('faq-a').value.trim();
+  if (!question || !answer) { toast('Question and answer are required', 'err'); return; }
+
+  let error;
+  if (id) {
+    ({ error } = await db.from('faqs').update({ question, answer }).eq('id', id));
+  } else {
+    const maxOrder = _faqs.length ? Math.max.apply(null, _faqs.map(function(f){ return f.sort_order||0; })) : 0;
+    ({ error } = await db.from('faqs').insert({ question, answer, sort_order: maxOrder + 1, active: true }));
+  }
+  if (error) { toast('Save failed: ' + error.message, 'err'); return; }
+  toast(id ? 'FAQ updated' : 'FAQ added', 'ok');
+  logActivity(id ? 'Updated FAQ: ' + question.slice(0,40) : 'Added FAQ: ' + question.slice(0,40));
+  closeFaqModal();
+  await loadFaqs();
+}
+
+async function deleteFaq(id) {
+  const faq = _faqs.find(function(f){ return f.id === id; });
+  if (!confirm('Delete this FAQ?\n\n"' + (faq ? faq.question : '') + '"')) return;
+  const { error } = await db.from('faqs').delete().eq('id', id);
+  if (error) { toast('Delete failed', 'err'); return; }
+  toast('FAQ deleted', 'ok');
+  await loadFaqs();
+}
+
+async function toggleFaqActive(id, active) {
+  const { error } = await db.from('faqs').update({ active }).eq('id', id);
+  if (error) { toast('Update failed', 'err'); return; }
+  _faqs = _faqs.map(function(f){ return f.id === id ? Object.assign({}, f, { active }) : f; });
+  renderFaqs();
+}
+
+async function moveFaq(id, dir) {
+  var idx = _faqs.findIndex(function(f){ return f.id === id; });
+  var swapIdx = idx + dir;
+  if (swapIdx < 0 || swapIdx >= _faqs.length) return;
+  var a = _faqs[idx], b = _faqs[swapIdx];
+  var aOrder = a.sort_order, bOrder = b.sort_order;
+  if (aOrder === bOrder) { aOrder = idx; bOrder = swapIdx; }
+  await Promise.all([
+    db.from('faqs').update({ sort_order: bOrder }).eq('id', a.id),
+    db.from('faqs').update({ sort_order: aOrder }).eq('id', b.id)
+  ]);
+  await loadFaqs();
+}
+</script>
+</div>
+</body>
+</html>

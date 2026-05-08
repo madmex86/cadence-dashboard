@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script src="shared.js"></script>
 <style>
   /* Admin Specifics */
@@ -45,6 +44,7 @@
     <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
     <a href="cadence-activity.html">Activity</a>
     <a href="cadence-admin.html">Admin</a>
+    <a href="cadence-site.html">Site</a>
     <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
     <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
   </div>
@@ -60,6 +60,7 @@
     <div class="subtitle" style="margin-bottom:16px;">Create an account with specific access privileges. They will receive a verification email.</div>
     
     <div class="fg">
+      <div><label class="fl">Full Name</label><input type="text" id="new-name" placeholder="Jane Portugal"/></div>
       <div><label class="fl">Email Address</label><input type="email" id="new-email" placeholder="wife@cadencecreatures.com"/></div>
       <div><label class="fl">Temporary Password</label><input type="password" id="new-pw" placeholder="Must be at least 6 characters"/></div>
       <div>
@@ -71,24 +72,19 @@
         </select>
       </div>
     </div>
-    
+
     <button class="btn" onclick="inviteUser()">Create Account</button>
   </div>
 
   <div class="card" style="margin-top:24px;">
-    <div class="title" style="font-size:16px;">Newsletter Control</div>
-    <div class="subtitle" style="margin-bottom:16px;">Broadcast updates to your <span id="sub-count" style="color:var(--goldl); font-weight:600;">...</span> verified subscribers.</div>
-    
-    <div class="fg">
-      <div><label class="fl">Subject Line</label><input type="text" id="news-subject" placeholder="New Creatures Spotted!"/></div>
-      <div><label class="fl">Message Content</label><textarea id="news-body" style="min-height:150px; background:rgba(0,0,0,0.2); border:1px solid var(--border); color:var(--cream); padding:12px; font-family:inherit; font-size:13px; line-height:1.6;" placeholder="Hello there! New geckos have been spotted in the forest..."></textarea></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="title" style="font-size:16px;">Team Members</div>
+      <div id="team-count" style="font-size:11px;color:var(--cream-faint);letter-spacing:.08em;"></div>
     </div>
-    
-    <div style="display:flex; gap:12px; align-items:center;">
-      <button class="btn pri" id="send-btn" onclick="sendNewsletter()">Broadcast to All</button>
-      <div id="news-status" style="font-size:11px; color:var(--cream-faint); font-style:italic;"></div>
-    </div>
+    <div class="subtitle" style="margin-bottom:16px;">Edit names, roles, and account status.</div>
+    <div id="team-list"><div class="subtitle" style="font-style:italic">Loading…</div></div>
   </div>
+
 </div>
 
 <div class="toast" id="tst"></div>
@@ -99,123 +95,119 @@ const tempDb = supabase.createClient(supabaseUrl, supabaseKey, {
   auth: { persistSession: false, autoRefreshToken: false }
 });
 
+const ROLE_DESC = {
+  fulfillment: 'Queue & Fulfillment only',
+  finance: 'P&L Tracker only',
+  admin: 'Full access to all pages'
+};
+
+function relTime(ts) {
+  if(!ts) return null;
+  const diff = Date.now() - new Date(ts).getTime();
+  const mins = Math.floor(diff / 60000);
+  if(mins < 1) return 'just now';
+  if(mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if(hrs < 24) return hrs + 'h ago';
+  const days = Math.floor(hrs / 24);
+  if(days < 30) return days + 'd ago';
+  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 async function inviteUser() {
-  const email = document.getElementById('new-email').value;
+  const full_name = document.getElementById('new-name').value.trim();
+  const email = document.getElementById('new-email').value.trim();
   const password = document.getElementById('new-pw').value;
   const role = document.getElementById('new-role').value;
-  
+
   if(!email || !password) return toast('Please enter email and password', 'err');
-  
   toast('Creating account...');
-  
+
   const { data, error } = await tempDb.auth.signUp({
-    email, password, options: { data: { role } }
+    email, password, options: { data: { role, full_name } }
   });
-  
+
   if(error) {
     toast('Error: ' + error.message, 'err');
   } else {
-    toast('Success! Verification email sent.', 'ok');
+    toast('Account created — verification email sent.', 'ok');
+    document.getElementById('new-name').value = '';
     document.getElementById('new-email').value = '';
     document.getElementById('new-pw').value = '';
-    // Also create a profile entry immediately
-    await db.from('profiles').insert({ id: data.user.id, email, role, full_name: '' });
+    await db.from('profiles').insert({ id: data.user.id, email, role, full_name });
     loadTeam();
   }
 }
 
 async function loadTeam() {
   const container = document.getElementById('team-list');
-  const { data, error } = await db.from('profiles').select('*').order('email');
-  
-  if(error) return container.innerHTML = '<div class="subtitle">Error loading team</div>';
-  
-  container.innerHTML = data.map(p => `
-    <div style="display:flex; align-items:center; gap:12px; background:rgba(0,0,0,0.15); padding:12px; border-radius:4px; border:1px solid rgba(201,168,76,0.1);">
-      <div style="flex:1;">
-        <div style="font-size:11px; color:var(--goldl); opacity:0.7;">${p.email}</div>
-        <input type="text" id="name-${p.id}" value="${p.full_name || ''}" placeholder="Enter Name" style="margin-top:6px; border:none; background:transparent; padding:0; height:auto; font-weight:600; font-size:14px;"/>
+  const { data, error } = await db.from('profiles').select('*').order('full_name');
+  if(error) { container.innerHTML = '<div class="subtitle" style="color:#e09090">Error loading team</div>'; return; }
+
+  const count = document.getElementById('team-count');
+  if(count) count.textContent = data.length + ' member' + (data.length !== 1 ? 's' : '');
+
+  container.innerHTML = data.map(p => {
+    const deactivated = p.deactivated;
+    const pending = !p.last_seen;
+    const lastSeenText = p.last_seen ? '🕐 Last seen ' + relTime(p.last_seen) : '📧 Awaiting first login';
+    const roleDesc = ROLE_DESC[p.role] || p.role || '—';
+    return `
+    <div style="display:flex;align-items:flex-start;gap:12px;background:rgba(0,0,0,0.15);padding:14px;border-radius:4px;border:1px solid rgba(201,168,76,${deactivated?'0.04':'0.1'});margin-bottom:8px;opacity:${deactivated?'0.5':'1'};">
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+          <span style="font-size:11px;color:var(--goldl);opacity:0.75">${p.email}</span>
+          ${pending ? '<span style="font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(201,168,76,0.12);color:#E8D08A;letter-spacing:.1em;text-transform:uppercase;">Pending</span>' : ''}
+          ${deactivated ? '<span style="font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(168,68,68,0.15);color:#e09090;letter-spacing:.1em;text-transform:uppercase;">Deactivated</span>' : ''}
+        </div>
+        <input type="text" id="name-${p.id}" value="${p.full_name||''}" placeholder="Full name" style="border:none;background:transparent;padding:0;font-weight:600;font-size:14px;color:var(--cream);width:100%;margin-bottom:4px;"/>
+        <div style="font-size:10px;color:var(--cream-faint);letter-spacing:.04em;">${lastSeenText}</div>
       </div>
-      <div style="width:120px;">
-        <select id="role-${p.id}" style="padding:4px 8px; font-size:11px;">
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0;">
+        <select id="role-${p.id}" onchange="this.nextElementSibling.textContent=window.ROLE_DESC[this.value]||''" style="padding:4px 8px;font-size:11px;width:130px;">
           <option value="fulfillment" ${p.role==='fulfillment'?'selected':''}>Packer</option>
           <option value="finance" ${p.role==='finance'?'selected':''}>Finance</option>
           <option value="admin" ${p.role==='admin'?'selected':''}>Admin</option>
         </select>
+        <div style="font-size:9px;color:var(--cream-faint);text-align:right;width:130px;line-height:1.4;">${roleDesc}</div>
       </div>
-      <button class="btn" style="padding:6px 12px; font-size:10px;" onclick="updateProfile('${p.id}')">Save</button>
-    </div>
-  `).join('');
+      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+        <button class="btn" style="padding:5px 12px;font-size:10px;" onclick="updateProfile('${p.id}')">Save</button>
+        <a href="cadence-activity.html" class="btn" style="padding:5px 12px;font-size:10px;text-decoration:none;text-align:center;">Activity ↗</a>
+        ${deactivated
+          ? `<button class="btn" style="padding:5px 12px;font-size:10px;border-color:rgba(125,201,148,0.4);color:#7dc994;" onclick="toggleDeactivate('${p.id}',false)">Reactivate</button>`
+          : `<button class="btn" style="padding:5px 12px;font-size:10px;border-color:rgba(168,68,68,0.35);color:#e09090;" onclick="toggleDeactivate('${p.id}',true)">Deactivate</button>`
+        }
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function updateProfile(id) {
+  const full_name = document.getElementById('name-'+id).value.trim();
+  const role = document.getElementById('role-'+id).value;
+  const { error } = await db.from('profiles').update({ full_name, role }).eq('id', id);
+  if(error) toast('Error updating profile', 'err');
+  else { sessionStorage.removeItem('cc_user_name'); toast('Profile updated!', 'ok'); }
+}
+
+async function toggleDeactivate(id, deactivate) {
+  if(deactivate && !confirm('Deactivate this account? They will be blocked on next page load.')) return;
+  const { error } = await db.from('profiles').update({ deactivated: deactivate }).eq('id', id);
+  if(error) { toast('Failed: ' + error.message, 'err'); return; }
+  toast(deactivate ? 'Account deactivated.' : 'Account reactivated.', 'ok');
+  loadTeam();
 }
 
 async function showApp() {
   const role = currentUser.user_metadata?.role || 'user';
   const isOwner = currentUser.email === 'stevenportugal86@gmail.com';
-  if(role !== 'admin' && !isOwner) {
-    window.location.href = 'index.html';
-    return;
-  }
+  if(role !== 'admin' && !isOwner) { window.location.href = 'index.html'; return; }
   document.getElementById('app').style.display = 'block';
   loadTeam();
-  loadSubs();
 }
 
-async function loadSubs() {
-  const { count, error } = await db.from('subscribers').select('*', { count: 'exact', head: true });
-  if(!error) document.getElementById('sub-count').textContent = count;
-}
-
-async function sendNewsletter() {
-  const subject = document.getElementById('news-subject').value;
-  const body = document.getElementById('news-body').value;
-  const status = document.getElementById('news-status');
-  
-  if(!subject || !body) return toast('Subject and message required', 'err');
-  
-  const { data: subs, error } = await db.from('subscribers').select('email');
-  if(error) return toast('Failed to load subscribers', 'err');
-  if(!subs.length) return toast('No subscribers found', 'err');
-  
-  if(!confirm(`Send this broadcast to ${subs.length} people?`)) return;
-  
-  const btn = document.getElementById('send-btn');
-  btn.disabled = true;
-  btn.textContent = 'Broadcasting...';
-  
-  let sent = 0;
-  emailjs.init("Kf28oWCMQdU-MdlL2"); 
-  
-  for(const sub of subs) {
-    try {
-      status.textContent = `Sending to ${sent + 1} of ${subs.length}...`;
-      await emailjs.send("service_4z4fm6m", 'template_newsletter', {
-        to_email: sub.email,
-        subject: subject,
-        message: body,
-        unsubscribe_url: 'https://cadencecreatures.com/unsubscribe.html?email=' + encodeURIComponent(sub.email)
-      });
-      sent++;
-    } catch(e) {
-      console.error('Email failed for', sub.email, e);
-    }
-  }
-  
-  toast(`Broadcast complete! Sent ${sent} emails.`, 'ok');
-  btn.disabled = false;
-  btn.textContent = 'Broadcast to All';
-  status.textContent = '';
-  document.getElementById('news-subject').value = '';
-  document.getElementById('news-body').value = '';
-}
-
-async function updateProfile(id) {
-  const full_name = document.getElementById('name-'+id).value;
-  const role = document.getElementById('role-'+id).value;
-  
-  const { error } = await db.from('profiles').update({ full_name, role }).eq('id', id);
-  if(error) toast('Error updating profile', 'err');
-  else toast('Profile updated!', 'ok');
-}
+window.ROLE_DESC = ROLE_DESC;
 </script>
 </div>
 </body>

@@ -2,52 +2,57 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Cadence Activity Feed</title>
-<link rel="icon" href="/favicon.ico?v=2" />
+<title>Cadence Creatures — Activity</title>
+<link rel="icon" href="/favicon.ico?v=2"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared.js"></script>
 <style>
-  /* Activity Specifics */
-  .main { padding: 40px 28px; max-width: 900px; margin: 0 auto; position: relative; z-index: 1; }
-  .log-list { display: flex; flex-direction: column; gap: 1px; background: rgba(201, 168, 76, 0.1); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
-  .log-item { background: #1C1612; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; transition: background 0.2s; border-bottom: 1px solid rgba(201, 168, 76, 0.05); }
-  .log-item:hover { background: rgba(255, 255, 255, 0.02); }
-  .log-main { display: flex; align-items: center; gap: 18px; flex: 1; }
-  .log-user { font-size: 10px; font-weight: 600; color: #C9A84C; background: rgba(201, 168, 76, 0.1); padding: 3px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
-  .log-action { font-size: 13px; color: #FAF6F0; letter-spacing: 0.02em; }
-  .log-time { font-size: 11px; color: #8A7D6E; white-space: nowrap; font-family: 'Lora', serif; }
+  .act-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 24px; }
+  .act-stat { background: rgba(255,255,255,.02); border: 1px solid rgba(201,168,76,.1); border-radius: 6px; padding: 16px 20px; }
+  .act-stat-v { font-family: 'Lora', serif; font-size: 26px; color: var(--goldl); }
+  .act-stat-l { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: .12em; margin-top: 2px; }
 
+  .filter-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .filter-bar input, .filter-bar select { background: rgba(0,0,0,.25); border: 1px solid rgba(201,168,76,.18); color: var(--cream); padding: 7px 12px; font-family: inherit; font-size: 12px; border-radius: 3px; outline: none; }
+  .filter-bar input { flex: 1; min-width: 180px; }
+  .filter-bar input:focus, .filter-bar select:focus { border-color: rgba(201,168,76,.5); }
+  .filter-count { font-size: 11px; color: var(--dim); margin-left: auto; white-space: nowrap; }
+
+  .log-list { display: flex; flex-direction: column; gap: 1px; background: rgba(201,168,76,.07); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .log-item { background: #1C1612; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid rgba(201,168,76,.04); transition: background .15s; }
+  .log-item:hover { background: rgba(255,255,255,.025); }
+  .log-item.new-flash { animation: flash .6s ease; }
+  @keyframes flash { 0%,100%{background:#1C1612} 30%{background:rgba(201,168,76,.08)} }
+  .log-main { display: flex; align-items: center; gap: 10px; flex: 1; flex-wrap: wrap; min-width: 0; }
+  .log-user { font-size: 10px; font-weight: 600; color: #C9A84C; background: rgba(201,168,76,.1); padding: 2px 9px; border-radius: 12px; text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
+  .act-tag { font-size: 9px; padding: 2px 8px; border-radius: 10px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; white-space: nowrap; }
+  .log-action { font-size: 13px; color: #FAF6F0; }
+  .order-chip { font-size: 9px; padding: 2px 7px; border-radius: 10px; background: rgba(91,191,212,.08); color: #5BBFD4; border: 1px solid rgba(91,191,212,.2); text-decoration: none; white-space: nowrap; }
+  .order-chip:hover { background: rgba(91,191,212,.15); }
+  .log-time { font-size: 11px; color: #8A7D6E; white-space: nowrap; font-family: 'Lora', serif; cursor: default; }
+
+  .load-more-wrap { text-align: center; padding: 20px; }
   .empty { padding: 60px; text-align: center; color: #8A7D6E; font-style: italic; font-family: 'Lora', serif; }
+
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #7dc994; display: inline-block; margin-right: 6px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  @media (max-width: 600px) { .act-stats { grid-template-columns: 1fr 1fr; } }
 </style>
 </head>
 <body>
-
-<div id="login-screen" style="display:none;"></div>
-
-<div id="app" style="display:none;">
+<div id="login-screen" style="display:none"></div>
+<div id="app" style="display:none">
   <div class="topbar">
     <div class="topbar-left">
-      <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))">
-        <path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round"/>
-        <rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C"/>
-        <circle cx="36" cy="4" r="5.5" fill="#E8D08A"/>
-        <circle cx="6" cy="18" r="4" fill="#5BBFD4"/>
-        <circle cx="66" cy="18" r="4" fill="#5BBFD4"/>
-      </svg>
-      <div>
-        <div class="topbar-name">Cadence Creatures</div>
-        <div class="topbar-sub">Activity Feed</div>
-      </div>
+      <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round"/><rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C"/><circle cx="36" cy="4" r="5.5" fill="#E8D08A"/><circle cx="6" cy="18" r="4" fill="#5BBFD4"/><circle cx="66" cy="18" r="4" fill="#5BBFD4"/></svg>
+      <div><div class="topbar-name">Cadence Creatures</div><div class="topbar-sub">Back Office</div></div>
     </div>
-    <div class="topbar-right">
-      <div id="user-greet"></div>
-      <a class="topbar-link" onclick="signOut()">Sign Out</a>
-    </div>
+    <div class="topbar-right"><div id="user-greet"></div><a class="topbar-link" onclick="signOut()">Sign Out</a></div>
   </div>
-
   <div class="dash-nav">
     <a href="index.html">Hub</a>
     <a href="cadence-queue.html">Queue</a>
@@ -59,66 +64,203 @@
     <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
     <a href="cadence-activity.html">Activity</a>
     <a href="cadence-admin.html">Admin</a>
+    <a href="cadence-site.html">Site</a>
     <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
     <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
   </div>
 
   <div class="main">
-    <div class="header">
-      <h1 class="title">Activity History</h1>
-      <p class="subtitle">A live record of all shop operations and personnel actions.</p>
-    </div>
+    <div class="main-content">
+      <div class="header">
+        <div class="title">Activity Feed <span class="live-dot" title="Live updates on"></span></div>
+        <div class="subtitle">A live record of all shop operations and personnel actions.</div>
+      </div>
 
-    <div id="log-container" class="log-list">
-      <div class="empty">Loading audit trail...</div>
+      <div class="act-stats">
+        <div class="act-stat"><div class="act-stat-v" id="stat-total">—</div><div class="act-stat-l">Total Events</div></div>
+        <div class="act-stat"><div class="act-stat-v" id="stat-today">—</div><div class="act-stat-l">Today</div></div>
+        <div class="act-stat"><div class="act-stat-v" id="stat-topuser" style="font-size:14px;padding-top:4px;">—</div><div class="act-stat-l">Most Active This Week</div></div>
+      </div>
+
+      <div class="filter-bar">
+        <input type="text" id="filter-search" placeholder="Search actions…" oninput="renderLogs()"/>
+        <select id="filter-user" onchange="renderLogs()"><option value="">All Users</option></select>
+        <select id="filter-type" onchange="renderLogs()">
+          <option value="">All Types</option>
+          <option value="create">Creates</option>
+          <option value="update">Updates</option>
+          <option value="status">Status Changes</option>
+          <option value="delete">Deletes</option>
+          <option value="other">Other</option>
+        </select>
+        <span class="filter-count" id="filter-count"></span>
+      </div>
+
+      <div id="log-container" class="log-list">
+        <div class="empty">Loading activity…</div>
+      </div>
+
+      <div class="load-more-wrap">
+        <button class="btn" id="load-more-btn" style="display:none" onclick="loadMore()">Load More</button>
+      </div>
     </div>
   </div>
 </div>
 
+<div class="toast" id="tst"></div>
+
 <script>
-async function showApp() {
-  const role = currentUser.user_metadata?.role || 'user';
-  const isOwner = currentUser.email === 'stevenportugal86@gmail.com';
-  if(role !== 'admin' && !isOwner) {
-    window.location.href = 'index.html';
-    return;
-  }
-  document.getElementById('app').style.display = 'block';
-  loadLogs();
+var _logs = [];
+var _offset = 0;
+var _hasMore = false;
+const PAGE = 50;
+
+function getType(action) {
+  const a = (action || '').toLowerCase();
+  if (/delet|remov/.test(a)) return 'delete';
+  if (/creat|added|import|new order/.test(a)) return 'create';
+  if (/ship|status|marked|complet|changed status/.test(a)) return 'status';
+  if (/updat|edit|modif|saved|changed/.test(a)) return 'update';
+  return 'other';
 }
 
-async function loadLogs() {
-  const container = document.getElementById('log-container');
-  const { data, error } = await db.from('activity_log').select('*').order('created_at', { ascending: false }).limit(100);
-  
+const TYPE_META = {
+  create: { label: 'Create',  color: '#7dc994', bg: 'rgba(125,201,148,.12)' },
+  update: { label: 'Update',  color: '#E8D08A', bg: 'rgba(201,168,76,.12)'  },
+  delete: { label: 'Delete',  color: '#e09090', bg: 'rgba(168,68,68,.15)'   },
+  status: { label: 'Status',  color: '#5BBFD4', bg: 'rgba(91,191,212,.12)'  },
+  other:  { label: 'Other',   color: '#8A7D6E', bg: 'rgba(255,255,255,.04)' }
+};
+
+function relTime(ts) {
+  const diff = Date.now() - new Date(ts).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return days + 'd ago';
+  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function fullTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+    + ' at ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+async function loadStats() {
+  const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+  const weekAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString();
+  const [totRes, todRes, wkRes] = await Promise.all([
+    db.from('activity_log').select('*', { count: 'exact', head: true }),
+    db.from('activity_log').select('*', { count: 'exact', head: true }).gte('created_at', todayStart.toISOString()),
+    db.from('activity_log').select('user_name').gte('created_at', weekAgo)
+  ]);
+  document.getElementById('stat-total').textContent = totRes.count ?? '—';
+  document.getElementById('stat-today').textContent = todRes.count ?? '—';
+  if (wkRes.data && wkRes.data.length) {
+    const counts = {};
+    wkRes.data.forEach(r => { if(r.user_name) counts[r.user_name] = (counts[r.user_name]||0)+1; });
+    const top = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+    document.getElementById('stat-topuser').textContent = top ? top[0] : '—';
+  }
+}
+
+async function loadLogs(append) {
+  if (!append) { _offset = 0; _logs = []; }
+  const { data, error } = await db.from('activity_log')
+    .select('*').order('created_at', { ascending: false })
+    .range(_offset, _offset + PAGE - 1);
   if (error) {
-    container.innerHTML = `<div class="empty" style="color:#e09090">Failed to load logs: ${error.message}</div>`;
+    document.getElementById('log-container').innerHTML = '<div class="empty" style="color:#e09090">Failed to load: ' + error.message + '</div>';
+    return;
+  }
+  _logs = append ? _logs.concat(data||[]) : (data||[]);
+  _offset += (data?.length||0);
+  _hasMore = data?.length === PAGE;
+  document.getElementById('load-more-btn').style.display = _hasMore ? 'block' : 'none';
+  populateUserFilter();
+  renderLogs();
+}
+
+async function loadMore() {
+  await loadLogs(true);
+}
+
+function populateUserFilter() {
+  const sel = document.getElementById('filter-user');
+  const cur = sel.value;
+  const users = [...new Set(_logs.map(l=>l.user_name).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">All Users</option>' + users.map(u=>`<option value="${u}"${cur===u?' selected':''}>${u}</option>`).join('');
+}
+
+function renderLogs() {
+  const search = document.getElementById('filter-search').value.toLowerCase();
+  const user   = document.getElementById('filter-user').value;
+  const type   = document.getElementById('filter-type').value;
+
+  const filtered = _logs.filter(log => {
+    if (user && log.user_name !== user) return false;
+    if (type && getType(log.action) !== type) return false;
+    if (search && !(
+      (log.action||'').toLowerCase().includes(search) ||
+      (log.user_name||'').toLowerCase().includes(search)
+    )) return false;
+    return true;
+  });
+
+  document.getElementById('filter-count').textContent = filtered.length + ' event' + (filtered.length!==1?'s':'');
+
+  const container = document.getElementById('log-container');
+  if (!filtered.length) {
+    container.innerHTML = '<div class="empty">No activity matches your filters.</div>';
     return;
   }
 
-  if (!data || data.length === 0) {
-    container.innerHTML = '<div class="empty">No activity recorded yet.</div>';
-    return;
-  }
-
-  container.innerHTML = data.map(log => {
-    const d = new Date(log.created_at);
-    const timeStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
-    return `
-      <div class="log-item">
-        <div class="log-main">
-          <span class="log-user">${log.user_name || 'System'}</span>
-          <span class="log-action">${log.action}</span>
-        </div>
-        <div class="log-time">${timeStr}</div>
+  container.innerHTML = filtered.map(log => {
+    const t = getType(log.action);
+    const m = TYPE_META[t];
+    const orderBadge = log.order_id
+      ? `<a class="order-chip" href="cadence-queue.html" title="${log.order_id}">Order ↗</a>`
+      : '';
+    return `<div class="log-item">
+      <div class="log-main">
+        <span class="log-user">${log.user_name||'System'}</span>
+        <span class="act-tag" style="color:${m.color};background:${m.bg}">${m.label}</span>
+        <span class="log-action">${log.action||'—'}</span>
+        ${orderBadge}
       </div>
-    `;
+      <div class="log-time" title="${fullTime(log.created_at)}">${relTime(log.created_at)}</div>
+    </div>`;
   }).join('');
 }
 
-// Refresh logs every 30 seconds
-setInterval(loadLogs, 30000);
+function prependLive(row) {
+  _logs.unshift(row);
+  populateUserFilter();
+  renderLogs();
+  loadStats();
+  // flash the first visible item
+  const first = document.querySelector('#log-container .log-item');
+  if (first) { first.classList.add('new-flash'); setTimeout(()=>first.classList.remove('new-flash'), 700); }
+}
+
+async function showApp() {
+  const role = currentUser.user_metadata?.role || 'user';
+  const isOwner = currentUser.email === 'stevenportugal86@gmail.com';
+  if (role !== 'admin' && !isOwner) { window.location.href = 'index.html'; return; }
+  document.getElementById('app').style.display = 'block';
+  await Promise.all([loadStats(), loadLogs(false)]);
+
+  // Real-time subscription
+  db.channel('activity-rt')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'activity_log' }, payload => {
+      prependLive(payload.new);
+    })
+    .subscribe();
+}
 </script>
 </div>
 </body>

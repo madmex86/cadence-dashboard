@@ -95,6 +95,7 @@
     <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
     <a href="cadence-activity.html">Activity</a>
     <a href="cadence-admin.html">Admin</a>
+    <a href="cadence-site.html">Site</a>
     <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
     <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
   </div>
@@ -173,6 +174,22 @@
         <img id="img-preview" class="img-preview" alt="preview"/>
       </div>
       <div class="form-full"><label class="fl">Notes</label><textarea class="fi" id="f-notes" style="min-height:52px;resize:vertical;" placeholder="Internal notes…"></textarea></div>
+
+      <div class="form-full" style="border-top:1px solid rgba(201,168,76,.1);padding-top:16px;margin-top:4px;">
+        <div style="font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(201,168,76,.4);margin-bottom:14px;">Field Notes / Lore Page</div>
+        <div class="fr" style="margin-bottom:12px;">
+          <div><label class="fl">Discovery Location</label><input class="fi" id="f-lore-location" placeholder="Sun Rock, Visalia, CA"/></div>
+          <div><label class="fl">Entry Date</label><input class="fi" id="f-lore-date" placeholder="Early Spring, 2026"/></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div><label class="fl">Story — Paragraph 1</label><textarea class="fi" id="f-lore-p1" style="min-height:64px;resize:vertical;" placeholder="Opening paragraph…"></textarea></div>
+          <div><label class="fl">Paragraph 2</label><textarea class="fi" id="f-lore-p2" style="min-height:64px;resize:vertical;"></textarea></div>
+          <div><label class="fl">Paragraph 3</label><textarea class="fi" id="f-lore-p3" style="min-height:64px;resize:vertical;"></textarea></div>
+          <div><label class="fl">Field Observations <span style="font-size:9px;text-transform:none;letter-spacing:0;color:var(--cream-faint);">— one per line</span></label><textarea class="fi" id="f-lore-obs" style="min-height:80px;resize:vertical;" placeholder="thrives in warm spots of afternoon light&#10;will sit perfectly still for hours"></textarea></div>
+          <div style="font-size:10px;color:var(--cream-faint);display:flex;align-items:center;gap:10px;">NFC / Lore URL: <a id="lore-url-preview" href="#" target="_blank" rel="noopener" style="font-family:monospace;color:rgba(201,168,76,.6);text-decoration:none;">—</a><button id="lore-copy-btn" onclick="copyLoreUrl()" style="display:none;font-size:9px;letter-spacing:.1em;text-transform:uppercase;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);color:var(--gold);padding:3px 8px;cursor:pointer;border-radius:2px;" title="Copy for NFC chip">Copy</button></div>
+        </div>
+      </div>
+
       <div class="form-full" style="display:flex;gap:16px;margin-top:2px;">
         <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim);cursor:pointer;">
           <input type="checkbox" id="f-featured"/> Featured on site
@@ -272,6 +289,7 @@
             <div class="card-actions">
               <button class="btn sm" onclick="openModal('${c.id}')">Edit</button>
               ${c.etsy_url ? `<a class="btn sm" href="${esc(c.etsy_url)}" target="_blank" rel="noopener" style="text-decoration:none;">Etsy ↗</a>` : ''}
+              ${(c.lore_story && c.lore_story.length) ? `<a class="btn sm" href="https://cadencecreatures.com/logs/creature.html?name=${encodeURIComponent(c.name)}" target="_blank" rel="noopener" style="text-decoration:none;color:var(--gold);">✦ Lore</a>` : ''}
             </div>
           </div>
         </div>`;
@@ -324,11 +342,43 @@
     document.getElementById('f-notes').value = c?.notes || '';
     document.getElementById('f-featured').checked = !!c?.is_featured;
     document.getElementById('f-revealed').checked = !!c?.is_revealed;
+    var story = Array.isArray(c?.lore_story) ? c.lore_story : [];
+    document.getElementById('f-lore-location').value = c?.lore_location || '';
+    document.getElementById('f-lore-date').value = c?.lore_entry_date || '';
+    document.getElementById('f-lore-p1').value = story[0] || '';
+    document.getElementById('f-lore-p2').value = story[1] || '';
+    document.getElementById('f-lore-p3').value = story[2] || '';
+    var obs = Array.isArray(c?.lore_observations) ? c.lore_observations : [];
+    document.getElementById('f-lore-obs').value = obs.join('\n');
+    var loreName = c?.name || '';
+    var loreEl = document.getElementById('lore-url-preview');
+    var loreCopyBtn = document.getElementById('lore-copy-btn');
+    if (loreName) {
+      var loreHref = 'https://cadencecreatures.com/logs/creature.html?name=' + encodeURIComponent(loreName);
+      loreEl.textContent = 'cadencecreatures.com/logs/creature.html?name=' + encodeURIComponent(loreName);
+      loreEl.href = loreHref;
+      loreCopyBtn.style.display = 'inline-block';
+      loreCopyBtn.dataset.url = loreHref;
+    } else {
+      loreEl.textContent = '—';
+      loreEl.href = '#';
+      loreCopyBtn.style.display = 'none';
+    }
     previewImg();
     document.getElementById('modal-bg').classList.add('open');
   }
 
   function closeModal() { document.getElementById('modal-bg').classList.remove('open'); }
+
+  function copyLoreUrl() {
+    var url = document.getElementById('lore-copy-btn').dataset.url;
+    if (!url) return;
+    navigator.clipboard.writeText(url).then(function() {
+      var btn = document.getElementById('lore-copy-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+    });
+  }
 
   function previewImg() {
     const url = document.getElementById('f-image-url').value.trim();
@@ -355,6 +405,15 @@
       notes: document.getElementById('f-notes').value.trim(),
       is_featured: document.getElementById('f-featured').checked,
       is_revealed: document.getElementById('f-revealed').checked,
+      lore_location: document.getElementById('f-lore-location').value.trim() || null,
+      lore_entry_date: document.getElementById('f-lore-date').value.trim() || null,
+      lore_story: [
+        document.getElementById('f-lore-p1').value.trim(),
+        document.getElementById('f-lore-p2').value.trim(),
+        document.getElementById('f-lore-p3').value.trim()
+      ].filter(Boolean),
+      lore_observations: document.getElementById('f-lore-obs').value
+        .split('\n').map(function(s){ return s.trim(); }).filter(Boolean),
     };
     if (!payload.name) { toast('Name is required', 'err'); return; }
     sync(true);
