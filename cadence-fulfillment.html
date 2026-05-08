@@ -13,116 +13,69 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 <script src="shared.js"></script>
 <style>
-  :root {
-    --bg: #0a0f1e;
-    --panel-bg: #11192d;
-    --border: rgba(201, 168, 76, 0.15);
-    --gold: #C9A84C;
-    --gold-light: #E8D08A;
-    --cream: #f4eee0;
-    --cream-dim: #c5bba8;
-    --cream-faint: rgba(197, 187, 168, 0.5);
-    --cyan: #5BBFD4;
-    --green: #7dc994;
-  }
+  /* Fulfillment Specifics */
+  .board { flex: 1; display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; padding: 24px; }
+  .col { flex: 1; min-width: 300px; display: flex; flex-direction: column; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(201, 168, 76, 0.1); border-radius: 6px; overflow: hidden; }
+  .col-header { padding: 14px 16px; background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(201, 168, 76, 0.1); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold-light); display: flex; justify-content: space-between; align-items: center; }
+  .col-count { background: rgba(201, 168, 76, 0.15); color: var(--gold-light); font-size: 10px; padding: 2px 8px; border-radius: 12px; }
+  .col-body { padding: 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px; min-height: 200px; }
 
-  body { margin: 0; padding: 0; background: var(--bg); color: var(--cream); font-family: 'Lora', serif; overflow-x: hidden; }
+  .card { background: rgba(20, 18, 15, 0.9); border: 1px solid rgba(201, 168, 76, 0.2); border-radius: 4px; padding: 16px; display: flex; flex-direction: column; gap: 12px; transition: transform 0.1s; }
+  .dragging-ghost { opacity: 0.3; background: var(--gold-dim); }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .card-id { font-size: 13px; font-weight: 600; color: var(--gold-light); }
+  .card-buyer { font-size: 12px; color: rgba(196, 188, 178, 0.7); margin-top: 2px; }
+  .card-date { font-size: 10px; color: #8A7D6E; }
 
-  /* Fixed Sidebar Navigation */
-  .dash-nav {
-    position: fixed; left: 0; top: 0; bottom: 0;
-    width: 240px; background: #0d1425;
-    border-right: 1px solid var(--border);
-    display: flex; flex-direction: column;
-    padding: 80px 0 20px 0; z-index: 50;
-  }
-  .dash-nav a { padding: 12px 28px; font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: var(--cream-faint); text-decoration: none; transition: 0.2s; }
-  .dash-nav a:hover, .dash-nav a.active { color: var(--gold-light); background: rgba(255,255,255,0.03); }
-  .dash-nav a.active { border-left: 3px solid var(--gold); color: var(--gold-light); }
-
-  /* Topbar */
-  .topbar { 
-    position: fixed; top: 0; right: 0; left: 0; height: 60px;
-    background: rgba(13, 20, 37, 0.95); backdrop-filter: blur(10px);
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 30px; border-bottom: 1px solid var(--border); z-index: 100;
-  }
-
-  /* Main Offset Content */
-  #app { margin-left: 240px; display: flex; flex-direction: column; min-height: 100vh; }
-  .content { padding: 100px 30px 40px 30px; flex: 1; display: flex; flex-direction: column; }
-
-  /* Board & Column Styling */
-  .board { display: flex; gap: 20px; overflow-x: auto; flex: 1; padding-bottom: 20px; }
-  .col { 
-    flex: 0 0 320px; display: flex; flex-direction: column; 
-    background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); 
-    border-radius: 8px; overflow: hidden; 
-  }
-  .col-header { 
-    padding: 16px; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--border); 
-    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); 
-    display: flex; justify-content: space-between; align-items: center; 
-  }
-  .col-count { background: rgba(201, 168, 76, 0.15); color: var(--gold-light); font-size: 9px; padding: 2px 8px; border-radius: 4px; }
-  .col-body { padding: 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 300px; }
-
-  /* Card Styling */
-  .card { 
-    background: var(--panel-bg); border: 1px solid var(--border); 
-    border-radius: 6px; padding: 16px; display: flex; flex-direction: column; gap: 12px; 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: transform 0.1s; 
-  }
-  .card-id { font-size: 13px; font-weight: 700; color: var(--gold-light); }
-  .card-buyer { font-size: 11px; color: var(--cream-faint); margin-top: 2px; }
-  
   .checklist { display: flex; flex-direction: column; gap: 8px; }
-  .chk-item { display: flex; align-items: flex-start; gap: 10px; font-size: 12px; cursor: pointer; padding: 4px 0; }
-  .chk-box { width: 16px; height: 16px; border: 1px solid var(--border); border-radius: 3px; flex-shrink: 0; }
-  .chk-item.done .chk-box { background: var(--gold); }
+  .chk-item { display: flex; align-items: flex-start; gap: 10px; font-size: 12px; color: #FAF6F0; cursor: pointer; padding: 4px 0; }
+  .chk-box { width: 18px; height: 18px; border: 1px solid rgba(201, 168, 76, 0.3); border-radius: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .chk-item.done .chk-box { background: var(--gold); border-color: var(--gold); }
+  .chk-item.done .chk-box::after { content: '✓'; color: #1C1612; font-size: 13px; font-weight: bold; }
   .chk-item.done span { text-decoration: line-through; opacity: 0.4; }
 
-  @media (max-width: 1024px) { 
-    .dash-nav { display: none; } 
-    #app { margin-left: 0; } 
+  @media (max-width: 768px) {
     .board { flex-direction: column; }
-    .col { flex: 1 0 auto; width: 100%; }
+    .col { min-width: 100%; }
   }
 </style>
 </head>
 <body>
 
+<!-- LOGIN (Hidden by default, handled by shared.js) -->
 <div id="login-screen" style="display:none"></div>
 
 <div id="app" style="display:none">
-  <div class="topbar">
-    <div style="display:flex; align-items:center; gap:12px;">
-      <svg width="24" height="24" viewBox="0 0 76 52" fill="none"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" stroke="#C9A84C" stroke-width="3"/></svg>
-      <div style="font-weight:bold; letter-spacing:0.1em; text-transform:uppercase;">Shipment Forge</div>
-    </div>
-    <div style="display:flex; align-items:center; gap:20px;">
-      <div id="user-greet" style="font-size:12px; color:var(--cream-dim)"></div>
-      <button class="btn sm" onclick="signOut()">Sign Out</button>
-    </div>
+<div class="topbar">
+  <div class="topbar-left">
+    <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round"/><rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C"/><circle cx="36" cy="4" r="5.5" fill="#E8D08A"/><circle cx="6" cy="18" r="4" fill="#5BBFD4"/><circle cx="66" cy="18" r="4" fill="#5BBFD4"/></svg>
+    <div><div class="topbar-name">Cadence Creatures</div><div class="topbar-sub">Back Office</div></div>
   </div>
-
+  <div class="topbar-right">
+    <div id="user-greet"></div>
+    <a class="topbar-link" onclick="signOut()">Sign Out</a>
+  </div>
+</div>
+  
   <div class="dash-nav">
-    <a href="index.html">Hub Dashboard</a>
-    <a href="cadence-queue.html">Operational Queue</a>
-    <a href="cadence-fulfillment.html" class="active">Fulfillment Board</a>
-    <a href="cadence-creatures-pl-tracker.html">P&amp;L Analysis</a>
-    <a href="cadence-activity.html">System Activity</a>
-    <a href="cadence-admin.html">Admin Control</a>
+    <a href="index.html">Hub</a>
+    <a href="cadence-queue.html">Queue</a>
+    <a href="cadence-fulfillment.html">Fulfillment</a>
+    <a href="cadence-customers.html">Customers</a>
+    <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
+    <a href="cadence-activity.html">Activity</a>
+    <a href="cadence-admin.html">Admin</a>
     <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
+    <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
   </div>
 
-  <div class="content">
-    <div class="header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 30px;">
+  <div class="main">
+    <div class="header" style="justify-content:space-between; flex-direction:row; align-items:flex-end;">
       <div>
-        <p style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 8px;">Order Logistics</p>
-        <h1 style="margin: 0; font-size: 32px; font-weight: bold;">Fulfillment Pipeline</h1>
+        <div class="title">Fulfillment Board</div>
+        <div class="subtitle">Check off items as they print and move orders through the pipeline.</div>
       </div>
-      <div style="display:flex; gap:12px;">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;">
         <button class="btn" onclick="toggleBulkMode()">⚡ Batch Actions</button>
         <button class="btn" onclick="printPullList()">🖨 Print Packing Slip</button>
       </div>
@@ -146,15 +99,15 @@
         <div class="col-body" id="list-packaging"></div>
       </div>
       <div class="col" id="col-shipped">
-        <div class="col-header"><span>Shipped</span><span class="col-count" id="cnt-shipped">0</span></div>
+        <div class="col-header"><span>Recently Shipped</span><span class="col-count" id="cnt-shipped">0</span></div>
         <div class="col-body" id="list-shipped"></div>
       </div>
     </div>
   </div>
-
+  
   <!-- Bulk Action Bar -->
   <div id="bulk-bar" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(201,168,76,0.15);border:1px solid var(--gold);padding:14px 24px;border-radius:8px;backdrop-filter:blur(8px);z-index:100;align-items:center;gap:16px;">
-    <div style="color:var(--gold-light);font-weight:500;"><span id="bulk-count">0</span> Selected</div>
+    <div style="color:var(--goldl);font-weight:500;"><span id="bulk-count">0</span> Selected</div>
     <select id="bulk-status" class="login-field" style="width:160px;margin:0;padding:8px;font-size:12px;">
       <option value="printing">Move to Printing</option>
       <option value="printed">Move to Printed</option>

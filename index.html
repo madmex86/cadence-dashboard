@@ -14,103 +14,92 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="shared.js"></script>
   <style>
-    :root {
-      --bg: #0a0f1e;
-      --panel-bg: #11192d;
-      --border: rgba(201, 168, 76, 0.15);
-      --gold: #C9A84C;
-      --gold-light: #E8D08A;
-      --cream: #f4eee0;
-      --cream-dim: #c5bba8;
-      --cream-faint: rgba(197, 187, 168, 0.5);
-      --cyan: #5BBFD4;
-      --red: #e09090;
-    }
-
-    body { margin: 0; padding: 0; background: var(--bg); color: var(--cream); font-family: 'Lora', serif; overflow-x: hidden; }
-
-    /* Fixed Sidebar Navigation */
-    .dash-nav {
-      position: fixed; left: 0; top: 0; bottom: 0;
-      width: 240px; background: #0d1425;
-      border-right: 1px solid var(--border);
-      display: flex; flex-direction: column;
-      padding: 80px 0 20px 0; z-index: 50;
-    }
-    .dash-nav a { padding: 12px 28px; font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: var(--cream-faint); text-decoration: none; transition: 0.2s; }
-    .dash-nav a:hover, .dash-nav a.active { color: var(--gold-light); background: rgba(255,255,255,0.03); }
-    .dash-nav a.active { border-left: 3px solid var(--gold); color: var(--gold-light); }
-
-    /* Topbar */
-    .topbar { 
-      position: fixed; top: 0; right: 0; left: 0; height: 60px;
-      background: rgba(13, 20, 37, 0.95); backdrop-filter: blur(10px);
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 30px; border-bottom: 1px solid var(--border); z-index: 100;
-    }
-
-    /* Main Layout Offset */
-    #app { margin-left: 240px; }
-    .content { padding: 100px 30px 40px 30px; max-width: 1400px; }
-
-    /* KPI Grid */
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 32px; }
-    .kpi-card { background: var(--panel-bg); border: 1px solid var(--border); padding: 24px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
-    .kpi-label { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); opacity: 0.7; margin-bottom: 10px; }
-    .kpi-val { font-size: 32px; font-weight: bold; color: #fff; tracking: -0.02em; }
-
-    /* Panels */
-    .notifications-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; }
-    .notification-panel { background: var(--panel-bg); border: 1px solid var(--border); padding: 24px; border-radius: 8px; }
-    .notification-panel h2 { font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold-light); margin: 0 0 20px 0; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px; }
-    
-    .notif-item { font-size: 13px; padding: 12px; border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; background: rgba(0,0,0,0.2); margin-bottom: 10px; }
-    .notif-item.critical { border-color: rgba(224, 144, 144, 0.3); background: rgba(224, 144, 144, 0.05); color: var(--red); }
-    .notif-empty { font-size: 11px; color: var(--cream-faint); font-style: italic; }
-
-    @media (max-width: 1024px) { .dash-nav { display: none; } #app { margin-left: 0; } }
+    /* Hub Specifics */
+    .kpi-section { margin-bottom: 28px; }
+    .notifications-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    .notification-panel { border: 1px solid rgba(201, 168, 76, 0.12); background: rgba(255, 255, 255, 0.02); padding: 18px 20px; border-radius: 6px; }
+    .notif-item { font-size: 13px; line-height: 1.5; color: var(--cream); padding: 12px 14px; border: 1px solid rgba(201, 168, 76, 0.08); border-radius: 4px; background: rgba(255, 255, 255, 0.015); margin-bottom: 8px; }
+    .notif-item.critical { border-color: rgba(224, 144, 144, 0.22); background: rgba(224, 144, 144, 0.08); }
+    .notif-empty { font-size: 12px; color: var(--dim); padding: 12px 14px; border: 1px dashed rgba(201, 168, 76, 0.14); border-radius: 4px; }
+    .hub-header { text-align: center; margin-bottom: 24px; }
+    .hub-date { font-family: var(--fc); font-size: 17px; color: var(--dim); }
   </style>
 </head>
 
 <body>
 
   <!-- LOGIN -->
-  <div id="login-screen" style="display:none"></div>
+  <div id="login-screen">
+    <div class="login-box">
+      <svg class="login-crown" width="64" height="50" viewBox="0 -2 76 52" fill="none">
+        <path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5"
+          stroke-linejoin="round" />
+        <rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C" />
+        <circle cx="36" cy="4" r="5.5" fill="#E8D08A" />
+        <circle cx="6" cy="18" r="4" fill="#5BBFD4" />
+        <circle cx="66" cy="18" r="4" fill="#5BBFD4" />
+      </svg>
+      <div class="login-title">Cadence Creatures</div>
+      <div class="login-sub">Back Office · Private</div>
+      <div class="login-field" style="margin-bottom:8px;">
+        <input type="email" id="em-input" placeholder="Email Address" />
+      </div>
+      <div class="login-field">
+        <input type="password" id="pw-input" placeholder="Password" onkeydown="if(event.key==='Enter')tryLogin()" />
+      </div>
+      <button class="login-btn" onclick="tryLogin()">Enter</button>
+      <div class="login-err" id="login-err"></div>
+    </div>
+  </div>
 
   <!-- APP -->
   <div id="app" style="display:none">
     <div class="topbar">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <svg width="24" height="24" viewBox="0 0 76 52" fill="none"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" stroke="#C9A84C" stroke-width="3"/></svg>
-        <div><div style="font-weight:bold; letter-spacing:0.1em; text-transform:uppercase;">Cadence Forge</div></div>
+      <div class="topbar-left">
+        <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))">
+          <path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round" />
+          <rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C" />
+          <circle cx="36" cy="4" r="5.5" fill="#E8D08A" />
+          <circle cx="6" cy="18" r="4" fill="#5BBFD4" />
+          <circle cx="66" cy="18" r="4" fill="#5BBFD4" />
+        </svg>
+        <div>
+          <div class="topbar-name">Cadence Creatures</div>
+          <div class="topbar-sub">Back Office</div>
+        </div>
       </div>
-      <div style="display:flex; align-items:center; gap:20px;">
-        <div id="user-greet" style="font-size:12px; color:var(--cream-dim)"></div>
-        <button class="btn sm" onclick="signOut()">Sign Out</button>
+      <div class="topbar-right">
+        <div id="user-greet"></div>
+        <a class="topbar-link" onclick="signOut()">Sign Out</a>
       </div>
     </div>
 
     <div class="dash-nav">
-      <a href="index.html" class="active">Hub Dashboard</a>
-      <a href="cadence-queue.html">Operational Queue</a>
-      <a href="cadence-fulfillment.html">Fulfillment Board</a>
-      <a href="cadence-creatures-pl-tracker.html">P&amp;L Analysis</a>
-      <a href="cadence-activity.html">System Activity</a>
-      <a href="cadence-admin.html">Admin Control</a>
+      <a href="index.html">Hub</a>
+      <a href="cadence-queue.html">Queue</a>
+      <a href="cadence-fulfillment.html">Fulfillment</a>
+      <a href="cadence-customers.html">Customers</a>
+      <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
+      <a href="cadence-activity.html">Activity</a>
+      <a href="cadence-admin.html">Admin</a>
       <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
+      <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
     </div>
 
-    <div class="content">
-      <div style="text-align:center; margin-bottom: 40px;">
-        <p id="hub-date" style="font-family: 'Caveat', cursive; font-size: 20px; color: var(--gold-light); margin-bottom: 8px;"></p>
-        <h1 style="margin: 0; font-size: 36px; font-weight: bold; letter-spacing: -0.03em;">Forge Hub</h1>
-      </div>
-
-      <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:16px; margin-bottom:40px;">
-        <button class="btn pri" onclick="openPrintModal()">📥 Log Finished Prints</button>
-        <button class="btn" onclick="oModal()">➕ Add Order</button>
-        <button class="btn" onclick="window.location.href='cadence-queue.html'">🗂 View Queue</button>
-      </div>
+    <div class="main">
+      <div class="main-content">
+        <div class="hub-header">
+          <svg class="hub-crown" width="44" height="34" viewBox="0 -2 76 52" fill="none">
+            <path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2"
+              stroke-linejoin="round" />
+            <rect x="4" y="42" width="64" height="2.5" rx="1.25" fill="#C9A84C" />
+            <circle cx="36" cy="4" r="4.5" fill="#E8D08A" />
+            <circle cx="6" cy="18" r="3.5" fill="#5BBFD4" />
+            <circle cx="66" cy="18" r="3.5" fill="#5BBFD4" />
+          </svg>
+          <div class="hub-title">Dashboard Hub</div>
+          <div class="hub-date" id="hub-date"></div>
+        </div>
 
 
 
@@ -120,6 +109,7 @@
       <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin-bottom:28px;">
         <button class="btn pri" onclick="openPrintModal()">📥 Log Finished Prints</button>
         <button class="btn" onclick="oModal()">➕ Add Order</button>
+        <button class="btn" onclick="window.location.href='cadence-queue.html?cost=true'">💎 Cost Intelligence</button>
         <button class="btn" onclick="window.location.href='cadence-queue.html'">🗂 View Queue</button>
       </div>
 
@@ -384,7 +374,7 @@
                 ? lowInv.map(s => {
                   const label = [s.brand, s.color, s.spool_name].filter(Boolean).join(' ').trim() || s.spool_name || 'Unnamed spool';
                   const rem = s.spool_count != null ? ` — ${s.spool_count} left` : '';
-                  return `<div class="notif-item critical">⚠ ${label}${rem}</div>`;
+                  return `<div class="notif-item critical">${label}${rem}</div>`;
                 }).join('')
                 : '<div class="notif-empty">All spools good.</div>';
             }
@@ -397,7 +387,7 @@
             crePanel.innerHTML = lowCre.length
               ? lowCre.map(c => {
                 const onHand = c.qty_on_hand ?? c.inventory_count ?? 0;
-                return `<div class="notif-item critical">⚠ ${c.name} — ${onHand} on hand</div>`;
+                return `<div class="notif-item critical">${c.name} — ${onHand} on hand</div>`;
               }).join('')
               : '<div class="notif-empty">All creatures stocked.</div>';
           }

@@ -8,86 +8,48 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script src="shared.js"></script>
 <style>
-  :root {
-    --bg: #0a0f1e;
-    --panel-bg: #11192d;
-    --border: rgba(201, 168, 76, 0.15);
-    --gold: #C9A84C;
-    --gold-light: #E8D08A;
-    --cream: #f4eee0;
-    --cream-dim: #c5bba8;
-    --cream-faint: rgba(197, 187, 168, 0.5);
-  }
-
-  body { margin: 0; padding: 0; background: var(--bg); color: var(--cream); font-family: 'Lora', serif; overflow-x: hidden; }
-
-  /* Sidebar Fixed Layout */
-  .dash-nav {
-    position: fixed; left: 0; top: 0; bottom: 0;
-    width: 240px; background: #0d1425;
-    border-right: 1px solid var(--border);
-    display: flex; flex-direction: column;
-    padding: 80px 0 20px 0; z-index: 50;
-  }
-  .dash-nav a { padding: 12px 28px; font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: var(--cream-faint); text-decoration: none; transition: 0.2s; }
-  .dash-nav a:hover, .dash-nav a.active { color: var(--gold-light); background: rgba(255,255,255,0.03); }
-  .dash-nav a.active { border-left: 3px solid var(--gold); color: var(--gold-light); }
-
-  /* Topbar */
-  .topbar { 
-    position: fixed; top: 0; right: 0; left: 0; height: 60px;
-    background: rgba(13, 20, 37, 0.95); backdrop-filter: blur(10px);
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 30px; border-bottom: 1px solid var(--border); z-index: 100;
-  }
-
-  /* Main Offset */
-  #app { margin-left: 240px; }
-  .content { padding: 100px 30px 40px 30px; max-width: 1000px; }
-
-  /* Admin Cards */
-  .card { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; padding: 32px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
-  .card-title { font-size: 18px; font-weight: 600; color: var(--gold-light); margin-bottom: 8px; }
-  .card-sub { font-size: 13px; color: var(--cream-faint); margin-bottom: 24px; }
-  
+  /* Admin Specifics */
+  .card { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: 6px; padding: 28px; }
   .fg { display: flex; flex-direction: column; gap: 20px; margin-bottom: 24px; }
-  .fl { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gold); opacity: 0.7; margin-bottom: 8px; }
-
-  @media (max-width: 1024px) { .dash-nav { display: none; } #app { margin-left: 0; } }
+  .fl { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--cream-faint); margin-bottom: 8px; }
 </style>
 </head>
 <body>
 
+<!-- LOGIN (Hidden by default, handled by shared.js) -->
 <div id="login-screen" style="display:none"></div>
 
 <div id="app" style="display:none">
-  <div class="topbar">
-    <div style="display:flex; align-items:center; gap:12px;">
-      <svg width="24" height="24" viewBox="0 0 76 52" fill="none"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" stroke="#C9A84C" stroke-width="3"/></svg>
-      <div><div style="font-weight:bold; letter-spacing:0.1em; text-transform:uppercase;">Admin Forge</div></div>
-    </div>
-    <div style="display:flex; align-items:center; gap:20px;">
-      <div id="user-greet" style="font-size:12px; color:var(--cream-dim)"></div>
-      <button class="btn sm" onclick="signOut()">Sign Out</button>
-    </div>
+<div class="topbar">
+  <div class="topbar-left">
+    <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round"/><rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C"/><circle cx="36" cy="4" r="5.5" fill="#E8D08A"/><circle cx="6" cy="18" r="4" fill="#5BBFD4"/><circle cx="66" cy="18" r="4" fill="#5BBFD4"/></svg>
+    <div><div class="topbar-name">Cadence Creatures</div><div class="topbar-sub">Back Office</div></div>
   </div>
+  <div class="topbar-right">
+    <div id="user-greet"></div>
+    <a class="topbar-link" onclick="signOut()">Sign Out</a>
+  </div>
+</div>
 
   <div class="dash-nav">
-    <a href="index.html">Hub Dashboard</a>
-    <a href="cadence-queue.html">Operational Queue</a>
-    <a href="cadence-fulfillment.html">Fulfillment Board</a>
-    <a href="cadence-creatures-pl-tracker.html">P&amp;L Analysis</a>
-    <a href="cadence-activity.html">System Activity</a>
-    <a href="cadence-admin.html" class="active">Admin Control</a>
+    <a href="index.html">Hub</a>
+    <a href="cadence-queue.html">Queue</a>
+    <a href="cadence-fulfillment.html">Fulfillment</a>
+    <a href="cadence-customers.html">Customers</a>
+    <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
+    <a href="cadence-activity.html">Activity</a>
+    <a href="cadence-admin.html">Admin</a>
     <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
+    <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
   </div>
 
-<div class="content">
-  <div style="margin-bottom: 40px;">
-    <p style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 8px;">Access Control</p>
-    <h1 style="margin: 0; font-size: 32px; font-weight: bold;">Personnel Management</h1>
+<div class="main">
+  <div class="header">
+    <div class="title">Admin Control Room</div>
+    <div class="subtitle">Manage team members and access control.</div>
   </div>
   
   <div class="card">
@@ -111,10 +73,17 @@
   </div>
 
   <div class="card" style="margin-top:24px;">
-    <div class="title" style="font-size:16px;">Current Team</div>
-    <div class="subtitle" style="margin-bottom:16px;">Manage display names and roles for your shop personnel.</div>
-    <div id="team-list" style="display:grid; gap:12px;">
-      <div class="subtitle" style="text-align:center; padding:20px;">Loading team members...</div>
+    <div class="title" style="font-size:16px;">Newsletter Control</div>
+    <div class="subtitle" style="margin-bottom:16px;">Broadcast updates to your <span id="sub-count" style="color:var(--goldl); font-weight:600;">...</span> verified subscribers.</div>
+    
+    <div class="fg">
+      <div><label class="fl">Subject Line</label><input type="text" id="news-subject" placeholder="New Creatures Spotted!"/></div>
+      <div><label class="fl">Message Content</label><textarea id="news-body" style="min-height:150px; background:rgba(0,0,0,0.2); border:1px solid var(--border); color:var(--cream); padding:12px; font-family:inherit; font-size:13px; line-height:1.6;" placeholder="Hello there! New geckos have been spotted in the forest..."></textarea></div>
+    </div>
+    
+    <div style="display:flex; gap:12px; align-items:center;">
+      <button class="btn pri" id="send-btn" onclick="sendNewsletter()">Broadcast to All</button>
+      <div id="news-status" style="font-size:11px; color:var(--cream-faint); font-style:italic;"></div>
     </div>
   </div>
 </div>
@@ -185,6 +154,55 @@ async function showApp() {
   }
   document.getElementById('app').style.display = 'block';
   loadTeam();
+  loadSubs();
+}
+
+async function loadSubs() {
+  const { count, error } = await db.from('subscribers').select('*', { count: 'exact', head: true });
+  if(!error) document.getElementById('sub-count').textContent = count;
+}
+
+async function sendNewsletter() {
+  const subject = document.getElementById('news-subject').value;
+  const body = document.getElementById('news-body').value;
+  const status = document.getElementById('news-status');
+  
+  if(!subject || !body) return toast('Subject and message required', 'err');
+  
+  const { data: subs, error } = await db.from('subscribers').select('email');
+  if(error) return toast('Failed to load subscribers', 'err');
+  if(!subs.length) return toast('No subscribers found', 'err');
+  
+  if(!confirm(`Send this broadcast to ${subs.length} people?`)) return;
+  
+  const btn = document.getElementById('send-btn');
+  btn.disabled = true;
+  btn.textContent = 'Broadcasting...';
+  
+  let sent = 0;
+  emailjs.init("Kf28oWCMQdU-MdlL2"); 
+  
+  for(const sub of subs) {
+    try {
+      status.textContent = `Sending to ${sent + 1} of ${subs.length}...`;
+      await emailjs.send("service_4z4fm6m", 'template_newsletter', {
+        to_email: sub.email,
+        subject: subject,
+        message: body,
+        unsubscribe_url: 'https://cadencecreatures.com/unsubscribe.html?email=' + encodeURIComponent(sub.email)
+      });
+      sent++;
+    } catch(e) {
+      console.error('Email failed for', sub.email, e);
+    }
+  }
+  
+  toast(`Broadcast complete! Sent ${sent} emails.`, 'ok');
+  btn.disabled = false;
+  btn.textContent = 'Broadcast to All';
+  status.textContent = '';
+  document.getElementById('news-subject').value = '';
+  document.getElementById('news-body').value = '';
 }
 
 async function updateProfile(id) {

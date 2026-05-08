@@ -11,151 +11,68 @@
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="shared.js"></script>
 <style>
-  :root {
-    --bg: #0a0f1e;
-    --panel-bg: #11192d;
-    --border: rgba(201, 168, 76, 0.15);
-    --gold: #C9A84C;
-    --gold-light: #E8D08A;
-    --cream: #f4eee0;
-    --cream-dim: #c5bba8;
-    --cream-faint: rgba(197, 187, 168, 0.5);
-    --cyan: #5BBFD4;
-    --green: #7dc994;
-  }
-
-  body { 
-    margin: 0; padding: 0; 
-    background: var(--bg); 
-    color: var(--cream); 
-    font-family: 'Lora', serif; 
-    overflow-x: hidden; 
-  }
-
-  /* Fixed Sidebar Navigation */
-  .dash-nav {
-    position: fixed;
-    left: 0; top: 0; bottom: 0;
-    width: 240px;
-    background: #0d1425;
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    padding: 80px 0 20px 0;
-    z-index: 50;
-  }
-  .dash-nav a {
-    padding: 12px 28px;
-    font-size: 11px;
-    letter-spacing: .15em;
-    text-transform: uppercase;
-    color: var(--cream-faint);
-    text-decoration: none;
-    transition: 0.2s;
-  }
-  .dash-nav a:hover, .dash-nav a.active { color: var(--gold-light); background: rgba(255,255,255,0.03); }
-  .dash-nav a.active { border-left: 3px solid var(--gold); color: var(--gold-light); }
-
-  /* Main Layout Offset */
-  #app { margin-left: 240px; min-height: 100vh; }
-
-  /* Topbar Fix */
-  .topbar { 
-    position: fixed; top: 0; right: 0; left: 0;
-    height: 60px;
-    background: rgba(13, 20, 37, 0.95);
-    backdrop-filter: blur(10px);
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 30px;
-    border-bottom: 1px solid var(--border);
-    z-index: 100;
-  }
-
-  /* Content Styling */
-  .content { padding: 100px 30px 40px 30px; }
-  .panel { display: none; }
-  .panel.active { display: block; }
-
-  /* Queue Components */
-  .stats-widget { 
-    display: grid; grid-template-columns: repeat(5, 1fr); 
-    border: 1px solid var(--border); 
-    border-radius: 4px; overflow: hidden; 
-    background: rgba(0,0,0,0.2); 
-  }
-  .stat-cell { padding: 20px 14px; text-align: center; border-right: 1px solid var(--border); }
+  /* Queue Specifics */
+  .stats-widget { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; margin-bottom: 22px; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; background: rgba(0,0,0,0.2); }
+  .stat-cell { padding: 18px 14px; text-align: center; border-right: 1px solid var(--border); }
   .stat-cell:last-child { border-right: none; }
-  .stat-l { font-size: 9px; letter-spacing: .15em; text-transform: uppercase; color: var(--cream-faint); margin-bottom: 8px; }
-  .stat-v { font-size: 24px; font-weight: 600; font-family: 'Lora', serif; }
-  .stat-v.blue { color: var(--cyan); } 
-  .stat-v.gold { color: var(--gold-light); } 
-  .stat-v.purple { color: #b89de8; } 
-  .stat-v.green { color: var(--green); }
+  .stat-l { font-size: 9px; letter-spacing: .15em; text-transform: uppercase; color: var(--cream-faint); margin-bottom: 5px; }
+  .stat-v { font-size: 22px; font-weight: 600; }
+  .stat-v.blue { color: #5BBFD4; } .stat-v.gold { color: var(--gold-light); } .stat-v.purple { color: #b89de8; } .stat-v.green { color: #7dc994; }
 
-  /* Tab Bar Styling */
-  .tabs { 
-    position: sticky; top: 60px; 
-    display: flex; padding: 0 20px; 
-    border-bottom: 1px solid var(--border); 
-    background: rgba(10, 15, 30, 0.9); 
-    z-index: 40; 
-  }
-  .tab { 
-    font-family: 'Lora', serif; padding: 16px 20px; 
-    font-size: 10px; letter-spacing: .12em; 
-    text-transform: uppercase; color: var(--cream-faint); 
-    cursor: pointer; border: none; background: none; 
-    border-bottom: 2px solid transparent; 
-  }
-  .tab.active { color: var(--gold-light); border-bottom-color: var(--gold); }
+  .tabs { display: flex; padding: 0 28px; border-bottom: 1px solid var(--border); gap: 2px; background: rgba(0,0,0,0.1); }
+  .tab { font-family: 'Lora', serif; padding: 12px 20px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--cream-faint); cursor: pointer; border: none; background: none; border-bottom: 3px solid transparent; transition: all 0.2s; }
+  .tab:hover { color: var(--gold-light); background: rgba(201, 168, 76, 0.03); }
+  .tab.active { color: var(--gold-light); border-bottom-color: var(--gold); background: rgba(201, 168, 76, 0.05); }
 
-  /* Table Standards */
-  table { width: 100%; border-collapse: collapse; background: var(--panel-bg); border-radius: 8px; overflow: hidden; }
-  th { font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); opacity: 0.6; padding: 16px; text-align: left; border-bottom: 1px solid var(--border); }
-  td { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 13px; }
+  .badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 10px; background: rgba(168,68,68,.25); color: #e09090; font-size: 10px; margin-left: 6px; }
+  
+  .printer-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; padding: 4px 10px; border: 1px solid rgba(91,191,212,.25); color: #5BBFD4; border-radius: 12px; background: rgba(91,191,212,0.05); }
+  
+  table { width: 100%; border-collapse: collapse; }
+  th { font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: rgba(201, 168, 76, 0.45); padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  td { padding: 12px 14px; border-bottom: 1px solid rgba(201, 168, 76, 0.05); vertical-align: middle; }
   tr:hover td { background: rgba(201, 168, 76, 0.04); }
 
-  .pill { display: inline-flex; align-items: center; font-size: 9px; letter-spacing: .07em; padding: 4px 10px; border-radius: 4px; font-weight: 600; text-transform: uppercase; }
+  .pill { display: inline-flex; align-items: center; font-size: 10px; letter-spacing: .07em; padding: 4px 12px; border-radius: 14px; font-weight: 600; text-transform: uppercase; }
   .p-queued { background: rgba(91,191,212,.12); color: #5BBFD4; }
   .p-printing { background: rgba(201, 168, 76,.14); color: #E8D08A; }
   .p-printed { background: rgba(147,112,219,.15); color: #b89de8; }
   .p-shipped { background: rgba(74,140,92,.15); color: #7dc994; }
   .p-complete { background: rgba(74,140,92,.25); color: #7dc994; }
 
-  /* Alerts & Badges */
-  .alert-pill { background: rgba(201, 168, 76, 0.1); border: 1px solid var(--gold); color: var(--gold-light); padding: 8px 16px; border-radius: 4px; font-size: 11px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-  .badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 10px; background: rgba(168,68,68,.25); color: #e09090; font-size: 10px; margin-left: 6px; }
-
-  @media (max-width: 1024px) {
-    .dash-nav { display: none; }
-    #app { margin-left: 0; }
+  @media (max-width: 768px) {
+    .stats-widget { grid-template-columns: repeat(3, 1fr); }
+    .kpis { grid-template-columns: 1fr 1fr; }
   }
 </style>
 </head>
 <body>
 
+<!-- LOGIN (Hidden by default, handled by shared.js) -->
 <div id="login-screen" style="display:none"></div>
 
 <div id="app" style="display:none">
-  <div class="topbar">
-    <div style="display:flex; align-items:center; gap:12px;">
-      <svg width="24" height="24" viewBox="0 0 76 52" fill="none"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" stroke="#C9A84C" stroke-width="3"/></svg>
-      <div><div style="font-weight:bold; letter-spacing:0.1em; text-transform:uppercase;">Cadence Forge</div></div>
-    </div>
-    <div style="display:flex; align-items:center; gap:20px;">
-      <div id="user-greet" style="font-size:12px; color:var(--cream-dim)"></div>
-      <button class="btn sm" onclick="signOut()">Sign Out</button>
-    </div>
+<div class="topbar">
+  <div class="topbar-left">
+    <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round"/><rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C"/><circle cx="36" cy="4" r="5.5" fill="#E8D08A"/><circle cx="6" cy="18" r="4" fill="#5BBFD4"/><circle cx="66" cy="18" r="4" fill="#5BBFD4"/></svg>
+    <div><div class="topbar-name">Cadence Creatures</div><div class="topbar-sub">Back Office</div></div>
   </div>
+  <div class="topbar-right">
+    <div id="user-greet"></div>
+    <a class="topbar-link" onclick="signOut()">Sign Out</a>
+  </div>
+</div>
 
   <div class="dash-nav">
-    <a href="index.html">Hub Dashboard</a>
-    <a href="cadence-queue.html" class="active">Operational Queue</a>
-    <a href="cadence-fulfillment.html">Fulfillment Board</a>
-    <a href="cadence-creatures-pl-tracker.html">P&amp;L Analysis</a>
-    <a href="cadence-activity.html">System Activity</a>
-    <a href="cadence-admin.html">Admin Control</a>
+    <a href="index.html">Hub</a>
+    <a href="cadence-queue.html">Queue</a>
+    <a href="cadence-fulfillment.html">Fulfillment</a>
+    <a href="cadence-customers.html">Customers</a>
+    <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
+    <a href="cadence-activity.html">Activity</a>
+    <a href="cadence-admin.html">Admin</a>
     <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
+    <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
   </div>
 
 <div class="tabs">
@@ -167,6 +84,7 @@
   <button class="tab" onclick="go('finance')">Finance</button>
   <button class="tab" onclick="go('mileage')">Mileage</button>
   <button class="tab" onclick="go('printers')">Printers</button>
+  <button class="tab" onclick="go('printcost')">💎 Cost Engine</button>
 </div>
 
 <div class="content">
@@ -316,7 +234,10 @@
   </div>
 </div>
 
+
+<!-- MARKET INTEL (market_items + market_prices) -->
 </div>
+
 
 <!-- ORDER MODAL -->
 <div class="overlay" id="m-order"><div class="modal">
@@ -531,7 +452,13 @@ function g(id){return document.getElementById(id).value.trim();}
 let cur='orders';
 function go(tab){
   cur=tab;
-    document.querySelectorAll('.tab').forEach((t, i) => { const ts = ['orders', 'stock', 'creatures', 'merch', 'inventory', 'finance', 'mileage', 'printers']; t.classList.toggle('active', ts[i] === tab); });
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.getAttribute('onclick').includes(`'${tab}'`));
+  });
+  if(tab === 'printcost') {
+    openPrintCost();
+    return; // Don't hide current panel, just open modal
+  }
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+tab).classList.add('active');
   if(tab==='orders')render_orders();
@@ -542,6 +469,10 @@ function go(tab){
   if(tab==='finance'){render_fin();update_fin_kpis();}
   if(tab==='mileage'){render_mileage();update_mileage_kpis();}
   if(tab==='printers')render_printers();
+  if(tab==='customers')load_customers();
+  if(tab==='market'){load_market_items();load_market_prices();}
+  if(tab==='watchlist')load_watchlist();
+  if(tab==='lore')load_lore();
 }
 
 async function load_orders(){sync(true);const{data,error}=await db.from('orders').select('*').order('created_at',{ascending:false});if(error){serr();return;}orders=data;sync(false);render_orders();update_order_kpis();update_badges();check_alerts();}
@@ -708,7 +639,7 @@ function update_order_kpis(){update_pipeline();update_stats_widget();}
 function check_alerts(){
   const low=inv.filter(s=>(s.spool_count??0)<=(s.reorder_spool_threshold??1));
   const box=document.getElementById('alert-box');
-  box.innerHTML=low.length?`<div class="alert">⚠ Low filament: ${low.map(s=>s.spool_name).join(', ')}</div>`:'';
+  box.innerHTML=low.length?`<div class="alert">Low filament: ${low.map(s=>s.spool_name).join(', ')}</div>`:'';
 }
 
 async function quickStock(id, delta) {
@@ -1411,13 +1342,66 @@ function update_badges(){
   const cab=document.getElementById('creature-alert-box');
   if(cab){
     const lowNames=creatures.filter(c=>(c.qty_on_hand??c.inventory_count??0)<=2).map(c=>c.name);
-    cab.innerHTML=lowNames.length?`<div class="alert" style="margin-bottom:14px">⚠ Low stock (≤2): ${lowNames.join(', ')}</div>`:'';
+    cab.innerHTML=lowNames.length?`<div class="alert">Low stock (≤2): ${lowNames.join(', ')}</div>`:'';
   }
 }
 
+// ── CUSTOMERS ────────────────────────────────────────────────────────────
+let customers = [];
+async function load_customers() {
+  const {data,error} = await db.from('cc_customers').select('*').order('created_at',{ascending:false});
+  if(error){document.getElementById('custtb').innerHTML='<tr class="empty"><td colspan="6" style="color:var(--red)">Table not yet created in Supabase.</td></tr>';return;}
+  customers = data||[];
+  const tb = document.getElementById('custtb');
+  if(!customers.length){tb.innerHTML='<tr class="empty"><td colspan="6">No customers yet.</td></tr>';return;}
+  tb.innerHTML = customers.map(c=>{
+    const joined = c.created_at ? new Date(c.created_at).toLocaleDateString() : '—';
+    return `<tr>
+      <td><strong>${c.email||'—'}</strong></td>
+      <td>${c.first_name||'—'}</td>
+      <td>${c.favorite_creature||'—'}</td>
+      <td>${c.is_local?'<span class="pill p-complete">Local</span>':'—'}</td>
+      <td style="font-size:11px;color:var(--cream-faint)">${joined}</td>
+      <td><button class="btn sm red" onclick="delCustomer('${c.id}')">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+async function delCustomer(id){if(!confirm('Delete customer?'))return;await db.from('cc_customers').delete().eq('id',id);load_customers();}
+function custModal(){
+  const html=`<div class="overlay open" id="m-cust"><div class="modal">
+    <div class="modal-t">Add Customer</div>
+    <div class="fg">
+      <div class="fr"><div><label class="fl">Email</label><input id="cust-email" type="email" placeholder="customer@example.com"/></div><div><label class="fl">First Name</label><input id="cust-name" placeholder="Jane"/></div></div>
+      <div><label class="fl">Favorite Creature</label><input id="cust-fav" placeholder="S'mores"/></div>
+      <div><label class="fl">Local Customer?</label><select id="cust-local"><option value="false">No</option><option value="true">Yes</option></select></div>
+    </div>
+    <div class="modal-act"><button class="btn" onclick="document.getElementById('m-cust').remove()">Cancel</button><button class="btn pri" onclick="saveCustomer()">Save</button></div>
+  </div></div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+async function saveCustomer(){
+  const email=document.getElementById('cust-email').value;
+  const first_name=document.getElementById('cust-name').value;
+  const favorite_creature=document.getElementById('cust-fav').value;
+  const is_local=document.getElementById('cust-local').value==='true';
+  const {error}=await db.from('cc_customers').insert([{email,first_name,favorite_creature,is_local}]);
+  if(error){toast('Save failed: '+error.message,'err');return;}
+  document.getElementById('m-cust').remove();
+  toast('Customer added','ok');
+  load_customers();
+}
+
+
+
+
 function showApp() {
   document.getElementById('app').style.display = 'block';
-  Promise.all([load_printers(),load_orders(),load_creatures(),load_inv(),load_fin(),load_mileage()]);
+  Promise.all([
+    load_printers(),load_orders(),load_creatures(),load_inv(),load_fin(),load_mileage(),load_customers()
+  ]).then(() => {
+    const params = new URLSearchParams(window.location.search);
+    if(params.get('cost') === 'true') openPrintCost();
+  });
 }
 
 db.channel('queue-rt')
@@ -1426,6 +1410,7 @@ db.channel('queue-rt')
   .on('postgres_changes',{event:'*',schema:'public',table:'inventory'},()=>load_inv())
   .on('postgres_changes',{event:'*',schema:'public',table:'finance'},()=>load_fin())
   .on('postgres_changes',{event:'*',schema:'public',table:'mileage'},()=>load_mileage())
+  .on('postgres_changes',{event:'*',schema:'public',table:'cc_customers'},()=>load_customers())
   .subscribe();
 
 </script>
