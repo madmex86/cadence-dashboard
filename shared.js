@@ -120,3 +120,46 @@ function applyRolePermissions() {
   if(path.includes('cadence-creatures-pl-tracker.html') && role === 'fulfillment') window.location.href='index.html';
   if((path.includes('cadence-fulfillment.html') || path.includes('cadence-queue.html')) && role === 'finance') window.location.href='index.html';
 }
+
+// EMAIL AUTOMATION (EmailJS)
+if (typeof emailjs !== 'undefined') {
+  emailjs.init("Kf28oWCMQdU-MdlL2");
+}
+
+async function sendFulfillmentEmail(order) {
+  if(!order.buyer_email) {
+    console.log("No email address for order:", order.etsy_order_id);
+    return;
+  }
+  
+  // Prepare the items for the {{#orders}} loop in your template
+  const orderItems = Array.isArray(order.items) ? order.items.map(itm => ({
+    name: itm.replace('[x] ','').trim(),
+    price: 'Included',
+    units: 1
+  })) : [{ name: order.items || 'Cadence Creature', price: 'Included', units: 1 }];
+
+  const templateParams = {
+    name: order.buyer_name || 'Customer',
+    email: order.buyer_email,
+    order_id: order.etsy_order_id || order.id.slice(0,8),
+    orders: orderItems,
+    tracking_number: order.tracking_number || 'N/A',
+    carrier: order.carrier || 'USPS',
+    tracking_link: order.tracking_number ? `https://tools.usps.com/go/TrackConfirmAction?tLabels=${order.tracking_number}` : '#',
+    cost: {
+      shipping: '0.00',
+      tax: '0.00',
+      total: order.total_amount ? order.total_amount.toFixed(2) : '0.00'
+    }
+  };
+
+  try {
+    const res = await emailjs.send('service_4z4fm6m', 'template_6waa5cm', templateParams);
+    console.log('EmailJS Success Response:', res);
+    toast('Notification Email Sent!', 'ok');
+  } catch (error) {
+    console.error('EmailJS Server Error:', error);
+    toast('Email notification failed: ' + (error.text || error.message), 'err');
+  }
+}

@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="shared.js"></script>
 <style>
 :root{--ink:#1C1612;--gold:#C9A84C;--gold-light:#E8D08A;--gold-dim:rgba(201,168,76,0.14);--teal:#5BBFD4;--green:#4a8c5c;--red:#a84444;--amber:#c97c2a;--cream:#FAF6F0;--cream-dim:#c4bcb2;--cream-faint:#7a6f62;--border:rgba(201,168,76,0.12);--border-h:rgba(201,168,76,0.30);}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -520,7 +522,7 @@ textarea{resize:vertical;min-height:68px;}
             <th style="text-align:left; padding:8px 0;">Filament (Spool)</th>
             <th style="width:70px">Model (g) <span class="help-icon tip-bottom" data-tooltip="The weight of the model itself from Bambu Studio.">?</span></th>
             <th style="width:70px">Purged (g) <span class="help-icon tip-bottom" data-tooltip="Material wasted during color changes. Look for 'Purged' in Bambu Studio.">?</span></th>
-            <th style="width:70px">Tower (g) <span class="help-icon tip-bottom tip-left" data-tooltip="Weight of the prime tower (if used).">?</span></th>
+            <th style="width:70px">Tower (g) <span class="help-icon tip-bottom" data-tooltip="Weight of the prime tower (if used).">?</span></th>
             <th style="width:70px; text-align:right;">Total (g)</th>
             <th style="width:40px"></th>
           </tr>
@@ -635,8 +637,10 @@ function render_orders(){
   if(!filteredOrders.length){tb.innerHTML='<tr class="empty"><td colspan="10">No orders match criteria.</td></tr>';return;}
   tb.innerHTML=filteredOrders.map(o=>{
     const items=Array.isArray(o.items)?o.items.join(', '):(o.items||'—');
-    const dt=o.order_date?new Date(o.order_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'—';
-    const shipDt=o.shipped_date?` → ${new Date(o.shipped_date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}`:'' ;
+    const d = o.created_at ? new Date(o.created_at) : new Date();
+    const dt = isNaN(d.getTime()) ? '—' : d.toLocaleDateString();
+    const sd = o.shipped_date ? new Date(o.shipped_date) : null;
+    const shipDt = (sd && !isNaN(sd.getTime())) ? ` → ${sd.toLocaleDateString()}` : '';
     const canExport=(['shipped','complete'].includes(o.status)&&o.total_amount);
     const printer=o.printer_name||'Vision';
     
@@ -687,7 +691,21 @@ function render_orders(){
       </td></tr>`;
   }).join('');
 }
-async function updateStatus(id,status){sync(true);const upd={status};if(status==='shipped')upd.shipped_date=new Date().toISOString().slice(0,10);const{error}=await db.from('orders').update(upd).eq('id',id);if(error){serr();toast('Update failed','err');return;}orders=orders.map(o=>o.id===id?{...o,...upd}:o);sync(false);update_order_kpis();update_badges();render_orders();toast(status==='shipped'?'Marked shipped — date stamped':'Status updated','ok');}
+async function updateStatus(id,s){
+  sync(true);
+  const upd={status:s};
+  if(s==='shipped')upd.shipped_date=new Date().toISOString().slice(0,10);
+  const{error}=await db.from('orders').update(upd).eq('id',id);
+  if(error){serr();return;}
+  
+  if(s === 'shipped') {
+    const order = orders.find(o => o.id === id);
+    if(order) sendFulfillmentEmail(order);
+  }
+  
+  toast(s==='shipped'?'Marked shipped':'Status updated','ok');
+  await load_orders();
+}
 async function exportOne(id){const o=orders.find(x=>x.id===id);if(!o||!o.total_amount)return;sync(true);const{error}=await db.from('finance').insert({entry_type:'income',category:'Etsy Sale',description:`Order #${o.etsy_order_id||id.slice(0,8)} — ${o.buyer_name||''}`.trim(),amount:o.total_amount,entry_date:o.order_date||new Date().toISOString().slice(0,10),order_id:id});if(error){serr();toast('Export failed','err');return;}sync(false);toast('Exported to P&L','ok');await load_fin();}
 async function exportShipped(){const eligible=orders.filter(o=>['shipped','complete'].includes(o.status)&&o.total_amount);if(!eligible.length){toast('No shipped orders with a total to export');return;}sync(true);const rows=eligible.map(o=>({entry_type:'income',category:'Etsy Sale',description:`Order #${o.etsy_order_id||o.id.slice(0,8)} — ${o.buyer_name||''}`.trim(),amount:o.total_amount,entry_date:o.order_date||new Date().toISOString().slice(0,10),order_id:o.id}));const{error}=await db.from('finance').upsert(rows,{onConflict:'order_id',ignoreDuplicates:true});if(error){serr();toast('Export failed','err');return;}sync(false);toast(`Exported ${rows.length} orders to P&L`,'ok');await load_fin();}
 function oModal(id=''){
@@ -712,11 +730,10 @@ async function saveOrder(){
   const{error}=id?await db.from('orders').update(p).eq('id',id):await db.from('orders').insert(p);
   
   if(error){
-    console.error('Supabase Save Error:', error);
-    serr();
-    toast('Save failed: ' + error.message, 'err');
+    console.error('Supabase Save Error Details:', error);
     btn.disabled = false;
     btn.textContent = originalText;
+    toast('Database Error: ' + (error.message || 'Check connection'), 'err');
     return;
   }
   
