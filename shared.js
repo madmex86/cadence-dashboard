@@ -122,9 +122,15 @@ function applyRolePermissions() {
 }
 
 // EMAIL AUTOMATION (EmailJS)
-if (typeof emailjs !== 'undefined') {
-  emailjs.init("Kf28oWCMQdU-MdlL2");
+function initEmail() {
+  if (typeof emailjs !== 'undefined') {
+    emailjs.init({ publicKey: "Kf28oWCMQdU-MdlL2" });
+    console.log('EmailJS Initialized');
+  }
 }
+
+// Initialize on Load
+window.addEventListener('load', initEmail);
 
 async function sendFulfillmentEmail(order) {
   if(!order.buyer_email) {
