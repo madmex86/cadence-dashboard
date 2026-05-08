@@ -194,7 +194,11 @@
   <div class="fg">
     <div class="fr"><div><label class="fl">Etsy Order ID</label><input id="o-eid" placeholder="e.g. 1234567890"/></div><div><label class="fl">Buyer Name</label><input id="o-buyer"/></div></div>
     <div><label class="fl">Buyer Email <span class="help-icon" data-tooltip="The customer's email address for automated shipping notifications.">?</span></label><input id="o-email" type="email" placeholder="customer@example.com"/></div>
-    <div><label class="fl">Items (one per line)</label><textarea id="o-items" placeholder="S'mores — Forest Gecko&#10;Bandit — Raccoon"></textarea></div>
+    <div>
+      <label class="fl">Items</label>
+      <div id="item-rows" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px;"></div>
+      <button type="button" onclick="addItemRow()" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);background:none;border:none;cursor:pointer;padding:2px 0;opacity:.7;transition:opacity .2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.7">+ Add item</button>
+    </div>
     <div class="fr">
       <div><label class="fl">Status</label><select id="o-st"><option value="queued">Queued</option><option value="printing">Printing</option><option value="printed">Printed</option><option value="packaging">Packaging</option><option value="shipped">Shipped</option><option value="complete">Complete</option></select></div>
       <div><label class="fl">Printer</label><select id="o-printer"><option value="Vision">Vision</option></select></div>
@@ -463,12 +467,58 @@ async function updateStatus(id,s){
 }
 async function exportOne(id){const o=orders.find(x=>x.id===id);if(!o||!o.total_amount)return;sync(true);const{error}=await db.from('finance').insert({entry_type:'income',category:'Etsy Sale',description:`Order #${o.etsy_order_id||id.slice(0,8)} — ${o.buyer_name||''}`.trim(),amount:o.total_amount,entry_date:o.order_date||new Date().toISOString().slice(0,10),order_id:id});if(error){serr();toast('Export failed','err');return;}sync(false);toast('Exported to P&L','ok');await load_fin();}
 async function exportShipped(){const eligible=orders.filter(o=>['shipped','complete'].includes(o.status)&&o.total_amount);if(!eligible.length){toast('No shipped orders with a total to export');return;}sync(true);const rows=eligible.map(o=>({entry_type:'income',category:'Etsy Sale',description:`Order #${o.etsy_order_id||o.id.slice(0,8)} — ${o.buyer_name||''}`.trim(),amount:o.total_amount,entry_date:o.order_date||new Date().toISOString().slice(0,10),order_id:o.id}));const{error}=await db.from('finance').upsert(rows,{onConflict:'order_id',ignoreDuplicates:true});if(error){serr();toast('Export failed','err');return;}sync(false);toast(`Exported ${rows.length} orders to P&L`,'ok');await load_fin();}
+function creatureOptions(){
+  return '<option value="">Select creature…</option>'
+    + creatures.map(c=>`<option value="${c.name}">${c.name}${c.species?' — '+c.species:''}</option>`).join('');
+}
+function addItemRow(name='',qty=1){
+  const row=document.createElement('div');
+  row.style.cssText='display:flex;gap:8px;align-items:center;';
+  row.innerHTML=`<input type="number" class="item-qty" min="1" value="${qty}" style="width:54px;flex-shrink:0;text-align:center;"/>`
+    +`<select class="item-sel" style="flex:1;">${creatureOptions()}</select>`
+    +`<button type="button" onclick="removeItemRow(this)" style="flex-shrink:0;width:26px;height:26px;background:none;border:1px solid rgba(232,112,112,.3);color:rgba(232,112,112,.7);cursor:pointer;font-size:16px;line-height:1;padding:0;transition:all .2s;" onmouseover="this.style.borderColor='#e87070';this.style.color='#e87070'" onmouseout="this.style.borderColor='rgba(232,112,112,.3)';this.style.color='rgba(232,112,112,.7)'">×</button>`;
+  document.getElementById('item-rows').appendChild(row);
+  if(name){
+    const sel=row.querySelector('.item-sel');
+    const opt=Array.from(sel.options).find(o=>o.value===name)
+      ||Array.from(sel.options).find(o=>name.toLowerCase().startsWith(o.value.toLowerCase()));
+    if(opt)sel.value=opt.value;
+  }
+  updateRemoveBtns();
+}
+function removeItemRow(btn){
+  btn.closest('div').remove();
+  updateRemoveBtns();
+}
+function updateRemoveBtns(){
+  const rows=document.querySelectorAll('#item-rows > div');
+  rows.forEach(r=>{ r.querySelector('button').style.visibility=rows.length>1?'visible':'hidden'; });
+}
+function buildItemRows(items){
+  document.getElementById('item-rows').innerHTML='';
+  if(!items.length){addItemRow();return;}
+  items.forEach(item=>{
+    const xMatch=item.match(/^(.+?)\s+x(\d+)$/i);
+    const dashMatch=item.match(/^(.+?)\s+[—-]\s+/);
+    const name=xMatch?xMatch[1].trim():dashMatch?dashMatch[1].trim():item.trim();
+    const qty=xMatch?parseInt(xMatch[2]):1;
+    addItemRow(name,qty);
+  });
+}
+function getItemsFromRows(){
+  return Array.from(document.querySelectorAll('#item-rows .item-sel'))
+    .map((sel,i)=>{
+      const name=sel.value; if(!name)return null;
+      const qty=parseInt(sel.closest('div').querySelector('.item-qty').value)||1;
+      return qty>1?name+' x'+qty:name;
+    }).filter(Boolean);
+}
 function oModal(id=''){
   document.getElementById('o-id').value=id;document.getElementById('ot').textContent=id?'Edit Order':'Add Order';
   const sel=document.getElementById('o-printer');
   sel.innerHTML=printers.filter(p=>p.active).map(p=>`<option value="${p.name}">${p.name}${p.is_default?' (default)':''}</option>`).join('') + '<option value="In Stock">In Stock / No Print</option>';
-  if(id){const o=orders.find(x=>x.id===id);if(!o)return;document.getElementById('o-eid').value=o.etsy_order_id||'';document.getElementById('o-buyer').value=o.buyer_name||'';document.getElementById('o-email').value=o.buyer_email||'';document.getElementById('o-items').value=Array.isArray(o.items)?o.items.join('\n'):(o.items||'');document.getElementById('o-st').value=o.status;document.getElementById('o-printer').value=o.printer_name||'Vision';document.getElementById('o-amt').value=o.total_amount||'';document.getElementById('o-dt').value=o.order_date?o.order_date.slice(0,10):'';document.getElementById('o-note').value=o.shipping_note||'';document.getElementById('o-track').value=o.tracking_number||'';document.getElementById('o-carrier').value=o.carrier||'';}
-  else{['o-eid','o-buyer','o-email','o-items','o-amt','o-note','o-track'].forEach(x=>document.getElementById(x).value='');document.getElementById('o-carrier').value='';document.getElementById('o-st').value='queued';document.getElementById('o-dt').value=new Date().toISOString().slice(0,10);const def=printers.find(p=>p.is_default);if(def)document.getElementById('o-printer').value=def.name;}
+  if(id){const o=orders.find(x=>x.id===id);if(!o)return;document.getElementById('o-eid').value=o.etsy_order_id||'';document.getElementById('o-buyer').value=o.buyer_name||'';document.getElementById('o-email').value=o.buyer_email||'';buildItemRows(Array.isArray(o.items)?o.items:(o.items?[o.items]:[]));document.getElementById('o-st').value=o.status;document.getElementById('o-printer').value=o.printer_name||'Vision';document.getElementById('o-amt').value=o.total_amount||'';document.getElementById('o-dt').value=o.order_date?o.order_date.slice(0,10):'';document.getElementById('o-note').value=o.shipping_note||'';document.getElementById('o-track').value=o.tracking_number||'';document.getElementById('o-carrier').value=o.carrier||'';}
+  else{['o-eid','o-buyer','o-email','o-amt','o-note','o-track'].forEach(x=>document.getElementById(x).value='');buildItemRows([]);document.getElementById('o-carrier').value='';document.getElementById('o-st').value='queued';document.getElementById('o-dt').value=new Date().toISOString().slice(0,10);const def=printers.find(p=>p.is_default);if(def)document.getElementById('o-printer').value=def.name;}
   openModal('m-order');
 }
 async function saveOrder(){
@@ -478,7 +528,7 @@ async function saveOrder(){
   btn.textContent = 'Saving...';
 
   const id=g('o-id');
-  const items=g('o-items').split('\n').map(s=>s.trim()).filter(Boolean);
+  const items=getItemsFromRows();
   const carrier=document.getElementById('o-carrier').value;
   const p={etsy_order_id:g('o-eid')||null,buyer_name:g('o-buyer')||null,buyer_email:g('o-email')||null,items,status:g('o-st'),printer_name:document.getElementById('o-printer').value||'Vision',total_amount:parseFloat(g('o-amt'))||null,order_date:g('o-dt')||null,shipping_note:g('o-note')||null,tracking_number:g('o-track')||null,carrier:carrier||null};
   sync(true);
