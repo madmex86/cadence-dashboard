@@ -107,6 +107,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     await applyRolePermissions();
     if(typeof showApp === 'function') showApp();
   } else {
+    // Show login only if we are on the Hub and have no session
+    const loginCont = document.getElementById('login-container');
+    if(loginCont) loginCont.style.display = 'flex';
+
     // Force redirect to Hub if they are on a protected page without a session
     if(typeof showApp !== 'function' && !window.location.pathname.includes('index.html')) {
       window.location.href = 'index.html';
