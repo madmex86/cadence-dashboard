@@ -265,30 +265,14 @@ function initEmail() {
 // UNIVERSAL DASHBOARD STYLES (Enforces symmetry across all pages)
 const styleShield = document.createElement('style');
 styleShield.textContent = `
-  /* Global Variables & Reset */
-  :root {
-    --gold: #C9A84C;
-    --gold-light: #E8D08A;
-    --gold-dim: rgba(201, 168, 76, 0.15);
-    --cream: #FAF6F0;
-    --cream-dim: rgba(196, 188, 178, 0.7);
-    --cream-faint: rgba(196, 188, 178, 0.4);
-    --ink: #0E0C09;
-    --border: rgba(201, 168, 76, 0.12);
-    --teal: #5BBFD4;
-    --red: #e09090;
-    --green: #7dc994;
-    --amber: #c97c2a;
-    --purple: #b89de8;
-  }
-
+  /* Global Reset & Core Wrappers */
   html { font-size: 16px; }
   body { 
     background: #0E0C09 !important; 
     color: #FAF6F0 !important; 
     margin: 0 !important; 
     padding: 0 !important;
-    font-family: 'Lora', serif;
+    font-family: 'Lora', serif !important;
     font-size: 14px;
     line-height: 1.5;
     min-height: 100vh;
@@ -300,30 +284,43 @@ styleShield.textContent = `
     min-height: 100vh !important;
     width: 100% !important;
     background: #0E0C09 !important;
+    opacity: 1 !important;
   }
+
+  /* Panel & Tab Logic (Fixes the "Stacked Mess") */
+  .panel { display: none !important; }
+  .panel.active { display: block !important; }
+  .content { flex: 1; display: flex; flex-direction: column; }
+  
+  /* Hero Typography */
+  h1, .sec-title { font-family: 'Lora', serif !important; font-size: 18px !important; letter-spacing: 0.12em !important; text-transform: uppercase !important; color: var(--gold-light) !important; margin-bottom: 20px !important; font-weight: 500 !important; }
+  h2 { font-size: 13px !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; color: var(--gold-light) !important; opacity: 0.8; }
+
 
   /* Core Layout Components */
   .main { flex: 1; display: flex; flex-direction: column; }
   .main-content { padding: 32px 28px; max-width: 1200px; margin: 0 auto; width: 100%; box-sizing: border-box; }
   
-  /* Buttons & UI Elements */
+  /* Buttons & Interactive Elements */
   .btn { 
-    font-family: 'Lora', serif; 
-    font-size: 10px; 
-    letter-spacing: 0.15em; 
-    text-transform: uppercase; 
-    padding: 10px 20px; 
-    background: none; 
-    border: 1px solid var(--gold); 
-    color: var(--gold-light); 
-    cursor: pointer; 
-    transition: all 0.3s; 
-    border-radius: 2px;
+    font-family: 'Lora', serif !important; 
+    font-size: 10px !important; 
+    letter-spacing: 0.15em !important; 
+    text-transform: uppercase !important; 
+    padding: 12px 24px !important; 
+    background: rgba(201, 168, 76, 0.05) !important; 
+    border: 1px solid var(--gold) !important; 
+    color: var(--gold-light) !important; 
+    cursor: pointer !important; 
+    transition: all 0.3s ease !important; 
+    border-radius: 3px !important;
+    white-space: nowrap !important;
   }
-  .btn:hover { background: var(--gold-dim); color: #fff; }
-  .btn.pri { background: var(--gold); color: #1C1612; }
-  .btn.pri:hover { background: var(--gold-light); }
-  .btn.sm { padding: 6px 12px; font-size: 9px; }
+  .btn:hover { background: var(--gold-dim) !important; color: #fff !important; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  .btn.pri { background: var(--gold) !important; color: #1C1612 !important; border: none !important; }
+  .btn.pri:hover { background: var(--gold-light) !important; }
+  .btn.sm { padding: 8px 14px !important; font-size: 9px !important; }
+
   .btn.red { border-color: var(--red); color: var(--red); }
   .btn.red:hover { background: rgba(224, 144, 144, 0.1); }
 
