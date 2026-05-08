@@ -67,6 +67,22 @@ function toast(m,t=''){
   clearTimeout(e._t); e._t=setTimeout(()=>e.classList.remove('show'),2800);
 }
 
+function sync(on) {
+  const dot = document.getElementById('sdot');
+  const label = document.getElementById('slabel');
+  if(dot) dot.className = 'sync-dot' + (on ? ' busy' : '');
+  if(label) label.textContent = on ? 'Syncing...' : 'Connected';
+  console.log(on ? '🔄 Syncing...' : '✅ Connected');
+}
+
+function serr() {
+  const dot = document.getElementById('sdot');
+  const label = document.getElementById('slabel');
+  if(dot) dot.className = 'sync-dot err';
+  if(label) label.textContent = 'Error';
+  console.error('❌ Supabase Connection Error');
+}
+
 // Check Auth on Load
 window.addEventListener('DOMContentLoaded', async () => {
   const link = document.createElement('link');
@@ -105,13 +121,14 @@ async function applyRolePermissions() {
   const nav = document.querySelector('.dash-nav');
   if(nav) {
     const links = nav.querySelectorAll('a');
-    links.forEach(a => {
-      const href = a.getAttribute('href');
-      const path = window.location.pathname;
+      links.forEach(a => {
+        const href = a.getAttribute('href');
+        const path = window.location.pathname;
+        const fileName = path.split('/').pop() || 'index.html';
 
-      // Set Active state
-      if(path.includes(href) && href !== 'index.html') a.classList.add('active');
-      if((path.endsWith('/') || path.endsWith('index.html')) && href === 'index.html') a.classList.add('active');
+        // Set Active state - Precise Match
+        if(fileName === href) a.classList.add('active');
+        if(fileName === '' && href === 'index.html') a.classList.add('active');
 
       // ADMIN ONLY TABS (P&L, Activity, Admin)
       const isAdminOnly = href.includes('pl-tracker') || href.includes('activity') || href.includes('admin');
@@ -282,22 +299,25 @@ styleShield.textContent = `
     padding: 0 16px !important; 
     gap: 0 !important;
     border-bottom: 1px solid rgba(201, 168, 76, 0.1) !important;
+    overflow-x: auto !important;
   }
   .dash-nav a { 
     font-family: 'Lora', serif !important;
     font-size: 10px !important;
-    padding: 12px 16px !important;
+    padding: 12px 18px !important;
     text-transform: uppercase !important;
     letter-spacing: 0.15em !important;
     color: rgba(196, 188, 178, 0.5) !important;
     text-decoration: none !important;
-    border-bottom: 2px solid transparent !important;
+    border-bottom: 3px solid transparent !important;
     transition: all 0.2s ease !important;
+    position: relative !important;
+    display: inline-block !important;
   }
   .dash-nav a.active { 
     color: #E8D08A !important; 
-    border-bottom-color: #C9A84C !important;
-    background: rgba(201, 168, 76, 0.03) !important;
+    border-bottom: 3px solid #C9A84C !important;
+    background: rgba(201, 168, 76, 0.05) !important;
   }
   .topbar-link {
     font-family: 'Lora', serif !important;

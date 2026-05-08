@@ -608,8 +608,7 @@ let orders=[],creatures=[],inv=[],fin=[],printers=[];
 function fmt$(v){return'$'+Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 
 
-function sync(on){const d=document.getElementById('sdot'),l=document.getElementById('slabel');d.className='sync-dot'+(on?' busy':'');l.textContent=on?'Syncing…':'Connected';}
-function serr(){document.getElementById('sdot').className='sync-dot err';document.getElementById('slabel').textContent='Error';}
+
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function openModal(id){document.getElementById(id).classList.add('open');}
 function g(id){return document.getElementById(id).value.trim();}
