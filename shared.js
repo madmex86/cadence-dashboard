@@ -154,7 +154,45 @@ async function applyRolePermissions() {
     if(revCard && role !== 'admin') {
       revCard.style.display = 'none';
     }
+
+    // INJECT UNIFIED CONNECTION HUB
+    if(right) {
+      let connHub = document.getElementById('conn-hub');
+      if(!connHub) {
+        connHub = document.createElement('div');
+        connHub.id = 'conn-hub';
+        connHub.style = 'display:flex; align-items:center; gap:12px; margin-right:15px;';
+        right.insertBefore(connHub, right.querySelector('.topbar-link'));
+      }
+      connHub.innerHTML = `
+        <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:rgba(196,188,178,0.5); letter-spacing:0.05em;">
+          <div style="width:6px; height:6px; border-radius:50%; background:#4a8c5c;"></div> Cloud Sync
+        </div>
+        <div id="master-printer-pill" style="display:flex; align-items:center; gap:6px; font-size:10px; padding:4px 10px; border:1px solid rgba(91,191,212,0.2); color:#5BBFD4; border-radius:12px; background:rgba(91,191,212,0.05); white-space:nowrap;">
+          🖨 Vision: Loading...
+        </div>
+      `;
+      updateMasterPrinterStatus();
+    }
   }
+
+  // Real-time Printer Watcher
+  db.channel('master-printers')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'printers' }, () => updateMasterPrinterStatus())
+    .subscribe();
+}
+
+async function updateMasterPrinterStatus() {
+  const pill = document.getElementById('master-printer-pill');
+  if(!pill) return;
+  const { data } = await db.from('printers').select('*').eq('name', 'Vision').single();
+  if(data) {
+    const status = data.status === 'printing' ? `Printing ${data.current_job || ''}` : 'Idle';
+    pill.textContent = `🖨 Vision: ${status}`;
+    pill.style.borderColor = data.status === 'printing' ? 'rgba(91,191,212,0.4)' : 'rgba(91,191,212,0.2)';
+    pill.style.background = data.status === 'printing' ? 'rgba(91,191,212,0.1)' : 'rgba(91,191,212,0.05)';
+  }
+}
   
   const path = window.location.pathname;
   if((path.includes('cadence-admin.html') || path.includes('cadence-activity.html')) && role !== 'admin') {
