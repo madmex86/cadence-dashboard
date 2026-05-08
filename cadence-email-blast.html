@@ -187,9 +187,9 @@ async function sendBlast() {
   if (_isSending) return;
   var subject = document.getElementById('blast-subject').value.trim();
   var body = document.getElementById('blast-body').value.trim();
-  if (!subject) { toast('Please enter a subject line.', 'err'); return; }
-  if (!body) { toast('Please write a message body.', 'err'); return; }
-  if (!_subs.length) { toast('No subscribers found.', 'err'); return; }
+  if (!subject) { toast('Please enter a subject line.', 'err'); document.getElementById('send-status').textContent = 'Please enter a subject line.'; return; }
+  if (!body) { toast('Please write a message body.', 'err'); document.getElementById('send-status').textContent = 'Please write a message body.'; return; }
+  if (!_subs.length) { toast('No subscribers found.', 'err'); document.getElementById('send-status').textContent = 'No subscribers found — check Supabase.'; return; }
   if (!confirm('Send this email to ' + _subs.length + ' subscriber' + (_subs.length !== 1 ? 's' : '') + '?')) return;
 
   _isSending = true;
@@ -245,9 +245,9 @@ async function sendBlast() {
 }
 
 async function loadSubscribers() {
-  var res = await db.from('subscribers').select('email,first_name');
-  if (res.error) { console.error('Subscriber load failed:', res.error); return; }
-  _subs = res.data || [];
+  var res = await db.from('subscribers').select('email,first_name,subscribed').eq('subscribed', true);
+  if (res.error) { console.error('Subscriber load failed:', res.error); document.getElementById('send-status').textContent = 'Error loading subscribers: ' + res.error.message; return; }
+  _subs = (res.data || []).filter(function(s) { return s.subscribed !== false; });
   document.getElementById('sub-count').textContent = _subs.length;
 }
 
@@ -257,6 +257,7 @@ async function showApp() {
   loadHistory();
 }
 </script>
+<div class="toast" id="tst"></div>
 </div>
 </body>
 </html>
