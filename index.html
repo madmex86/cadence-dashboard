@@ -202,9 +202,11 @@
             <div><label class="fl">Etsy Order ID</label><input id="o-eid" placeholder="e.g. 1234567890" /></div>
             <div><label class="fl">Buyer Name</label><input id="o-buyer" /></div>
           </div>
-          <div><label class="fl">Items (one per line)</label><textarea id="o-items"
-              placeholder="S'mores — Forest Gecko&#10;Bandit — Raccoon"
-              style="resize:vertical;min-height:80px;"></textarea></div>
+          <div>
+            <label class="fl">Items</label>
+            <div id="item-rows" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px;"></div>
+            <button type="button" onclick="addItemRow()" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);background:none;border:none;cursor:pointer;padding:2px 0;opacity:.7;transition:opacity .2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.7">+ Add item</button>
+          </div>
           <div class="fr">
             <div><label class="fl">Status</label><select id="o-st">
                 <option value="queued">Queued</option>
@@ -420,10 +422,55 @@
         loadDashboardData();
       }
 
+      function creatureOptions(){
+        return '<option value="">Select creature…</option>'
+          + (allCreatures||[]).map(c=>`<option value="${c.name}">${c.name}${c.species?' — '+c.species:''}</option>`).join('');
+      }
+      function addItemRow(name='',qty=1){
+        const row=document.createElement('div');
+        row.style.cssText='display:flex;gap:8px;align-items:center;';
+        row.innerHTML=`<input type="number" class="item-qty" min="1" value="${qty}" style="width:54px;flex-shrink:0;text-align:center;background:rgba(0,0,0,.25);border:1px solid rgba(201,168,76,.18);color:var(--cream);padding:6px;font-family:inherit;font-size:13px;border-radius:3px;outline:none;"/>`
+          +`<select class="item-sel" style="flex:1;background:rgba(0,0,0,.25);border:1px solid rgba(201,168,76,.18);color:var(--cream);padding:6px 8px;font-family:inherit;font-size:13px;border-radius:3px;outline:none;">${creatureOptions()}</select>`
+          +`<button type="button" onclick="removeItemRow(this)" style="flex-shrink:0;width:26px;height:26px;background:none;border:1px solid rgba(232,112,112,.3);color:rgba(232,112,112,.7);cursor:pointer;font-size:16px;line-height:1;padding:0;transition:all .2s;" onmouseover="this.style.borderColor='#e87070';this.style.color='#e87070'" onmouseout="this.style.borderColor='rgba(232,112,112,.3)';this.style.color='rgba(232,112,112,.7)'">×</button>`;
+        document.getElementById('item-rows').appendChild(row);
+        if(name){
+          const sel=row.querySelector('.item-sel');
+          const opt=Array.from(sel.options).find(o=>o.value===name)
+            ||Array.from(sel.options).find(o=>name.toLowerCase().startsWith(o.value.toLowerCase()));
+          if(opt)sel.value=opt.value;
+        }
+        updateRemoveBtns();
+      }
+      function removeItemRow(btn){ btn.closest('div').remove(); updateRemoveBtns(); }
+      function updateRemoveBtns(){
+        const rows=document.querySelectorAll('#item-rows > div');
+        rows.forEach(r=>{ r.querySelector('button').style.visibility=rows.length>1?'visible':'hidden'; });
+      }
+      function buildItemRows(items){
+        document.getElementById('item-rows').innerHTML='';
+        if(!items.length){addItemRow();return;}
+        items.forEach(item=>{
+          const xMatch=item.match(/^(.+?)\s+x(\d+)$/i);
+          const dashMatch=item.match(/^(.+?)\s+[—-]\s+/);
+          const name=xMatch?xMatch[1].trim():dashMatch?dashMatch[1].trim():item.trim();
+          const qty=xMatch?parseInt(xMatch[2]):1;
+          addItemRow(name,qty);
+        });
+      }
+      function getItemsFromRows(){
+        return Array.from(document.querySelectorAll('#item-rows .item-sel'))
+          .map(sel=>{
+            const name=sel.value; if(!name)return null;
+            const qty=parseInt(sel.closest('div').querySelector('.item-qty').value)||1;
+            return qty>1?name+' x'+qty:name;
+          }).filter(Boolean);
+      }
+
       function oModal() {
         document.getElementById('o-id').value = '';
         document.getElementById('ot').textContent = 'Add Order';
-        ['o-eid', 'o-buyer', 'o-items', 'o-amt', 'o-note', 'o-track'].forEach(x => document.getElementById(x).value = '');
+        ['o-eid', 'o-buyer', 'o-amt', 'o-note', 'o-track'].forEach(x => document.getElementById(x).value = '');
+        buildItemRows([]);
         document.getElementById('o-carrier').value = '';
         document.getElementById('o-st').value = 'queued';
         document.getElementById('o-dt').value = new Date().toISOString().slice(0, 10);
@@ -433,7 +480,7 @@
       async function saveOrder() {
         const eid = document.getElementById('o-eid').value;
         const b = document.getElementById('o-buyer').value;
-        const items = document.getElementById('o-items').value.split('\n').map(s => s.trim()).filter(Boolean);
+        const items = getItemsFromRows();
         const st = document.getElementById('o-st').value;
         const printer = document.getElementById('o-printer').value;
         const amt = document.getElementById('o-amt').value;
