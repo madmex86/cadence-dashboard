@@ -278,13 +278,7 @@ async function updateMasterPrinterStatus() {
   } catch(e) { console.warn('Printer status update failed'); }
 }
 
-// EMAIL AUTOMATION (EmailJS)
-function initEmail() {
-  if (typeof emailjs !== 'undefined') {
-    emailjs.init({ publicKey: "Kf28oWCMQdU-MdlL2" });
-    console.log('EmailJS Initialized');
-  }
-}
+function initEmail() {}
 
 // UNIVERSAL DASHBOARD STYLES (Enforces symmetry across all pages)
 const styleShield = document.createElement('style');
@@ -626,35 +620,13 @@ async function sendFulfillmentEmail(order) {
     return;
   }
   
-  // Prepare the items for the {{#orders}} loop in your template
-  const orderItems = Array.isArray(order.items) ? order.items.map(itm => ({
-    name: itm.replace('[x] ','').trim(),
-    price: 'Included',
-    units: 1
-  })) : [{ name: order.items || 'Cadence Creature', price: 'Included', units: 1 }];
-
-  const templateParams = {
-    name: order.buyer_name || 'Customer',
-    email: order.buyer_email,
-    order_id: order.etsy_order_id || order.id.slice(0,8),
-    orders: orderItems,
-    tracking_number: order.tracking_number || 'N/A',
-    carrier: order.carrier || 'USPS',
-    tracking_link: order.tracking_number ? `https://tools.usps.com/go/TrackConfirmAction?tLabels=${order.tracking_number}` : '#',
-    cost: {
-      shipping: '0.00',
-      tax: '0.00',
-      total: order.total_amount ? order.total_amount.toFixed(2) : '0.00'
-    }
-  };
-
   try {
-    const res = await emailjs.send('service_4z4fm6m', 'template_6waa5cm', templateParams);
-    console.log('EmailJS Success Response:', res);
-    toast('Notification Email Sent!', 'ok');
+    const { error } = await db.functions.invoke('send-shipping', { body: { order } });
+    if (error) throw error;
+    toast('Shipping notification sent!', 'ok');
   } catch (error) {
-    console.error('EmailJS Server Error:', error);
-    toast('Email notification failed: ' + (error.text || error.message), 'err');
+    console.error('Shipping email error:', error);
+    toast('Email notification failed: ' + (error.message || String(error)), 'err');
   }
 }
 
