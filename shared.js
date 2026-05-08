@@ -123,12 +123,12 @@ async function applyRolePermissions() {
     const links = nav.querySelectorAll('a');
       links.forEach(a => {
         const href = a.getAttribute('href');
+        if(!href) return;
         const path = window.location.pathname;
-        const fileName = path.split('/').pop() || 'index.html';
 
-        // Set Active state - Precise Match
-        if(fileName === href) a.classList.add('active');
-        if(fileName === '' && href === 'index.html') a.classList.add('active');
+        // Smart Active Match: If path ends with href, or if at root and href is index.html
+        const isActive = path.endsWith(href) || (path.endsWith('/') && href === 'index.html');
+        if(isActive) a.classList.add('active');
 
       // ADMIN ONLY TABS (P&L, Activity, Admin)
       const isAdminOnly = href.includes('pl-tracker') || href.includes('activity') || href.includes('admin');
