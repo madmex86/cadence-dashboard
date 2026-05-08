@@ -131,7 +131,7 @@
 <div class="panel" id="panel-stock">
   <div class="sec-hdr">
     <span class="sec-title">Stock vs. Active Prints — real-time comparison</span>
-    <button class="btn sm pri" onclick="cModal()">+ Add Creature</button>
+    <a class="btn sm" href="cadence-creature-editor.html" style="text-decoration:none;">Manage Creatures ↗</a>
   </div>
   <div style="overflow-x:auto">
     <table><thead><tr><th>Log</th><th>Name</th><th>SKU</th><th>Species</th><th>Env</th><th>Qty On Hand</th><th>Currently Printing</th><th>Queued</th><th>Net Available</th></tr></thead>
@@ -143,8 +143,8 @@
 <div class="panel" id="panel-creatures">
   <div id="creature-alert-box"></div>
   <div class="sec-hdr">
-    <span class="sec-title">Creature Lineup · syncs to Market Intelligence</span>
-    <button class="btn sm pri" onclick="cModal()">+ Add creature</button>
+    <span class="sec-title">Creature Lineup · read-only reference</span>
+    <a class="btn sm" href="cadence-creature-editor.html" style="text-decoration:none;">Add / Edit in Creature Editor ↗</a>
   </div>
   <div style="overflow-x:auto">
     <table><thead><tr><th>Log</th><th>Name</th><th>SKU</th><th>Species</th><th>Env</th><th>Retail $</th><th>Etsy $</th><th>Cost $</th><th>Margin</th><th>On Hand</th><th>Filaments</th><th>Status</th><th></th></tr></thead>
@@ -259,46 +259,6 @@
     <div><label class="fl">Shipping Note</label><input id="o-note"/></div>
   </div>
   <div class="modal-act"><button class="btn" onclick="closeModal('m-order')">Cancel</button><button class="btn pri" onclick="saveOrder()">Save</button></div>
-</div></div>
-
-<!-- CREATURE MODAL -->
-<div class="overlay" id="m-creature"><div class="modal">
-  <div class="modal-t" id="cmt">Add Creature</div>
-  <input type="hidden" id="c-id"/>
-  <div class="fg">
-    <div class="fr"><div><label class="fl">Log #<span class="help-tip">?<span class="tip-text">Sequential creature number starting at 1. Shows as #001 on the card badge and log page.</span></span></label><input id="c-log" placeholder="001"/></div><div><label class="fl">Name</label><input id="c-name" placeholder="S'mores"/></div></div>
-    <div class="fr"><div>
-      <label class="fl">SKU<span class="help-tip">?<span class="tip-text">Auto-generated from Species + Name. Format: SPE-NAM with no keychain, or SPE-NAM-KCH with a keychain variant.</span></span></label>
-      <div style="display:flex;gap:5px;align-items:center;">
-        <input id="c-sku" placeholder="GEC-SMO" maxlength="11" style="flex:1;text-transform:uppercase;font-family:monospace;letter-spacing:.06em;"/>
-        <button type="button" class="btn" onclick="genQueueSKU()" style="white-space:nowrap;padding:5px 10px;font-size:11px;flex-shrink:0;">↺</button>
-      </div>
-      <div style="margin-top:5px;display:flex;align-items:center;gap:8px;">
-        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:rgba(196,188,178,0.5);cursor:pointer;user-select:none;">
-          <input type="checkbox" id="c-has-kch" onchange="toggleQueueKch()"/> Keychain variant
-        </label>
-        <input id="c-kch-suffix" placeholder="KCH" maxlength="3" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'');genQueueSKU()" style="width:52px;text-transform:uppercase;font-family:monospace;display:none;padding:3px 6px;font-size:12px;"/>
-      </div>
-    </div><div><label class="fl">Species</label><input id="c-species" placeholder="Gecko"/></div></div>
-    <div class="fr"><div><label class="fl">Environment<span class="help-tip">?<span class="tip-text">Sets the card accent color and habitat filter on the site. Forest = green, Ocean = teal, Fantasy = purple, Holiday = red, Space = blue.</span></span></label><select id="c-env"><option value="forest">Forest</option><option value="sea">Ocean</option><option value="fantasy">Fantasy</option><option value="holiday">Holiday</option><option value="space">Space</option></select></div><div><label class="fl">Qty On Hand<span class="help-tip">?<span class="tip-text">How many finished, ready-to-ship copies exist right now.</span></span></label><input id="c-qty" type="number" min="0" placeholder="0"/></div></div>
-    <div class="fr3"><div><label class="fl">Retail ($)<span class="help-tip">?<span class="tip-text">Price for direct sales — website, in-person, events. Before any platform fees.</span></span></label><input id="c-retail" type="number" step="0.01"/></div><div><label class="fl">Etsy ($)<span class="help-tip">?<span class="tip-text">Listing price on Etsy. Set ~8–10% higher than retail to cover Etsy's 6.5% transaction fee plus listing fees.</span></span></label><input id="c-etsy" type="number" step="0.01"/></div><div><label class="fl">Cost ($)<span class="help-tip">?<span class="tip-text">Your total production cost — filament, time, paint, materials. Used in P&amp;L to calculate your profit margin.</span></span></label><input id="c-cost" type="number" step="0.01"/></div></div>
-    <div class="fr"><div><label class="fl">Active<span class="help-tip">?<span class="tip-text">Active = visible on the live site. Set to Inactive to hide without deleting.</span></span></label><select id="c-active"><option value="true">Active</option><option value="false">Inactive</option></select></div><div><label class="fl">Notes</label><input id="c-notes"/></div></div>
-    <div class="fr">
-      <div>
-        <label class="fl">Image URL <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">Paste link or upload photo</span></label>
-        <div style="display:flex;gap:6px;">
-          <input id="c-image-url" placeholder="https://.../photo.jpg" style="flex:1;"/>
-          <label class="btn pri" style="cursor:pointer;margin:0;padding:6px 10px;font-size:11px;display:flex;align-items:center;">
-            Upload
-            <input type="file" accept="image/*" style="display:none;" onchange="uploadCreatureImage(event)"/>
-          </label>
-        </div>
-      </div>
-      <div style="visibility:hidden"></div> <!-- Placeholder for layout -->
-    </div>
-    <div><label class="fl">Filament Colors Used <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">(hold Ctrl/Cmd to select multiple)</span></label><select id="c-filaments" multiple style="min-height:80px;font-size:12px"></select></div>
-  </div>
-  <div class="modal-act"><button class="btn" onclick="closeModal('m-creature')">Cancel</button><button class="btn pri" onclick="saveCreature()">Save</button></div>
 </div></div>
 
 <!-- INVENTORY MODAL — BUG FIXED -->
@@ -453,7 +413,6 @@
 document.addEventListener('keydown', (e) => {
   if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
   if(e.key.toLowerCase() === 'o') { e.preventDefault(); oModal(); }
-  if(e.key.toLowerCase() === 'c') { e.preventDefault(); cModal(); }
 });
 let orders=[],creatures=[],inv=[],fin=[],printers=[];
 
@@ -821,10 +780,9 @@ function render_creatures(){
       <td>${filDots}</td>
       <td><span class="pill ${c.active?'p-active':'p-inactive'}">${c.active?'Active':'Inactive'}</span></td>
       <td style="white-space:nowrap">
-        <button class="btn sm" onclick="cModal('${c.id}')">Edit</button>
+        <a class="btn sm" href="cadence-creature-editor.html" style="text-decoration:none;">Edit ↗</a>
         <button class="btn sm" style="margin-left:4px" title="Print this creature" onclick="openAssign('${c.id}')">🖨</button>
         <button class="btn sm" style="margin-left:4px" title="Print label" onclick="openCreatureLabel('${c.id}')">🏷</button>
-        <button class="btn sm red" style="margin-left:4px" onclick="delCreature('${c.id}')">✕</button>
       </td></tr>`;
   }).join('');
 }
@@ -847,86 +805,6 @@ function colorFromName(name){
   if(n.includes('crystal'))return'#aee0f0';
   if(n.includes('glow')||n.includes('lumin'))return'#aaee66';
   return'#7a6f62';
-}
-async function uploadCreatureImage(e){
-  const file = e.target.files[0];
-  if(!file) return;
-  const btn = e.target.parentElement;
-  const ogText = btn.innerHTML;
-  btn.innerHTML = 'Wait...';
-  try {
-    const ext = file.name.split('.').pop();
-    const fileName = 'creature_' + Date.now() + '.' + ext;
-    const { data, error } = await db.storage.from('creature-images').upload(fileName, file);
-    if(error) throw error;
-    const { data: pubData } = db.storage.from('creature-images').getPublicUrl(fileName);
-    if(pubData && pubData.publicUrl) {
-      document.getElementById('c-image-url').value = pubData.publicUrl;
-    }
-  } catch(err) {
-    console.error(err);
-    alert('Upload failed. Please ensure you created a public bucket called "creature-images" in Supabase with an INSERT policy.');
-  } finally {
-    btn.innerHTML = ogText;
-    e.target.value = '';
-  }
-}
-function qSkuSeg(s) {
-  return (s||'').toUpperCase().replace(/[^A-Z]/g,'').substring(0,3).padEnd(3,'X');
-}
-function genQueueSKU() {
-  const species = qSkuSeg(document.getElementById('c-species').value);
-  const name    = qSkuSeg(document.getElementById('c-name').value);
-  if (species === 'XXX' && name === 'XXX') return;
-  let sku = species + '-' + name;
-  if (document.getElementById('c-has-kch').checked) {
-    sku += '-' + qSkuSeg(document.getElementById('c-kch-suffix').value);
-  }
-  document.getElementById('c-sku').value = sku;
-}
-function toggleQueueKch() {
-  const on = document.getElementById('c-has-kch').checked;
-  document.getElementById('c-kch-suffix').style.display = on ? 'inline-block' : 'none';
-  genQueueSKU();
-}
-function initQueueKch(sku) {
-  const parts = (sku || '').split('-');
-  const hasKch = parts.length === 3;
-  document.getElementById('c-has-kch').checked = hasKch;
-  document.getElementById('c-kch-suffix').style.display = hasKch ? 'inline-block' : 'none';
-  document.getElementById('c-kch-suffix').value = hasKch ? parts[2] : '';
-}
-function cModal(id=''){
-  document.getElementById('c-id').value=id;document.getElementById('cmt').textContent=id?'Edit Creature':'Add Creature';
-  // populate filament multi-select from inventory
-  const fsel=document.getElementById('c-filaments');
-  fsel.innerHTML=inv.map(s=>`<option value="${s.id}">${s.spool_name}${s.color?' — '+s.color:''}</option>`).join('');
-  if(id){const c=creatures.find(x=>x.id===id);if(!c)return;document.getElementById('c-log').value=c.log_number||'';document.getElementById('c-name').value=c.name||'';document.getElementById('c-sku').value=c.sku||'';document.getElementById('c-species').value=c.species||'';document.getElementById('c-env').value=c.environment||'forest';document.getElementById('c-retail').value=c.price_retail||'';document.getElementById('c-etsy').value=c.price_etsy||'';document.getElementById('c-cost').value=c.cost_to_print||'';document.getElementById('c-active').value=String(c.active);document.getElementById('c-notes').value=c.notes||'';document.getElementById('c-qty').value=c.qty_on_hand??c.inventory_count??0;document.getElementById('c-image-url').value=c.image_url||'';
-    // restore filament selections
-    if(c.filament_colors){try{const ids=JSON.parse(c.filament_colors);Array.from(fsel.options).forEach(o=>o.selected=ids.includes(o.value));}catch{}}
-    else{Array.from(fsel.options).forEach(o=>o.selected=false);}
-  }
-  else{['c-log','c-name','c-sku','c-species','c-retail','c-etsy','c-cost','c-notes','c-qty','c-image-url'].forEach(x=>document.getElementById(x).value='');document.getElementById('c-env').value='forest';document.getElementById('c-active').value='true';Array.from(fsel.options).forEach(o=>o.selected=false);}
-  initQueueKch(document.getElementById('c-sku').value);
-  openModal('m-creature');
-}
-async function saveCreature(){
-  const id=g('c-id');
-  const fsel=document.getElementById('c-filaments');
-  const selectedFils=Array.from(fsel.selectedOptions).map(o=>o.value);
-  const p={log_number:g('c-log')||null,name:g('c-name'),sku:g('c-sku')||null,slug:g('c-name').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''),species:g('c-species')||null,environment:g('c-env'),price_retail:parseFloat(g('c-retail'))||null,price_etsy:parseFloat(g('c-etsy'))||null,cost_to_print:parseFloat(g('c-cost'))||null,active:document.getElementById('c-active').value==='true',notes:g('c-notes')||null,qty_on_hand:parseInt(g('c-qty'))||0,inventory_count:parseInt(g('c-qty'))||0,filament_colors:selectedFils.length?JSON.stringify(selectedFils):null,image_url:g('c-image-url')||null};
-  if(!p.name){toast('Name required','err');return;}
-  sync(true);closeModal('m-creature');
-  const{error}=id?await db.from('creatures').update(p).eq('id',id):await db.from('creatures').insert(p);
-  if(error){serr();toast('Save failed','err');return;}
-  toast(id?'Updated':'Added','ok');await load_creatures();
-  if(typeof sendDiscordAlert === 'function') {
-    if(!id) {
-      sendDiscordAlert('✨ New Creature Added', `**${p.name}** was just added to the bestiary queue!`);
-    } else {
-      sendDiscordAlert('📝 Creature Updated', `**${p.name}** was updated in the database.`);
-    }
-  }
 }
 function openCreatureLabel(id){
   const c=creatures.find(x=>x.id===id);if(!c)return;
@@ -957,8 +835,6 @@ function printLabel(){
   w.document.close();
   w.focus();setTimeout(()=>{w.print();},300);
 }
-
-async function delCreature(id){if(!confirm('Delete creature?'))return;sync(true);const{error}=await db.from('creatures').delete().eq('id',id);if(error){serr();toast('Failed','err');return;}toast('Deleted');await load_creatures();}
 
 // BUG FIX: saveInv no longer reads phantom inputs (i-total, i-rem, i-thr)
 async function load_inv(){sync(true);const{data,error}=await db.from('inventory').select('id,spool_name,brand,color,material,spool_count,reorder_spool_threshold,cost_per_spool,purchase_url').order('spool_name');if(error){serr();return;}inv=data;sync(false);render_inv();update_badges();check_alerts();}
