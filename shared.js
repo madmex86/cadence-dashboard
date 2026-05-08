@@ -103,6 +103,7 @@ async function applyRolePermissions() {
   const role = currentUser.user_metadata?.role || 'user';
   
   const nav = document.querySelector('.dash-nav');
+  if(nav) {
     const links = nav.querySelectorAll('a');
     links.forEach(a => {
       const href = a.getAttribute('href');
