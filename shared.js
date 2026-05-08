@@ -265,14 +265,26 @@ function initEmail() {
 // UNIVERSAL DASHBOARD STYLES (Enforces symmetry across all pages)
 const styleShield = document.createElement('style');
 styleShield.textContent = `
+  /* Global Dashboard Reset */
+  body { 
+    background: #0E0C09 !important; 
+    color: #FAF6F0 !important; 
+    margin: 0 !important; 
+    padding: 0 !important;
+    font-family: 'Lora', serif !important;
+  }
+
   .topbar { 
     display: flex !important; 
     justify-content: space-between !important; 
     align-items: center !important; 
     height: 64px !important; 
     padding: 0 28px !important; 
-    background: rgba(28, 22, 18, 0.95) !important;
+    background: rgba(28, 22, 18, 0.98) !important;
     border-bottom: 1px solid rgba(201, 168, 76, 0.15) !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 1000 !important;
   }
   .topbar-left { display: flex !important; align-items: center !important; gap: 12px !important; }
   .topbar-right { display: flex !important; align-items: center !important; gap: 20px !important; }
@@ -291,29 +303,36 @@ styleShield.textContent = `
 
   .dash-nav { 
     display: flex !important; 
-    background: rgba(0,0,0,0.2) !important; 
+    background: rgba(20, 18, 15, 0.95) !important; 
     padding: 0 16px !important; 
     gap: 0 !important;
     border-bottom: 1px solid rgba(201, 168, 76, 0.1) !important;
     overflow-x: auto !important;
+    position: sticky !important;
+    top: 64px !important;
+    z-index: 999 !important;
   }
   .dash-nav a { 
     font-family: 'Lora', serif !important;
     font-size: 10px !important;
-    padding: 12px 18px !important;
+    padding: 14px 20px !important;
     text-transform: uppercase !important;
     letter-spacing: 0.15em !important;
-    color: rgba(196, 188, 178, 0.5) !important;
+    color: rgba(196, 188, 178, 0.6) !important;
     text-decoration: none !important;
     border-bottom: 3px solid transparent !important;
     transition: all 0.2s ease !important;
     position: relative !important;
     display: inline-block !important;
   }
+  .dash-nav a:hover {
+    color: #E8D08A !important;
+    background: rgba(201, 168, 76, 0.03) !important;
+  }
   .dash-nav a.active { 
     color: #E8D08A !important; 
     border-bottom: 3px solid #C9A84C !important;
-    background: rgba(201, 168, 76, 0.05) !important;
+    background: rgba(201, 168, 76, 0.08) !important;
   }
   .topbar-link {
     font-family: 'Lora', serif !important;
