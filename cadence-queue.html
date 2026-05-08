@@ -82,7 +82,7 @@
   <button class="tab active" onclick="go('orders')">Orders <span class="badge" id="b-orders" style="display:none"></span></button>
   <button class="tab" onclick="go('stock')">Stock &amp; Queue</button>
   <button class="tab" onclick="go('creatures')">Creatures <span class="badge" id="b-creatures" style="display:none"></span></button>
-  <button class="tab" onclick="go('merch')">Merch</button>
+
   <button class="tab" onclick="go('inventory')">Filament <span class="badge" id="b-inv" style="display:none"></span></button>
   <button class="tab" onclick="go('finance')">Finance</button>
   <button class="tab" onclick="go('mileage')">Mileage</button>
@@ -152,27 +152,6 @@
   </div>
 </div>
 
-<!-- MERCH -->
-<div class="panel" id="panel-merch">
-  <div class="sec-hdr">
-    <span class="sec-title">Storefront Merchandising · Marketing HQ</span>
-    <div style="font-size:11px;color:var(--cream-faint)">Manage your home page presence, taglines, and "Secret" reveals here.</div>
-  </div>
-  <div style="overflow-x:auto">
-    <table class="merch-table">
-      <thead>
-        <tr>
-          <th style="width:200px">Creature</th>
-          <th>Marketing Tagline <span class="help-icon" data-tooltip="The catchy phrase shown on the home page (e.g. 'Your sweet new friend').">?</span></th>
-          <th style="width:180px">Etsy Link <span class="help-icon" data-tooltip="The specific URL for the Etsy listing.">?</span></th>
-          <th style="width:120px">Visibility <span class="help-icon tip-left" data-tooltip="Control if the creature is 'Revealed' (clear) or 'Secret' (blurred) on the site.">?</span></th>
-          <th style="width:180px">Home Page Action <span class="help-icon tip-left" data-tooltip="Mark with a star to feature this creature in the home page storefront.">?</span></th>
-        </tr>
-      </thead>
-      <tbody id="merchtb"><tr class="empty"><td colspan="5">Loading…</td></tr></tbody>
-    </table>
-  </div>
-</div>
 
 <!-- INVENTORY -->
 <div class="panel" id="panel-inventory">
@@ -439,7 +418,6 @@ function go(tab){
   if(tab==='orders')render_orders();
   if(tab==='stock')render_stock();
   if(tab==='creatures')render_creatures();
-  if(tab==='merch')render_merch();
   if(tab==='inventory')render_inv();
   if(tab==='finance'){render_fin();update_fin_kpis();}
   if(tab==='mileage'){render_mileage();update_mileage_kpis();}
@@ -673,75 +651,6 @@ function render_stock(){
   }).join('');
 }
 
-function render_merch() {
-  const tb = document.getElementById('merchtb');
-  if (!creatures.length) { tb.innerHTML = '<tr class="empty"><td colspan="5">No creatures loaded.</td></tr>'; return; }
-  
-  tb.innerHTML = creatures.map(c => {
-    const isFeatured = c.is_featured === true;
-    const isRevealed = c.is_revealed !== false;
-    return `<tr>
-      <td>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div style="width:36px;height:36px;background:var(--gold-dim);border-radius:3px;overflow:hidden;flex-shrink:0;">
-            ${c.image_url ? `<img src="${c.image_url}" style="width:100%;height:100%;object-fit:cover;">` : '🦎'}
-          </div>
-          <div>
-            <div style="font-weight:600;color:var(--gold-light);font-size:12px;">${c.name}</div>
-            <div style="font-size:9px;color:var(--cream-faint);letter-spacing:0.1em;text-transform:uppercase;">Log #${c.log_number}</div>
-          </div>
-        </div>
-      </td>
-      <td>
-        <textarea id="tag-${c.id}" class="btn sm" style="width:100%;background:rgba(0,0,0,0.2);border-color:var(--border);color:var(--cream);text-align:left;height:45px;resize:none;font-size:12px;padding:6px;">${c.tagline || ''}</textarea>
-      </td>
-      <td>
-        <input id="etsy-${c.id}" type="text" class="btn sm" style="width:100%;background:rgba(0,0,0,0.2);border-color:var(--border);color:var(--teal);text-align:left;font-size:11px;" value="${c.etsy_url || ''}" placeholder="Etsy Link">
-      </td>
-      <td>
-        <select id="rev-${c.id}" class="btn sm" style="width:100%;background:rgba(0,0,0,0.2);border-color:var(--border);font-size:11px;">
-          <option value="true" ${isRevealed ? 'selected' : ''}>👁 Visible</option>
-          <option value="false" ${!isRevealed ? 'selected' : ''}>🌫 Blurred</option>
-        </select>
-      </td>
-      <td>
-        <div style="display:flex;gap:4px;">
-          <button class="btn sm ${isFeatured ? 'gold' : ''}" style="flex:1;font-size:9px;padding:5px 0;" onclick="saveMerchRow('${c.id}', ${!isFeatured})">
-            ${isFeatured ? '★ Featured' : 'Unfeatured'}
-          </button>
-          <button class="btn sm pri" style="padding:0 8px;" onclick="saveMerchRow('${c.id}', ${isFeatured})" title="Save Changes">💾</button>
-        </div>
-      </td>
-    </tr>`;
-  }).join('');
-}
-
-async function saveMerchRow(id, isFeatured) {
-  const tagline = document.getElementById(`tag-${id}`).value;
-  const etsyUrl = document.getElementById(`etsy-${id}`).value;
-  const isRevealed = document.getElementById(`rev-${id}`).value === 'true';
-  
-  sync(true);
-  const { error } = await db.from('creatures').update({ 
-    is_featured: isFeatured,
-    tagline,
-    etsy_url: etsyUrl,
-    is_revealed: isRevealed
-  }).eq('id', id);
-  
-  if (error) {
-    serr();
-    toast('Save failed', 'err');
-    return;
-  }
-  
-  // Update local state
-  creatures = creatures.map(c => c.id === id ? { ...c, is_featured: isFeatured, tagline, etsy_url: etsyUrl, is_revealed } : c);
-  sync(false);
-  render_merch();
-  render_creatures();
-  toast('Storefront Updated', 'ok');
-}
 
 async function load_creatures(){sync(true);const{data,error}=await db.from('creatures').select('*').order('log_number');if(error){serr();return;}creatures=data;sync(false);render_creatures();render_stock();update_stats_widget();}
 function render_creatures(){
