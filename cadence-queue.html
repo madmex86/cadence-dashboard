@@ -475,7 +475,7 @@ function addItemRow(name='',qty=1){
   const row=document.createElement('div');
   row.style.cssText='display:flex;gap:8px;align-items:center;';
   row.innerHTML=`<input type="number" class="item-qty" min="1" value="${qty}" style="width:54px;flex-shrink:0;text-align:center;"/>`
-    +`<select class="item-sel" style="flex:1;">${creatureOptions()}</select>`
+    +`<select class="item-sel" style="flex:1;min-width:0;">${creatureOptions()}</select>`
     +`<button type="button" onclick="removeItemRow(this)" style="flex-shrink:0;width:26px;height:26px;background:none;border:1px solid rgba(232,112,112,.3);color:rgba(232,112,112,.7);cursor:pointer;font-size:16px;line-height:1;padding:0;transition:all .2s;" onmouseover="this.style.borderColor='#e87070';this.style.color='#e87070'" onmouseout="this.style.borderColor='rgba(232,112,112,.3)';this.style.color='rgba(232,112,112,.7)'">×</button>`;
   document.getElementById('item-rows').appendChild(row);
   if(name){
