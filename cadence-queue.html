@@ -333,11 +333,19 @@
 <!-- CREATURE LABEL MODAL -->
 <div class="overlay" id="m-clabel"><div class="modal" style="max-width:420px">
   <div class="modal-t">🏷 Creature Label</div>
-  <div id="sticker-preview" style="border:2px dashed rgba(201,168,76,0.3);padding:20px;margin-bottom:16px;text-align:center;background:rgba(255,255,255,0.03)">
-    <div style="font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:rgba(201,168,76,.5);margin-bottom:6px">Cadence Creatures</div>
-    <div style="font-size:22px;font-weight:700;color:var(--gold-light);letter-spacing:.04em" id="lbl-name">—</div>
-    <div style="font-size:13px;color:var(--cream-dim);margin:4px 0" id="lbl-species">—</div>
-    <div style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(201,168,76,.4);margin-top:8px" id="lbl-log">Log #—</div>
+  <div id="sticker-preview" style="border:2px dashed rgba(201,168,76,0.3);padding:18px 20px;margin-bottom:16px;background:rgba(255,255,255,0.03)">
+    <div style="font-size:8px;letter-spacing:.28em;text-transform:uppercase;color:rgba(201,168,76,.5);margin-bottom:8px;text-align:center">Cadence Creatures</div>
+    <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:2px;">
+      <div style="font-size:22px;font-weight:700;color:var(--gold-light);letter-spacing:.04em;flex:1" id="lbl-name">—</div>
+      <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(201,168,76,.45)" id="lbl-log">—</div>
+    </div>
+    <div style="font-size:12px;color:var(--cream-dim);margin-bottom:10px" id="lbl-species">—</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-top:1px solid rgba(201,168,76,.12);padding-top:10px;">
+      <div style="font-family:monospace;font-size:11px;letter-spacing:.08em;color:rgba(201,168,76,.7);background:rgba(201,168,76,.07);padding:2px 7px;border-radius:2px;" id="lbl-sku">—</div>
+      <div style="font-size:10px;color:var(--cream-faint)" id="lbl-env">—</div>
+      <div style="font-size:10px;color:var(--teal);display:none" id="lbl-kch">⛓ Keychain</div>
+      <div style="font-size:10px;color:rgba(201,168,76,.6);margin-left:auto" id="lbl-price">—</div>
+    </div>
   </div>
   <div style="font-size:11px;color:var(--cream-faint);margin-bottom:14px;line-height:1.6">Print on a 2×1" label sheet (Avery 8167 or similar). Each label = one creature.</div>
   <div class="modal-act"><button class="btn" onclick="closeModal('m-clabel')">Close</button><button class="btn pri" onclick="printLabel()">🖨 Print</button></div>
@@ -679,29 +687,51 @@ function colorFromName(name){
 }
 function openCreatureLabel(id){
   const c=creatures.find(x=>x.id===id);if(!c)return;
+  const hasKch=(c.sku||'').split('-').length===3;
   document.getElementById('lbl-name').textContent=c.name||'—';
   document.getElementById('lbl-species').textContent=c.species||'—';
-  document.getElementById('lbl-log').textContent='Log #'+(c.log_number||'—');
+  document.getElementById('lbl-log').textContent=c.log_number?'Log #'+c.log_number:'';
+  document.getElementById('lbl-sku').textContent=c.sku||'—';
+  document.getElementById('lbl-env').textContent=c.environment||'';
+  const kchEl=document.getElementById('lbl-kch');
+  kchEl.style.display=hasKch?'block':'none';
+  const price=c.price_retail||c.price_etsy;
+  document.getElementById('lbl-price').textContent=price?'$'+Number(price).toFixed(2):'';
   openModal('m-clabel');
 }
 function printLabel(){
   const name=document.getElementById('lbl-name').textContent;
   const species=document.getElementById('lbl-species').textContent;
   const log=document.getElementById('lbl-log').textContent;
+  const sku=document.getElementById('lbl-sku').textContent;
+  const env=document.getElementById('lbl-env').textContent;
+  const hasKch=document.getElementById('lbl-kch').style.display!=='none';
+  const price=document.getElementById('lbl-price').textContent;
   const w=window.open('','_blank','width=600,height=400');
   w.document.write(`<!DOCTYPE html><html><head><title>Label — ${name}</title><style>
     @page{size:2in 1in;margin:0}
-    body{margin:0;padding:0;font-family:'Segoe UI',sans-serif;width:2in;height:1in;display:flex;align-items:center;justify-content:center;text-align:center;border:1px dashed #ccc;}
-    .wrap{padding:6px 10px}
-    .brand{font-size:7pt;letter-spacing:.2em;text-transform:uppercase;color:#7a6b58;margin-bottom:4px}
-    .name{font-size:16pt;font-weight:700;letter-spacing:.03em;line-height:1.1}
-    .species{font-size:8pt;color:#555;margin-top:2px}
-    .log{font-size:7pt;letter-spacing:.15em;text-transform:uppercase;color:#aaa;margin-top:5px}
+    body{margin:0;padding:0;font-family:'Segoe UI',sans-serif;width:2in;height:1in;display:flex;align-items:center;justify-content:center;}
+    .wrap{padding:5px 9px;width:100%;box-sizing:border-box;}
+    .brand{font-size:6pt;letter-spacing:.2em;text-transform:uppercase;color:#9a8b78;margin-bottom:5px;text-align:center;}
+    .name-row{display:flex;align-items:baseline;justify-content:space-between;gap:4px;}
+    .name{font-size:15pt;font-weight:700;letter-spacing:.02em;line-height:1.1;flex:1;}
+    .log{font-size:6.5pt;letter-spacing:.12em;text-transform:uppercase;color:#aaa;white-space:nowrap;}
+    .species{font-size:8pt;color:#555;margin:2px 0 5px;}
+    .meta-row{display:flex;align-items:center;gap:6px;border-top:1px solid #ddd;padding-top:4px;flex-wrap:wrap;}
+    .sku{font-family:monospace;font-size:7.5pt;letter-spacing:.06em;background:#f5f0e8;padding:1px 5px;border-radius:2px;color:#6b5d45;}
+    .env{font-size:7pt;color:#777;}
+    .kch{font-size:7pt;color:#3a8fa0;}
+    .price{font-size:7.5pt;color:#8a7550;margin-left:auto;}
   </style></head><body><div class="wrap">
     <div class="brand">Cadence Creatures</div>
-    <div class="name">${name}</div>
+    <div class="name-row"><div class="name">${name}</div><div class="log">${log}</div></div>
     <div class="species">${species}</div>
-    <div class="log">${log}</div>
+    <div class="meta-row">
+      <span class="sku">${sku}</span>
+      ${env?`<span class="env">${env}</span>`:''}
+      ${hasKch?`<span class="kch">⛓ Keychain</span>`:''}
+      ${price?`<span class="price">${price}</span>`:''}
+    </div>
   </div></body></html>`);
   w.document.close();
   w.focus();setTimeout(()=>{w.print();},300);
