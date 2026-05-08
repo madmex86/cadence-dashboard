@@ -111,6 +111,17 @@ function applyRolePermissions() {
       if(href.includes('cadence-creatures-pl-tracker.html') && role === 'fulfillment') a.style.display = 'none';
       if((href.includes('cadence-fulfillment.html') || href.includes('cadence-queue.html')) && role === 'finance') a.style.display = 'none';
     });
+
+    // DISPLAY USER NAME
+    const name = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
+    const right = document.querySelector('.topbar-right');
+    if(right && !document.getElementById('user-greet')) {
+      const greet = document.createElement('div');
+      greet.id = 'user-greet';
+      greet.style = 'font-size:11px; color:var(--goldl); font-weight:500; margin-right:15px; border-right:1px solid rgba(201,168,76,0.2); padding-right:15px;';
+      greet.textContent = `User: ${name.charAt(0).toUpperCase() + name.slice(1)}`;
+      right.insertBefore(greet, right.firstChild);
+    }
   }
   
   const path = window.location.pathname;
@@ -167,5 +178,21 @@ async function sendFulfillmentEmail(order) {
   } catch (error) {
     console.error('EmailJS Server Error:', error);
     toast('Email notification failed: ' + (error.text || error.message), 'err');
+  }
+}
+
+async function logActivity(action, orderId = null, details = null) {
+  if(!currentUser) return;
+  const name = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
+  try {
+    await db.from('activity_log').insert({
+      user_id: currentUser.id,
+      user_name: name.charAt(0).toUpperCase() + name.slice(1),
+      action: action,
+      order_id: orderId,
+      details: details
+    });
+  } catch(e) {
+    console.error('Logging Failed:', e);
   }
 }

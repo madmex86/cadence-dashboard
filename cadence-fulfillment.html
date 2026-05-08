@@ -154,7 +154,8 @@ input:focus,select:focus{border-color:rgba(201,168,76,.38);}
   <div class="dash-nav">
     <a href="index.html">Hub</a>
     <a href="cadence-queue.html">Queue</a>
-    <a href="cadence-fulfillment.html" class="active">Fulfillment</a>
+    <a href="cadence-fulfillment.html">Fulfillment</a>
+    <a href="cadence-activity.html">Activity</a>
     <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
     <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
     <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
@@ -371,6 +372,7 @@ async function moveOrder(id, newStatus, skipRender=false){
   if(!skipRender) renderBoard(); // optimistic
   
   await db.from('orders').update({status: newStatus}).eq('id', id);
+  logActivity(`Moved #${order.etsy_order_id || id.slice(0,8)} to ${newStatus}`, id);
   toast('Moved to ' + newStatus);
 }
 
@@ -400,6 +402,7 @@ async function quickShip(id) {
   }
   
   toast('Order Shipped!', 'ok');
+  logActivity(`Shipped #${order.etsy_order_id || id.slice(0,8)} with tracking: ${track}`, id);
   sendFulfillmentEmail({ ...order, tracking_number: track });
   loadData();
 }
@@ -438,6 +441,7 @@ async function saveShipping(){
   if(error){toast('Error','err'); return;}
   
   toast('Order Shipped!','ok');
+  logActivity(`Shipped #${order.etsy_order_id || id.slice(0,8)} via Modal`, id);
   sendFulfillmentEmail(order);
   // Remove from local array since it's no longer in the 4 board columns
   orders = orders.filter(o=>o.id!==id);

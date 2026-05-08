@@ -237,6 +237,7 @@ textarea{resize:vertical;min-height:68px;}
   <a href="index.html">Hub</a>
   <a href="cadence-queue.html" class="active">Queue</a>
   <a href="cadence-fulfillment.html">Fulfillment</a>
+  <a href="cadence-activity.html">Activity</a>
   <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
   <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
   <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
@@ -703,6 +704,10 @@ async function updateStatus(id,s){
     if(order) sendFulfillmentEmail(order);
   }
   
+  const o = orders.find(x => x.id === id);
+  const orderIdText = o ? (o.etsy_order_id || o.id.slice(0,8)) : id.slice(0,8);
+  logActivity(`Changed status of #${orderIdText} to ${s}`, id);
+  
   toast(s==='shipped'?'Marked shipped':'Status updated','ok');
   await load_orders();
 }
@@ -743,6 +748,7 @@ async function saveOrder(){
   
   closeModal('m-order');
   toast(id?'Order updated':'Order added','ok');
+  logActivity(id ? `Updated order details for #${g('o-eid')||id.slice(0,8)}` : `Created new order #${g('o-eid')}`, id || null);
   await load_orders();
 }
 function confirmDeleteOrder(id) {
@@ -757,7 +763,16 @@ function confirmDeleteOrder(id) {
   }
 }
 
-async function delOrder(id){sync(true);const{error}=await db.from('orders').delete().eq('id',id);if(error){serr();toast('Failed','err');return;}toast('Deleted');await load_orders();}
+async function delOrder(id){
+  const o = orders.find(x => x.id === id);
+  const idText = o ? (o.etsy_order_id || o.id.slice(0,8)) : id.slice(0,8);
+  sync(true);
+  const{error}=await db.from('orders').delete().eq('id',id);
+  if(error){serr();toast('Delete failed','err');return;}
+  logActivity(`Deleted order #${idText}`);
+  toast('Order deleted','ok');
+  await load_orders();
+}
 function openImport(){document.getElementById('imp-ta').value='';openModal('m-import');}
 async function runImport(){
   const raw=g('imp-ta');if(!raw){toast('Nothing to import','err');return;}
