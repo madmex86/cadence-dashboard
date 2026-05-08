@@ -169,9 +169,13 @@ async function applyRolePermissions() {
       const isActive = path.endsWith(href) || (path.endsWith('/') && href === 'index.html');
       if(isActive) a.classList.add('active');
 
-      // ADMIN ONLY TABS (P&L, Activity, Admin)
-      const isAdminOnly = href.includes('pl-tracker') || href.includes('activity') || href.includes('admin');
+      // ADMIN ONLY TABS (P&L, Activity, Admin, Creature Editor, Email Blast, Drop Launch)
+      const isAdminOnly = href.includes('pl-tracker') || href.includes('activity') || href.includes('admin')
+        || href.includes('creature-editor') || href.includes('email-blast') || href.includes('drop-launch');
       if(isAdminOnly && role !== 'admin') a.style.display = 'none';
+
+      // Hide drop-launch nav link after drop has launched
+      if(href.includes('drop-launch') && localStorage.getItem('cc_drop1_launched')) a.style.display = 'none';
 
       // ROLE-BASED VISIBILITY
       if(role === 'fulfillment' && isAdminOnly) a.style.display = 'none';

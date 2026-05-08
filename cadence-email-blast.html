@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cadence Creatures — Email Blast</title>
+<link rel="icon" href="/favicon.ico?v=2"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<script src="shared.js"></script>
+<style>
+  .blast-layout { display: grid; grid-template-columns: 1fr 360px; gap: 24px; align-items: start; }
+  @media (max-width: 900px) { .blast-layout { grid-template-columns: 1fr; } }
+
+  .panel { background: rgba(255,255,255,0.02); border: 1px solid rgba(201,168,76,0.12); border-radius: 6px; padding: 24px; }
+  .panel-title { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); margin-bottom: 16px; }
+
+  .stat-bar { display: flex; gap: 24px; margin-bottom: 24px; }
+  .stat-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(201,168,76,0.1); border-radius: 6px; padding: 14px 20px; flex: 1; }
+  .stat-val { font-family: 'Lora', serif; font-size: 24px; color: var(--goldl); }
+  .stat-lbl { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: .12em; margin-top: 2px; }
+
+  .fl { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .12em; color: var(--cream-faint); margin-bottom: 6px; }
+  .fi { width: 100%; background: rgba(0,0,0,0.25); border: 1px solid rgba(201,168,76,0.18); color: var(--cream); padding: 9px 12px; font-family: inherit; font-size: 13px; border-radius: 3px; outline: none; transition: border-color .2s; box-sizing: border-box; }
+  .fi:focus { border-color: rgba(201,168,76,0.5); }
+  textarea.fi { resize: vertical; min-height: 220px; line-height: 1.6; }
+  .send-row { display: flex; align-items: center; gap: 14px; margin-top: 18px; flex-wrap: wrap; }
+  .send-status { font-size: 12px; color: var(--dim); flex: 1; min-width: 180px; }
+
+  .progress-wrap { margin-top: 12px; display: none; }
+  .progress-bg { background: rgba(0,0,0,0.3); border-radius: 3px; height: 5px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(to right, var(--gold), var(--teal)); border-radius: 3px; width: 0%; transition: width .25s; }
+  .progress-label { font-size: 11px; color: var(--dim); margin-top: 6px; }
+
+  /* Preview */
+  .preview-email { background: #fff; border-radius: 4px; padding: 24px; color: #333; font-size: 13px; line-height: 1.65; min-height: 180px; }
+  .preview-from { font-size: 11px; color: #888; margin-bottom: 4px; }
+  .preview-subject { font-size: 15px; font-weight: 700; color: #111; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+  .preview-body { white-space: pre-wrap; word-break: break-word; }
+  .preview-footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid #eee; font-size: 10px; color: #aaa; }
+  .preview-placeholder { color: #ccc; font-style: italic; }
+
+  /* History */
+  .history-empty { font-size: 12px; color: var(--dim); font-style: italic; }
+  .history-item { padding: 12px 0; border-bottom: 1px solid rgba(201,168,76,0.08); }
+  .history-item:last-child { border-bottom: none; }
+  .hi-subject { color: var(--cream); font-size: 13px; margin-bottom: 3px; }
+  .hi-meta { font-size: 11px; color: var(--dim); letter-spacing: .06em; }
+</style>
+</head>
+<body>
+<div id="login-screen" style="display:none"></div>
+<div id="app" style="display:none">
+  <div class="topbar">
+    <div class="topbar-left">
+      <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round"/><rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C"/><circle cx="36" cy="4" r="5.5" fill="#E8D08A"/><circle cx="6" cy="18" r="4" fill="#5BBFD4"/><circle cx="66" cy="18" r="4" fill="#5BBFD4"/></svg>
+      <div><div class="topbar-name">Cadence Creatures</div><div class="topbar-sub">Back Office</div></div>
+    </div>
+    <div class="topbar-right"><div id="user-greet"></div><a class="topbar-link" onclick="signOut()">Sign Out</a></div>
+  </div>
+  <div class="dash-nav">
+    <a href="index.html">Hub</a>
+    <a href="cadence-queue.html">Queue</a>
+    <a href="cadence-fulfillment.html">Fulfillment</a>
+    <a href="cadence-customers.html">Customers</a>
+    <a href="cadence-creature-editor.html">Creatures</a>
+    <a href="cadence-email-blast.html">Email Blast</a>
+    <a href="cadence-drop-launch.html">🚀 Launch</a>
+    <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
+    <a href="cadence-activity.html">Activity</a>
+    <a href="cadence-admin.html">Admin</a>
+    <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
+    <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
+  </div>
+  <div class="main">
+    <div class="main-content">
+      <div class="header">
+        <div class="title">Email Blast</div>
+        <div class="subtitle">Compose and send newsletters to all subscribers.</div>
+      </div>
+
+      <div class="stat-bar">
+        <div class="stat-box"><div class="stat-val" id="sub-count">—</div><div class="stat-lbl">Subscribers</div></div>
+        <div class="stat-box"><div class="stat-val" id="blast-count">—</div><div class="stat-lbl">Blasts Sent</div></div>
+        <div class="stat-box"><div class="stat-val" id="last-blast">—</div><div class="stat-lbl">Last Blast</div></div>
+      </div>
+
+      <div class="blast-layout">
+        <!-- COMPOSE -->
+        <div>
+          <div class="panel" style="margin-bottom:24px;">
+            <div class="panel-title">Compose</div>
+            <div style="margin-bottom:14px;">
+              <label class="fl">Subject Line</label>
+              <input type="text" class="fi" id="blast-subject" placeholder="New Creatures Spotted!" oninput="updatePreview()"/>
+            </div>
+            <div style="margin-bottom:4px;">
+              <label class="fl">Message Body</label>
+              <textarea class="fi" id="blast-body" placeholder="Write your message here…&#10;&#10;Each subscriber will receive a personalized copy with their name." oninput="updatePreview()"></textarea>
+            </div>
+            <div class="send-row">
+              <button class="btn" id="send-btn" onclick="sendBlast()">Send to All Subscribers</button>
+              <div class="send-status" id="send-status"></div>
+            </div>
+            <div class="progress-wrap" id="progress-wrap">
+              <div class="progress-bg"><div class="progress-fill" id="progress-fill"></div></div>
+              <div class="progress-label" id="progress-label"></div>
+            </div>
+          </div>
+
+          <!-- HISTORY -->
+          <div class="panel">
+            <div class="panel-title">Blast History</div>
+            <div id="history-list"><div class="history-empty">No blasts sent yet.</div></div>
+          </div>
+        </div>
+
+        <!-- PREVIEW -->
+        <div class="panel" style="position:sticky;top:80px;">
+          <div class="panel-title">Preview</div>
+          <div class="preview-email">
+            <div class="preview-from">From: Cadence Creatures &lt;hello@cadencecreatures.com&gt;</div>
+            <div class="preview-subject" id="prev-subject"><span class="preview-placeholder">Your subject line</span></div>
+            <div class="preview-body" id="prev-body"><span class="preview-placeholder">Your message will appear here…</span></div>
+            <div class="preview-footer">
+              Cadence Creatures · Visalia, CA<br>
+              <a href="#" style="color:#aaa;">Unsubscribe</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var _subs = [];
+var _isSending = false;
+
+function updatePreview() {
+  var subject = document.getElementById('blast-subject').value.trim();
+  var body = document.getElementById('blast-body').value;
+  var ps = document.getElementById('prev-subject');
+  var pb = document.getElementById('prev-body');
+  ps.innerHTML = subject || '<span class="preview-placeholder">Your subject line</span>';
+  pb.innerHTML = body ? escHtml(body) : '<span class="preview-placeholder">Your message will appear here…</span>';
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function loadHistory() {
+  var raw = localStorage.getItem('cc_blast_history');
+  var history = raw ? JSON.parse(raw) : [];
+  document.getElementById('blast-count').textContent = history.length;
+  if (history.length) {
+    var last = new Date(history[history.length - 1].timestamp);
+    document.getElementById('last-blast').textContent = last.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  var el = document.getElementById('history-list');
+  if (!history.length) { el.innerHTML = '<div class="history-empty">No blasts sent yet.</div>'; return; }
+  el.innerHTML = history.slice().reverse().map(function(b) {
+    var d = new Date(b.timestamp);
+    var fmt = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      + ' · ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    return '<div class="history-item">'
+      + '<div class="hi-subject">' + escHtml(b.subject) + '</div>'
+      + '<div class="hi-meta">Sent to ' + b.sent + ' subscriber' + (b.sent !== 1 ? 's' : '') + ' &nbsp;·&nbsp; ' + fmt + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function saveHistory(subject, sent) {
+  var raw = localStorage.getItem('cc_blast_history');
+  var history = raw ? JSON.parse(raw) : [];
+  history.push({ subject: subject, sent: sent, timestamp: new Date().toISOString() });
+  localStorage.setItem('cc_blast_history', JSON.stringify(history));
+  loadHistory();
+}
+
+async function sendBlast() {
+  if (_isSending) return;
+  var subject = document.getElementById('blast-subject').value.trim();
+  var body = document.getElementById('blast-body').value.trim();
+  if (!subject) { toast('Please enter a subject line.', 'err'); return; }
+  if (!body) { toast('Please write a message body.', 'err'); return; }
+  if (!_subs.length) { toast('No subscribers found.', 'err'); return; }
+  if (!confirm('Send this email to ' + _subs.length + ' subscriber' + (_subs.length !== 1 ? 's' : '') + '?')) return;
+
+  _isSending = true;
+  var btn = document.getElementById('send-btn');
+  var status = document.getElementById('send-status');
+  var pw = document.getElementById('progress-wrap');
+  var pf = document.getElementById('progress-fill');
+  var pl = document.getElementById('progress-label');
+  btn.disabled = true;
+  pw.style.display = 'block';
+
+  emailjs.init('Kf28oWCMQdU-MdlL2');
+
+  var sent = 0;
+  var failed = 0;
+  for (var i = 0; i < _subs.length; i++) {
+    var sub = _subs[i];
+    var pct = Math.round(((i + 1) / _subs.length) * 100);
+    pl.textContent = 'Sending ' + (i + 1) + ' of ' + _subs.length + '…';
+    pf.style.width = pct + '%';
+    try {
+      await emailjs.send('service_4z4fm6m', 'template_newsletter', {
+        to_email: sub.email,
+        subject: subject,
+        message: body,
+        unsubscribe_url: 'https://cadencecreatures.com/unsubscribe.html?email=' + encodeURIComponent(sub.email)
+      });
+      sent++;
+    } catch(e) {
+      console.error('Email failed for', sub.email, e);
+      failed++;
+    }
+    await new Promise(function(r) { setTimeout(r, 150); });
+  }
+
+  _isSending = false;
+  btn.disabled = false;
+  pw.style.display = 'none';
+  pf.style.width = '0%';
+
+  var msg = 'Sent ' + sent + ' email' + (sent !== 1 ? 's' : '');
+  if (failed) msg += ', ' + failed + ' failed';
+  toast(msg + '.', sent ? 'ok' : 'err');
+  status.textContent = '';
+
+  if (sent > 0) {
+    saveHistory(subject, sent);
+    document.getElementById('blast-subject').value = '';
+    document.getElementById('blast-body').value = '';
+    updatePreview();
+  }
+}
+
+async function sync() {
+  var res = await db.from('subscribers').select('email,first_name');
+  if (res.error) { serr(res.error); return; }
+  _subs = res.data || [];
+  document.getElementById('sub-count').textContent = _subs.length;
+}
+
+showApp(async function() {
+  await sync();
+  loadHistory();
+});
+</script>
+</div>
+</body>
+</html>
