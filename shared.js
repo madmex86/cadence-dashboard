@@ -212,12 +212,20 @@ async function applyRolePermissions() {
 async function updateMasterPrinterStatus() {
   const pill = document.getElementById('master-printer-pill');
   if(!pill) return;
-  const { data } = await db.from('printers').select('*').eq('name', 'Vision').single();
-  if(data) {
-    const status = data.status === 'printing' ? `Printing ${data.current_job || ''}` : 'Idle';
-    pill.textContent = `🖨 Vision: ${status}`;
-    pill.style.borderColor = data.status === 'printing' ? 'rgba(91,191,212,0.4)' : 'rgba(91,191,212,0.2)';
-    pill.style.background = data.status === 'printing' ? 'rgba(91,191,212,0.1)' : 'rgba(91,191,212,0.05)';
+  
+  const { data: printer } = await db.from('printers').select('*').eq('name', 'Vision').single();
+  if(printer) {
+    if(printer.current_creature_id) {
+      const { data: creature } = await db.from('creatures').select('name').eq('id', printer.current_creature_id).single();
+      const jobName = creature ? creature.name : '...';
+      pill.textContent = `🖨 Vision: Printing ${jobName}`;
+      pill.style.borderColor = 'rgba(91,191,212,0.4)';
+      pill.style.background = 'rgba(91,191,212,0.1)';
+    } else {
+      pill.textContent = `🖨 Vision: Idle`;
+      pill.style.borderColor = 'rgba(91,191,212,0.2)';
+      pill.style.background = 'rgba(91,191,212,0.05)';
+    }
   }
 }
 
