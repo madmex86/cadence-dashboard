@@ -72,6 +72,7 @@ body::after{content:'';position:fixed;inset:0;background-image:url("data:image/s
     <a href="cadence-fulfillment.html">Fulfillment</a>
     <a href="cadence-activity.html" class="active">Activity</a>
     <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
+    <a href="cadence-admin.html">Admin</a>
   </div>
 
   <div class="main">
@@ -88,6 +89,11 @@ body::after{content:'';position:fixed;inset:0;background-image:url("data:image/s
 
 <script>
 async function showApp() {
+  const role = currentUser.user_metadata?.role || 'user';
+  if(role !== 'admin') {
+    window.location.href = 'index.html';
+    return;
+  }
   document.getElementById('app').style.display = 'block';
   loadLogs();
 }

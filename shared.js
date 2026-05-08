@@ -98,7 +98,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-function applyRolePermissions() {
+async function applyRolePermissions() {
   if(!currentUser) return;
   const role = currentUser.user_metadata?.role || 'user';
   
@@ -119,6 +119,11 @@ function applyRolePermissions() {
     const links = nav.querySelectorAll('a');
     links.forEach(a => {
       const href = a.getAttribute('href');
+      // ADMIN ONLY TABS
+      if((href.includes('cadence-admin.html') || href.includes('cadence-activity.html')) && role !== 'admin') {
+        a.style.display = 'none';
+      }
+      // ROLE SPECIFIC TABS
       if(href.includes('cadence-creatures-pl-tracker.html') && role === 'fulfillment') a.style.display = 'none';
       if((href.includes('cadence-fulfillment.html') || href.includes('cadence-queue.html')) && role === 'finance') a.style.display = 'none';
     });
@@ -144,8 +149,8 @@ function applyRolePermissions() {
   }
   
   const path = window.location.pathname;
-  if(path.includes('cadence-admin.html') && role !== 'admin') {
-    document.body.innerHTML = '<div style="padding:50px;text-align:center;color:#E8D08A;font-family:\'Lora\',serif;font-size:24px;">403 Forbidden. Admin Access Required.</div>';
+  if((path.includes('cadence-admin.html') || path.includes('cadence-activity.html')) && role !== 'admin') {
+    window.location.href = 'index.html';
   }
   if(path.includes('cadence-creatures-pl-tracker.html') && role === 'fulfillment') window.location.href='index.html';
   if((path.includes('cadence-fulfillment.html') || path.includes('cadence-queue.html')) && role === 'finance') window.location.href='index.html';
