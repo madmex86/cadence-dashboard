@@ -133,21 +133,21 @@
     <div class="form-grid">
       <div><label class="fl">Name</label><input class="fi" id="f-name" placeholder="S'mores"/></div>
       <div><label class="fl">Species</label><input class="fi" id="f-species" placeholder="Gecko"/></div>
-      <div><label class="fl">Log #</label><input class="fi" type="number" id="f-log" placeholder="1"/></div>
-      <div><label class="fl">Environment</label>
+      <div><label class="fl">Log #<span class="help-tip">?<span class="tip-text">Sequential creature number starting at 1. Shows as #001 on the card badge and on the creature's log page.</span></span></label><input class="fi" type="number" id="f-log" placeholder="1"/></div>
+      <div><label class="fl">Environment<span class="help-tip">?<span class="tip-text">Sets the card accent color and habitat filter on the site. Forest = green, Ocean = teal, Fantasy = purple, Holiday = red, Space = blue.</span></span></label>
         <select class="fi" id="f-env">
           <option value="forest">Forest</option><option value="ocean">Ocean</option>
           <option value="fantasy">Fantasy</option><option value="holiday">Holiday</option><option value="space">Space</option>
         </select>
       </div>
-      <div><label class="fl">Retail Price ($)</label><input class="fi" type="number" id="f-price-retail" placeholder="18.00" step="0.01"/></div>
-      <div><label class="fl">Etsy Price ($)</label><input class="fi" type="number" id="f-price-etsy" placeholder="18.00" step="0.01"/></div>
-      <div><label class="fl">Stock On Hand</label><input class="fi" type="number" id="f-qty" placeholder="0"/></div>
-      <div><label class="fl">Active</label>
+      <div><label class="fl">Retail Price ($)<span class="help-tip">?<span class="tip-text">What you charge for direct sales — website, in-person, events. Set before any platform fees.</span></span></label><input class="fi" type="number" id="f-price-retail" placeholder="18.00" step="0.01"/></div>
+      <div><label class="fl">Etsy Price ($)<span class="help-tip">?<span class="tip-text">Listing price on Etsy. Set ~8–10% higher than retail to cover Etsy's 6.5% transaction fee plus listing fees.</span></span></label><input class="fi" type="number" id="f-price-etsy" placeholder="18.00" step="0.01"/></div>
+      <div><label class="fl">Stock On Hand<span class="help-tip">?<span class="tip-text">How many finished, ready-to-ship copies exist right now. Drives the Out / Low badges on the creature grid.</span></span></label><input class="fi" type="number" id="f-qty" placeholder="0"/></div>
+      <div><label class="fl">Active<span class="help-tip">?<span class="tip-text">Active = visible on the live site. Set to Inactive to hide the creature without deleting it.</span></span></label>
         <select class="fi" id="f-active"><option value="true">Active</option><option value="false">Inactive</option></select>
       </div>
-      <div class="form-full"><label class="fl">Tagline</label><input class="fi" id="f-tagline" placeholder="Found wandering the forest floor…"/></div>
-      <div class="form-full"><label class="fl">Etsy Listing URL</label><input class="fi" id="f-etsy-url" placeholder="https://etsy.com/listing/…"/></div>
+      <div class="form-full"><label class="fl">Tagline<span class="help-tip">?<span class="tip-text">1–2 sentences of flavor text shown under the creature's name on the site. Keep it evocative and in-universe.</span></span></label><input class="fi" id="f-tagline" placeholder="Found wandering the forest floor…"/></div>
+      <div class="form-full"><label class="fl">Etsy Listing URL<span class="help-tip">?<span class="tip-text">Full URL to this creature's Etsy listing page. Used for the Etsy button on the site and the bestiary.</span></span></label><input class="fi" id="f-etsy-url" placeholder="https://etsy.com/listing/…"/></div>
       <div class="form-full">
         <label class="fl">Image URL <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">Paste a link or upload a photo</span></label>
         <div style="display:flex;gap:6px;">
@@ -163,9 +163,11 @@
       <div class="form-full" style="display:flex;gap:16px;margin-top:2px;">
         <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim);cursor:pointer;">
           <input type="checkbox" id="f-featured"/> Featured on site
+          <span class="help-tip" style="cursor:default;">?<span class="tip-text">Highlights this creature in the Featured section on the homepage. Best for new releases — don't check more than 2–3 at once.</span></span>
         </label>
         <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim);cursor:pointer;">
           <input type="checkbox" id="f-revealed"/> Image revealed
+          <span class="help-tip" style="cursor:default;">?<span class="tip-text">When unchecked, the creature image is blurred on the site (teaser mode). Check this once you're ready to show the photo publicly.</span></span>
         </label>
       </div>
     </div>

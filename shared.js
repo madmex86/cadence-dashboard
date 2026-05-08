@@ -595,8 +595,22 @@ styleShield.textContent = `
   .conn-item { display: flex; align-items: center; gap: 8px; font-size: 10px; color: rgba(196, 188, 178, 0.4); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
   .conn-dot { width: 7px; height: 7px; border-radius: 50%; box-shadow: 0 0 6px rgba(74, 140, 92, 0.3); }
   .conn-pill { display: flex; align-items: center; gap: 8px; font-size: 10px; padding: 5px 12px; border: 1px solid rgba(91, 191, 212, 0.2); color: #5BBFD4; border-radius: 14px; background: rgba(91, 191, 212, 0.04); white-space: nowrap; transition: all 0.3s; }
+
+  /* Help tooltips — global */
+  .help-tip { display: inline-flex; align-items: center; justify-content: center; width: 13px; height: 13px; border-radius: 50%; background: rgba(201,168,76,0.1); color: rgba(201,168,76,0.45); font-size: 8px; font-weight: 700; cursor: default; position: relative; margin-left: 5px; user-select: none; vertical-align: middle; transition: background .15s, color .15s; font-family: sans-serif; flex-shrink: 0; }
+  .help-tip:hover, .help-tip.open { background: rgba(201,168,76,0.22); color: #C9A84C; }
+  .help-tip .tip-text { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: #1e1a14; border: 1px solid rgba(201,168,76,0.28); border-radius: 4px; padding: 9px 12px; font-size: 11px; color: rgba(196,188,178,0.85); line-height: 1.6; width: 215px; z-index: 9999; font-family: inherit; letter-spacing: 0; text-transform: none; font-weight: 400; pointer-events: none; box-shadow: 0 6px 24px rgba(0,0,0,0.55); white-space: normal; }
+  .help-tip .tip-text::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: rgba(201,168,76,0.28); }
+  .help-tip:hover .tip-text, .help-tip.open .tip-text { display: block; }
 `;
 document.head.appendChild(styleShield);
+
+// Help tip click-toggle for touch devices
+document.addEventListener('click', function(e) {
+  const tip = e.target.closest('.help-tip');
+  if (tip) { tip.classList.toggle('open'); e.stopPropagation(); return; }
+  document.querySelectorAll('.help-tip.open').forEach(function(t) { t.classList.remove('open'); });
+});
 
 async function sendFulfillmentEmail(order) {
   if(!order.buyer_email) {

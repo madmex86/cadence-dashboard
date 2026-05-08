@@ -266,11 +266,11 @@
   <div class="modal-t" id="cmt">Add Creature</div>
   <input type="hidden" id="c-id"/>
   <div class="fg">
-    <div class="fr"><div><label class="fl">Log #</label><input id="c-log" placeholder="001"/></div><div><label class="fl">Name</label><input id="c-name" placeholder="S'mores"/></div></div>
-    <div class="fr"><div><label class="fl">SKU</label><input id="c-sku" placeholder="CC-001-SMORES"/></div><div><label class="fl">Species</label><input id="c-species" placeholder="Gecko"/></div></div>
-    <div class="fr"><div><label class="fl">Environment</label><select id="c-env"><option value="forest">Forest</option><option value="sea">Ocean</option><option value="fantasy">Fantasy</option><option value="holiday">Holiday</option><option value="space">Space</option></select></div><div><label class="fl">Qty On Hand</label><input id="c-qty" type="number" min="0" placeholder="0"/></div></div>
-    <div class="fr3"><div><label class="fl">Retail ($)</label><input id="c-retail" type="number" step="0.01"/></div><div><label class="fl">Etsy ($)</label><input id="c-etsy" type="number" step="0.01"/></div><div><label class="fl">Cost ($)</label><input id="c-cost" type="number" step="0.01"/></div></div>
-    <div class="fr"><div><label class="fl">Active</label><select id="c-active"><option value="true">Active</option><option value="false">Inactive</option></select></div><div><label class="fl">Notes</label><input id="c-notes"/></div></div>
+    <div class="fr"><div><label class="fl">Log #<span class="help-tip">?<span class="tip-text">Sequential creature number starting at 1. Shows as #001 on the card badge and log page.</span></span></label><input id="c-log" placeholder="001"/></div><div><label class="fl">Name</label><input id="c-name" placeholder="S'mores"/></div></div>
+    <div class="fr"><div><label class="fl">SKU<span class="help-tip">?<span class="tip-text">Stock-keeping unit. Format: CC-[Log#]-[NAME IN CAPS]. Example: CC-001-SMORES</span></span></label><input id="c-sku" placeholder="CC-001-SMORES"/></div><div><label class="fl">Species</label><input id="c-species" placeholder="Gecko"/></div></div>
+    <div class="fr"><div><label class="fl">Environment<span class="help-tip">?<span class="tip-text">Sets the card accent color and habitat filter on the site. Forest = green, Ocean = teal, Fantasy = purple, Holiday = red, Space = blue.</span></span></label><select id="c-env"><option value="forest">Forest</option><option value="sea">Ocean</option><option value="fantasy">Fantasy</option><option value="holiday">Holiday</option><option value="space">Space</option></select></div><div><label class="fl">Qty On Hand<span class="help-tip">?<span class="tip-text">How many finished, ready-to-ship copies exist right now.</span></span></label><input id="c-qty" type="number" min="0" placeholder="0"/></div></div>
+    <div class="fr3"><div><label class="fl">Retail ($)<span class="help-tip">?<span class="tip-text">Price for direct sales — website, in-person, events. Before any platform fees.</span></span></label><input id="c-retail" type="number" step="0.01"/></div><div><label class="fl">Etsy ($)<span class="help-tip">?<span class="tip-text">Listing price on Etsy. Set ~8–10% higher than retail to cover Etsy's 6.5% transaction fee plus listing fees.</span></span></label><input id="c-etsy" type="number" step="0.01"/></div><div><label class="fl">Cost ($)<span class="help-tip">?<span class="tip-text">Your total production cost — filament, time, paint, materials. Used in P&amp;L to calculate your profit margin.</span></span></label><input id="c-cost" type="number" step="0.01"/></div></div>
+    <div class="fr"><div><label class="fl">Active<span class="help-tip">?<span class="tip-text">Active = visible on the live site. Set to Inactive to hide without deleting.</span></span></label><select id="c-active"><option value="true">Active</option><option value="false">Inactive</option></select></div><div><label class="fl">Notes</label><input id="c-notes"/></div></div>
     <div class="fr">
       <div>
         <label class="fl">Image URL <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">Paste link or upload photo</span></label>
@@ -296,12 +296,13 @@
   <div class="fg">
     <div><label class="fl">Spool Name</label><input id="i-name" placeholder="Polymaker Panchroma Forest Green"/></div>
     <div class="fr"><div><label class="fl">Brand</label><input id="i-brand" placeholder="Polymaker"/></div><div><label class="fl">Color</label><input id="i-color" placeholder="Forest Green"/></div></div>
-    <div class="fr"><div><label class="fl">Material</label><select id="i-mat"><option>PLA</option><option>TPU</option><option>PETG</option><option>ABS</option><option>ASA</option><option>Other</option></select></div><div><label class="fl">Cost/Spool ($)</label><input id="i-cost" type="number" step="0.01"/></div></div>
-    <div class="fr"><div><label class="fl">Spools on Hand</label><input id="i-spool-count" type="number" min="0" placeholder="2"/></div><div><label class="fl">Reorder When Below</label><input id="i-spool-thr" type="number" min="0" placeholder="1" value="1"/></div></div>
-    <div><label class="fl">Purchase URL</label><input id="i-url"/></div>
+    <div class="fr"><div><label class="fl">Material</label><select id="i-mat"><option>PLA</option><option>TPU</option><option>PETG</option><option>ABS</option><option>ASA</option><option>Other</option></select></div><div><label class="fl">Cost/Spool ($)<span class="help-tip">?<span class="tip-text">Price paid per full spool. Used to calculate per-gram filament cost when costing out each creature.</span></span></label><input id="i-cost" type="number" step="0.01"/></div></div>
+    <div class="fr"><div><label class="fl">Spools on Hand</label><input id="i-spool-count" type="number" min="0" placeholder="2"/></div><div><label class="fl">Reorder When Below<span class="help-tip">?<span class="tip-text">A low-stock alert fires when your count drops to this number. Set to 1 so you're warned when you open your last spool.</span></span></label><input id="i-spool-thr" type="number" min="0" placeholder="1" value="1"/></div></div>
+    <div><label class="fl">Purchase URL<span class="help-tip">?<span class="tip-text">Link to where you buy this filament (Amazon, Polymaker, etc.). Saves time when it's time to reorder.</span></span></label><input id="i-url"/></div>
     <div id="i-finance-wrap" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(74,140,92,.06);border:1px solid rgba(74,140,92,.2);border-radius:2px">
       <input type="checkbox" id="i-log-fin" style="width:auto;accent-color:var(--green)"/>
       <label for="i-log-fin" style="font-size:11px;color:#7dc994;cursor:pointer;text-transform:none;letter-spacing:0">Also log this purchase as a Finance expense</label>
+      <span class="help-tip">?<span class="tip-text">Check this to automatically create a matching expense entry in the finance log. Keeps your P&amp;L accurate without double entry.</span></span>
     </div>
   </div>
   <div class="modal-act"><button class="btn" onclick="closeModal('m-inv')">Cancel</button><button class="btn pri" onclick="saveInv()">Save</button></div>
@@ -313,9 +314,9 @@
   <input type="hidden" id="f-id"/>
   <div class="fg">
     <div class="fr"><div><label class="fl">Type</label><select id="f-type"><option value="income">Income</option><option value="expense">Expense</option></select></div><div><label class="fl">Amount ($)</label><input id="f-amt" type="number" step="0.01"/></div></div>
-    <div class="fr"><div><label class="fl">Category</label><input id="f-cat" placeholder="Etsy Sale, Filament…"/></div><div><label class="fl">Date</label><input id="f-dt" type="date"/></div></div>
+    <div class="fr"><div><label class="fl">Category<span class="help-tip">?<span class="tip-text">Label for grouping entries. Examples: Etsy Sale, Direct Sale, Filament, Packaging, Shipping Supplies, Equipment, Fees.</span></span></label><input id="f-cat" placeholder="Etsy Sale, Filament…"/></div><div><label class="fl">Date</label><input id="f-dt" type="date"/></div></div>
     <div><label class="fl">Description</label><input id="f-desc"/></div>
-    <div class="fr"><div><label class="fl">Invoice # (optional)</label><input id="f-invoice" placeholder="INV-001"/></div><div><label class="fl">Notes</label><input id="f-fnotes" placeholder="optional"/></div></div>
+    <div class="fr"><div><label class="fl">Invoice # (optional)<span class="help-tip">?<span class="tip-text">Optional reference number for your own records. Useful for tracking filament orders, shipping receipts, or Etsy payouts.</span></span></label><input id="f-invoice" placeholder="INV-001"/></div><div><label class="fl">Notes</label><input id="f-fnotes" placeholder="optional"/></div></div>
   </div>
   <div class="modal-act"><button class="btn" onclick="closeModal('m-fin')">Cancel</button><button class="btn pri" onclick="saveFin()">Save</button></div>
 </div></div>
