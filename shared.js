@@ -103,45 +103,34 @@ async function applyRolePermissions() {
   const role = currentUser.user_metadata?.role || 'user';
   
   const nav = document.querySelector('.dash-nav');
-  if(nav) {
-    if(role === 'admin') {
-      if(!nav.querySelector('a[href="cadence-activity.html"]')) {
-        const actTab = document.createElement('a');
-        actTab.href = 'cadence-activity.html';
-        actTab.textContent = 'Activity';
-        nav.appendChild(actTab);
-      }
-      if(!nav.querySelector('a[href="cadence-admin.html"]')) {
-        const adminTab = document.createElement('a');
-        adminTab.href = 'cadence-admin.html';
-        adminTab.textContent = 'Admin';
-        nav.appendChild(adminTab);
-      }
-    }
-    
-    const path = window.location.pathname;
     const links = nav.querySelectorAll('a');
     links.forEach(a => {
       const href = a.getAttribute('href');
-      // Set Active
-      if(path.includes(href) && href !== 'index.html') a.className = 'active';
-      if(path.endsWith('/') || path.endsWith('index.html')) {
-         if(href === 'index.html') a.className = 'active';
-      }
+      const path = window.location.pathname;
 
-      // ADMIN ONLY TABS
-      if((href.includes('cadence-admin.html') || href.includes('cadence-activity.html')) && role !== 'admin') {
+      // Set Active state
+      if(path.includes(href) && href !== 'index.html') a.classList.add('active');
+      if((path.endsWith('/') || path.endsWith('index.html')) && href === 'index.html') a.classList.add('active');
+
+      // ADMIN ONLY TABS (P&L, Activity, Admin)
+      const isAdminOnly = href.includes('pl-tracker') || href.includes('activity') || href.includes('admin');
+      if(isAdminOnly && role !== 'admin') {
         a.style.display = 'none';
       }
-      // ROLE SPECIFIC TABS
-      if(href.includes('cadence-creatures-pl-tracker.html') && role === 'fulfillment') a.style.display = 'none';
-      if((href.includes('cadence-fulfillment.html') || href.includes('cadence-queue.html')) && role === 'finance') a.style.display = 'none';
+
+      // FULFILLMENT ROLE TABS
+      if(role === 'fulfillment' && (href.includes('pl-tracker') || href.includes('admin') || href.includes('activity'))) {
+        a.style.display = 'none';
+      }
+      
+      // FINANCE ROLE TABS
+      if(role === 'finance' && (href.includes('fulfillment') || href.includes('queue'))) {
+        a.style.display = 'none';
+      }
     });
 
-    // DISPLAY USER NAME (Prioritize Profile Table)
+    // DISPLAY USER NAME
     let displayName = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
-    
-    // Check Profiles table for a custom name
     const { data: profile } = await db.from('profiles').select('full_name').eq('id', currentUser.id).single();
     if(profile && profile.full_name) displayName = profile.full_name;
 
