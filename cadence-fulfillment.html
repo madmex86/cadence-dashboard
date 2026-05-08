@@ -444,10 +444,6 @@ async function saveShipping(){
   renderBoard();
 }
 
-// ── BULK ACTIONS ──
-let bulkMode = false;
-let selectedOrders = new Set();
-
 function toggleBulkMode() {
   bulkMode = !bulkMode;
   selectedOrders.clear();
