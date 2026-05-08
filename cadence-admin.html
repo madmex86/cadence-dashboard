@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Cadence Forge | Admin Control</title>
+<title>Cadence Creatures — Admin</title>
 <link rel="icon" href="/favicon.ico?v=2" />
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -19,13 +19,11 @@
     --cream: #f4eee0;
     --cream-dim: #c5bba8;
     --cream-faint: rgba(197, 187, 168, 0.5);
-    --cyan: #5BBFD4;
-    --red: #a84444;
   }
 
   body { margin: 0; padding: 0; background: var(--bg); color: var(--cream); font-family: 'Lora', serif; overflow-x: hidden; }
 
-  /* Sidebar Navigation */
+  /* Sidebar Fixed Layout */
   .dash-nav {
     position: fixed; left: 0; top: 0; bottom: 0;
     width: 240px; background: #0d1425;
@@ -34,7 +32,8 @@
     padding: 80px 0 20px 0; z-index: 50;
   }
   .dash-nav a { padding: 12px 28px; font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: var(--cream-faint); text-decoration: none; transition: 0.2s; }
-  .dash-nav a:hover { color: var(--gold-light); background: rgba(255,255,255,0.03); }
+  .dash-nav a:hover, .dash-nav a.active { color: var(--gold-light); background: rgba(255,255,255,0.03); }
+  .dash-nav a.active { border-left: 3px solid var(--gold); color: var(--gold-light); }
 
   /* Topbar */
   .topbar { 
@@ -46,30 +45,15 @@
 
   /* Main Offset */
   #app { margin-left: 240px; }
-  .content { padding: 100px 40px 40px 40px; max-width: 1000px; }
+  .content { padding: 100px 30px 40px 30px; max-width: 1000px; }
 
-  .card { 
-    background: var(--panel-bg); 
-    border: 1px solid var(--border); 
-    border-radius: 8px; padding: 32px; 
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    margin-bottom: 24px;
-  }
-
-  .fg { display: flex; flex-direction: column; gap: 20px; margin-bottom: 24px; }
-  .fl { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); opacity: 0.7; margin-bottom: 8px; }
+  /* Admin Cards */
+  .card { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; padding: 32px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+  .card-title { font-size: 18px; font-weight: 600; color: var(--gold-light); margin-bottom: 8px; }
+  .card-sub { font-size: 13px; color: var(--cream-faint); margin-bottom: 24px; }
   
-  input, select { 
-    width: 100%; padding: 12px; background: rgba(0,0,0,0.2); 
-    border: 1px solid var(--border); color: var(--cream); 
-    border-radius: 4px; font-family: 'Lora', serif;
-  }
-
-  .team-item { 
-    display: flex; align-items: center; gap: 16px; 
-    background: rgba(0,0,0,0.2); padding: 16px; 
-    border-radius: 6px; border: 1px solid var(--border); 
-  }
+  .fg { display: flex; flex-direction: column; gap: 20px; margin-bottom: 24px; }
+  .fl { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gold); opacity: 0.7; margin-bottom: 8px; }
 
   @media (max-width: 1024px) { .dash-nav { display: none; } #app { margin-left: 0; } }
 </style>
@@ -78,63 +62,67 @@
 
 <div id="login-screen" style="display:none"></div>
 
-<div id="app">
+<div id="app" style="display:none">
   <div class="topbar">
     <div style="display:flex; align-items:center; gap:12px;">
       <svg width="24" height="24" viewBox="0 0 76 52" fill="none"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" stroke="#C9A84C" stroke-width="3"/></svg>
-      <div style="font-weight:bold; letter-spacing:0.1em; text-transform:uppercase;">Control Room</div>
+      <div><div style="font-weight:bold; letter-spacing:0.1em; text-transform:uppercase;">Admin Forge</div></div>
     </div>
-    <div id="user-greet" style="font-size:12px; color:var(--cream-dim)"></div>
+    <div style="display:flex; align-items:center; gap:20px;">
+      <div id="user-greet" style="font-size:12px; color:var(--cream-dim)"></div>
+      <button class="btn sm" onclick="signOut()">Sign Out</button>
+    </div>
   </div>
 
   <div class="dash-nav">
     <a href="index.html">Hub Dashboard</a>
     <a href="cadence-queue.html">Operational Queue</a>
-    <a href="cadence-fulfillment.html">Fulfillment</a>
+    <a href="cadence-fulfillment.html">Fulfillment Board</a>
     <a href="cadence-creatures-pl-tracker.html">P&amp;L Analysis</a>
     <a href="cadence-activity.html">System Activity</a>
-    <a href="cadence-admin.html" style="color:var(--gold)">Admin Control</a>
+    <a href="cadence-admin.html" class="active">Admin Control</a>
     <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
   </div>
 
-  <div class="content">
-    <div style="margin-bottom: 30px;">
-      <p style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 8px;">Personnel & Security</p>
-      <h1 style="margin: 0; font-size: 32px; font-weight: bold;">Admin Control Room</h1>
+<div class="content">
+  <div style="margin-bottom: 40px;">
+    <p style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 8px;">Access Control</p>
+    <h1 style="margin: 0; font-size: 32px; font-weight: bold;">Personnel Management</h1>
+  </div>
+  
+  <div class="card">
+    <div class="title" style="font-size:16px;">Add Team Member</div>
+    <div class="subtitle" style="margin-bottom:16px;">Create an account with specific access privileges. They will receive a verification email.</div>
+    
+    <div class="fg">
+      <div><label class="fl">Email Address</label><input type="email" id="new-email" placeholder="wife@cadencecreatures.com"/></div>
+      <div><label class="fl">Temporary Password</label><input type="password" id="new-pw" placeholder="Must be at least 6 characters"/></div>
+      <div>
+        <label class="fl">Account Role</label>
+        <select id="new-role">
+          <option value="fulfillment">Packer / Fulfillment (Only sees Queue and Fulfillment board)</option>
+          <option value="finance">Finance (Only sees P&L Tracker)</option>
+          <option value="admin">Administrator (Full Access)</option>
+        </select>
+      </div>
     </div>
     
-    <div class="card">
-      <h3 style="margin: 0 0 8px 0; color: var(--gold-light);">Add Team Member</h3>
-      <p style="font-size: 12px; color: var(--cream-faint); margin-bottom: 24px;">Provision new access credentials for shop personnel.</p>
-      
-      <div class="fg">
-        <div><label class="fl">Email Address</label><input type="email" id="new-email" placeholder="personnel@cadencecreatures.com"/></div>
-        <div><label class="fl">Temporary Password</label><input type="password" id="new-pw" placeholder="Minimum 6 characters"/></div>
-        <div>
-          <label class="fl">Account Role</label>
-          <select id="new-role">
-            <option value="fulfillment">Packer / Fulfillment (Queue access only)</option>
-            <option value="finance">Finance (P&L access only)</option>
-            <option value="admin">Administrator (Universal Access)</option>
-          </select>
-        </div>
-      </div>
-      
-      <button class="btn pri" onclick="inviteUser()">Create Account</button>
-    </div>
+    <button class="btn" onclick="inviteUser()">Create Account</button>
+  </div>
 
-    <div class="card">
-      <h3 style="margin: 0 0 8px 0; color: var(--gold-light);">Current Team</h3>
-      <p style="font-size: 12px; color: var(--cream-faint); margin-bottom: 24px;">Manage active personnel and privilege levels.</p>
-      <div id="team-list" style="display:grid; gap:12px;">
-        <div style="text-align:center; padding:40px; color:var(--cream-faint); font-style:italic;">Scanning personnel records...</div>
-      </div>
+  <div class="card" style="margin-top:24px;">
+    <div class="title" style="font-size:16px;">Current Team</div>
+    <div class="subtitle" style="margin-bottom:16px;">Manage display names and roles for your shop personnel.</div>
+    <div id="team-list" style="display:grid; gap:12px;">
+      <div class="subtitle" style="text-align:center; padding:20px;">Loading team members...</div>
     </div>
   </div>
 </div>
 
+<div class="toast" id="tst"></div>
+
+<script src="shared.js"></script>
 <script>
-// Logic remains identical to your original provided script
 const tempDb = supabase.createClient(supabaseUrl, supabaseKey, {
   auth: { persistSession: false, autoRefreshToken: false }
 });
@@ -143,17 +131,22 @@ async function inviteUser() {
   const email = document.getElementById('new-email').value;
   const password = document.getElementById('new-pw').value;
   const role = document.getElementById('new-role').value;
+  
   if(!email || !password) return toast('Please enter email and password', 'err');
+  
   toast('Creating account...');
+  
   const { data, error } = await tempDb.auth.signUp({
     email, password, options: { data: { role } }
   });
+  
   if(error) {
     toast('Error: ' + error.message, 'err');
   } else {
     toast('Success! Verification email sent.', 'ok');
     document.getElementById('new-email').value = '';
     document.getElementById('new-pw').value = '';
+    // Also create a profile entry immediately
     await db.from('profiles').insert({ id: data.user.id, email, role, full_name: '' });
     loadTeam();
   }
@@ -162,21 +155,23 @@ async function inviteUser() {
 async function loadTeam() {
   const container = document.getElementById('team-list');
   const { data, error } = await db.from('profiles').select('*').order('email');
-  if(error) return container.innerHTML = '<div style="padding:20px; color:var(--red);">Error loading team</div>';
+  
+  if(error) return container.innerHTML = '<div class="subtitle">Error loading team</div>';
+  
   container.innerHTML = data.map(p => `
-    <div class="team-item">
+    <div style="display:flex; align-items:center; gap:12px; background:rgba(0,0,0,0.15); padding:12px; border-radius:4px; border:1px solid rgba(201,168,76,0.1);">
       <div style="flex:1;">
-        <div style="font-size:10px; color:var(--gold); opacity:0.6; letter-spacing:0.1em; text-transform:uppercase;">${p.email}</div>
-        <input type="text" id="name-${p.id}" value="${p.full_name || ''}" placeholder="Display Name" style="border:none; background:transparent; padding:0; height:auto; font-weight:600; font-size:15px; color:white;"/>
+        <div style="font-size:11px; color:var(--goldl); opacity:0.7;">${p.email}</div>
+        <input type="text" id="name-${p.id}" value="${p.full_name || ''}" placeholder="Enter Name" style="margin-top:6px; border:none; background:transparent; padding:0; height:auto; font-weight:600; font-size:14px;"/>
       </div>
-      <div style="width:140px;">
-        <select id="role-${p.id}" style="padding:6px; font-size:11px; background:rgba(255,255,255,0.05);">
+      <div style="width:120px;">
+        <select id="role-${p.id}" style="padding:4px 8px; font-size:11px;">
           <option value="fulfillment" ${p.role==='fulfillment'?'selected':''}>Packer</option>
           <option value="finance" ${p.role==='finance'?'selected':''}>Finance</option>
           <option value="admin" ${p.role==='admin'?'selected':''}>Admin</option>
         </select>
       </div>
-      <button class="btn sm" onclick="updateProfile('${p.id}')">Update</button>
+      <button class="btn" style="padding:6px 12px; font-size:10px;" onclick="updateProfile('${p.id}')">Save</button>
     </div>
   `).join('');
 }
@@ -195,10 +190,12 @@ async function showApp() {
 async function updateProfile(id) {
   const full_name = document.getElementById('name-'+id).value;
   const role = document.getElementById('role-'+id).value;
+  
   const { error } = await db.from('profiles').update({ full_name, role }).eq('id', id);
   if(error) toast('Error updating profile', 'err');
   else toast('Profile updated!', 'ok');
 }
 </script>
+</div>
 </body>
 </html>

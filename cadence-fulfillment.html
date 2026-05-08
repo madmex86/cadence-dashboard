@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Cadence Forge | Fulfillment Board</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cadence Creatures — Fulfillment</title>
 <link rel="icon" href="/favicon.ico?v=2" />
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -36,7 +37,8 @@
     padding: 80px 0 20px 0; z-index: 50;
   }
   .dash-nav a { padding: 12px 28px; font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: var(--cream-faint); text-decoration: none; transition: 0.2s; }
-  .dash-nav a:hover { color: var(--gold-light); background: rgba(255,255,255,0.03); }
+  .dash-nav a:hover, .dash-nav a.active { color: var(--gold-light); background: rgba(255,255,255,0.03); }
+  .dash-nav a.active { border-left: 3px solid var(--gold); color: var(--gold-light); }
 
   /* Topbar */
   .topbar { 
@@ -92,21 +94,25 @@
 
 <div id="login-screen" style="display:none"></div>
 
-<div id="app">
+<div id="app" style="display:none">
   <div class="topbar">
     <div style="display:flex; align-items:center; gap:12px;">
       <svg width="24" height="24" viewBox="0 0 76 52" fill="none"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" stroke="#C9A84C" stroke-width="3"/></svg>
       <div style="font-weight:bold; letter-spacing:0.1em; text-transform:uppercase;">Shipment Forge</div>
     </div>
-    <div id="user-greet" style="font-size:12px; color:var(--cream-dim)"></div>
+    <div style="display:flex; align-items:center; gap:20px;">
+      <div id="user-greet" style="font-size:12px; color:var(--cream-dim)"></div>
+      <button class="btn sm" onclick="signOut()">Sign Out</button>
+    </div>
   </div>
 
   <div class="dash-nav">
     <a href="index.html">Hub Dashboard</a>
     <a href="cadence-queue.html">Operational Queue</a>
-    <a href="cadence-fulfillment.html" style="color:var(--gold)">Fulfillment Board</a>
+    <a href="cadence-fulfillment.html" class="active">Fulfillment Board</a>
     <a href="cadence-creatures-pl-tracker.html">P&amp;L Analysis</a>
     <a href="cadence-activity.html">System Activity</a>
+    <a href="cadence-admin.html">Admin Control</a>
     <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
   </div>
 
@@ -146,3 +152,312 @@
     </div>
   </div>
 
+  <!-- Bulk Action Bar -->
+  <div id="bulk-bar" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(201,168,76,0.15);border:1px solid var(--gold);padding:14px 24px;border-radius:8px;backdrop-filter:blur(8px);z-index:100;align-items:center;gap:16px;">
+    <div style="color:var(--gold-light);font-weight:500;"><span id="bulk-count">0</span> Selected</div>
+    <select id="bulk-status" class="login-field" style="width:160px;margin:0;padding:8px;font-size:12px;">
+      <option value="printing">Move to Printing</option>
+      <option value="printed">Move to Printed</option>
+      <option value="packaging">Move to Packaging</option>
+    </select>
+    <button class="btn pri" onclick="bulkMoveOrders()">Apply</button>
+    <button class="btn" onclick="toggleBulkMode()">Cancel</button>
+  </div>
+</div>
+
+<!-- SHIPPING MODAL -->
+<div class="overlay" id="m-ship"><div class="modal">
+  <div class="modal-t">📦 Ship Order</div>
+  <input type="hidden" id="s-id"/>
+  <div class="fg">
+    <div><label class="fl">Tracking Number</label><input id="s-track" placeholder="e.g. 9400111899223397"/></div>
+    <div><label class="fl">Carrier</label><select id="s-carrier"><option value="">Auto-detect</option><option value="usps">USPS</option><option value="ups">UPS</option><option value="fedex">FedEx</option></select></div>
+    <div><label class="fl">Shipping Note</label><input id="s-note"/></div>
+  </div>
+  <div class="modal-act"><button class="btn" onclick="document.getElementById('m-ship').classList.remove('open')">Cancel</button><button class="btn pri" onclick="saveShipping()">Mark Shipped</button></div>
+</div></div>
+
+<div class="toast" id="tst"></div>
+
+<!-- shared.js moved to head -->
+<script>
+let orders = [];
+let creatures = [];
+let selectedOrders = new Set();
+let bulkMode = false;
+
+function showApp(){
+  document.getElementById('app').style.display = 'flex';
+  loadData();
+}
+
+async function loadData(){
+  try{
+    const {data, error} = await db.from('orders').select('*').in('status', ['queued','printing','printed','packaging','shipped']).order('shipped_date',{ascending:false}).limit(100);
+    if(error) return console.error(error);
+    orders = data || [];
+    renderBoard();
+    initSortable();
+  }catch(e){console.error(e);}
+}
+
+let sortables = [];
+function initSortable() {
+  sortables.forEach(s => s.destroy());
+  sortables = [];
+  if(bulkMode) return; 
+  
+  ['queued','printing','printed','packaging','shipped'].forEach(col => {
+    const el = document.getElementById('list-'+col);
+    if(!el) return;
+    sortables.push(new Sortable(el, {
+      group: 'shared',
+      animation: 150,
+      ghostClass: 'dragging-ghost',
+      onEnd: async function (evt) {
+        if(evt.from !== evt.to) {
+          const newStatus = evt.to.parentElement.id.replace('col-','');
+          const orderId = evt.item.dataset.id;
+          await moveOrder(orderId, newStatus, true);
+        }
+        savePriority();
+      }
+    }));
+  });
+}
+
+function savePriority() {
+  const customOrder = [];
+  document.querySelectorAll('.card').forEach(c => {
+    if(c.dataset.id) customOrder.push(c.dataset.id);
+  });
+  localStorage.setItem('cc_board_priority', JSON.stringify(customOrder));
+}
+
+function renderBoard(){
+  ['queued','printing','printed','packaging','shipped'].forEach(st=>{
+    let colOrders = orders.filter(o=>o.status===st);
+    
+    try {
+      const p = JSON.parse(localStorage.getItem('cc_board_priority')||'[]');
+      if(p.length) {
+        colOrders.sort((a,b) => {
+          let ia = p.indexOf(a.id);
+          let ib = p.indexOf(b.id);
+          if(ia===-1) ia=9999;
+          if(ib===-1) ib=9999;
+          return ia - ib;
+        });
+      }
+    }catch(e){}
+    
+    const div = document.getElementById('list-'+st);
+    div.innerHTML = colOrders.map(createCard).join('');
+    document.getElementById('cnt-'+st).textContent = colOrders.length;
+  });
+  if(!bulkMode) initSortable();
+}
+
+function createCard(o){
+  const items = Array.isArray(o.items) ? o.items : [];
+  const itemsHtml = items.map((itm, i) => {
+    const isDone = itm.startsWith('[x] ');
+    const rawText = isDone ? itm.slice(4) : itm;
+    return `<div class="chk-item ${isDone?'done':''}" onclick="if(!bulkMode) toggleItem('${o.id}', ${i})">
+      <div class="chk-box"></div>
+      <span>${rawText}</span>
+    </div>`;
+  }).join('');
+  
+  let actBtn = '';
+  if(o.status==='queued') actBtn = `<button class="btn" onclick="moveOrder('${o.id}','printing')">Start Printing →</button>`;
+  else if(o.status==='printing') actBtn = `<button class="btn" onclick="moveOrder('${o.id}','printed')">Mark Printed →</button>`;
+  else if(o.status==='printed') actBtn = `<button class="btn" onclick="moveOrder('${o.id}','packaging')">To Packaging →</button>`;
+  else if(o.status==='packaging') actBtn = `
+    <div style="display:grid; gap:8px; width:100%;">
+      <input type="text" id="track-${o.id}" placeholder="Tracking #" style="font-size:11px; padding:6px;" value="${o.tracking_number||''}">
+      <button class="btn pri" onclick="quickShip('${o.id}')">📦 Mark Shipped</button>
+    </div>
+  `;
+  else if(o.status==='shipped') actBtn = `<div style="font-size:10px; color:var(--green); text-transform:uppercase; letter-spacing:0.1em;">✓ Shipped ${o.tracking_number?'('+o.tracking_number+')':''}</div>`;
+
+  const isSel = selectedOrders.has(o.id);
+  const cardBorder = isSel ? 'border:2px solid var(--goldl);' : (bulkMode ? 'border:2px dashed rgba(201,168,76,0.3);cursor:pointer;' : '');
+
+  return `
+    <div class="card" data-id="${o.id}" style="${cardBorder}" ${bulkMode ? `onclick="toggleOrderSelection('${o.id}')"` : ''}>
+      <div class="card-top">
+        <div>
+          <div class="card-id">#${o.etsy_order_id||o.id.slice(0,8)}</div>
+          <div class="card-buyer">${o.buyer_name||'No Name'}</div>
+        </div>
+        <div class="card-date">${o.order_date?new Date(o.order_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):''}</div>
+      </div>
+      <div class="checklist">
+        ${itemsHtml}
+      </div>
+      <div class="card-act" style="${bulkMode ? 'display:none;' : ''}">
+        ${actBtn}
+      </div>
+    </div>
+  `;
+}
+
+async function toggleItem(orderId, itemIndex){
+  const order = orders.find(o=>o.id===orderId);
+  if(!order) return;
+  const newItems = [...order.items];
+  const itm = newItems[itemIndex];
+  if(itm.startsWith('[x] ')) newItems[itemIndex] = itm.slice(4);
+  else newItems[itemIndex] = '[x] ' + itm;
+  
+  order.items = newItems;
+  renderBoard(); // optimistic update
+  
+  await db.from('orders').update({items: newItems}).eq('id', orderId);
+}
+
+async function moveOrder(id, newStatus, skipRender=false){
+  const order = orders.find(o=>o.id===id);
+  if(!order) return;
+  order.status = newStatus;
+  if(!skipRender) renderBoard(); // optimistic
+  
+  await db.from('orders').update({status: newStatus}).eq('id', id);
+  logActivity(`Moved #${order.etsy_order_id || id.slice(0,8)} to ${newStatus}`, id);
+  toast('Moved to ' + newStatus);
+}
+
+async function quickShip(id) {
+  const track = document.getElementById('track-'+id).value;
+  if(!track && !confirm('Ship without tracking?')) return;
+  
+  const order = orders.find(o => o.id === id);
+  if(!order) return;
+
+  const btn = document.querySelector(`button[onclick="quickShip('${id}')"]`);
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span>⌛</span> Shipping...';
+
+  const {error} = await db.from('orders').update({
+    status: 'shipped',
+    tracking_number: track,
+    shipped_date: new Date().toISOString().slice(0,10)
+  }).eq('id', id);
+  
+  if(error) { 
+    toast('Error shipping', 'err'); 
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+    return; 
+  }
+  
+  toast('Order Shipped!', 'ok');
+  logActivity(`Shipped #${order.etsy_order_id || id.slice(0,8)} with tracking: ${track}`, id);
+  sendFulfillmentEmail({ ...order, tracking_number: track });
+  loadData();
+}
+
+function openShip(id){
+  document.getElementById('s-id').value = id;
+  const order = orders.find(o=>o.id===id);
+  document.getElementById('s-track').value = order?.tracking_number || '';
+  document.getElementById('s-carrier').value = order?.carrier || '';
+  document.getElementById('s-note').value = order?.shipping_note || '';
+  document.getElementById('m-ship').classList.add('open');
+}
+
+async function saveShipping(){
+  const id = document.getElementById('s-id').value;
+  const tracking_number = document.getElementById('s-track').value;
+  const carrier = document.getElementById('s-carrier').value;
+  const shipping_note = document.getElementById('s-note').value;
+  
+  const order = orders.find(o=>o.id===id);
+  if(order){
+    order.tracking_number = tracking_number;
+    order.carrier = carrier;
+    order.shipping_note = shipping_note;
+    order.status = 'shipped';
+  }
+  
+  document.getElementById('m-ship').classList.remove('open');
+  
+  const {error} = await db.from('orders').update({
+    status: 'shipped',
+    shipped_date: new Date().toISOString().slice(0,10),
+    tracking_number, carrier, shipping_note
+  }).eq('id', id);
+  
+  if(error){toast('Error','err'); return;}
+  
+  toast('Order Shipped!','ok');
+  logActivity(`Shipped #${order.etsy_order_id || id.slice(0,8)} via Modal`, id);
+  sendFulfillmentEmail(order);
+  // Remove from local array since it's no longer in the 4 board columns
+  orders = orders.filter(o=>o.id!==id);
+  renderBoard();
+}
+
+function toggleBulkMode() {
+  bulkMode = !bulkMode;
+  selectedOrders.clear();
+  renderBoard();
+  document.getElementById('bulk-bar').style.display = bulkMode ? 'flex' : 'none';
+}
+
+function toggleOrderSelection(id) {
+  if(!bulkMode) return;
+  if(selectedOrders.has(id)) selectedOrders.delete(id);
+  else selectedOrders.add(id);
+  renderBoard();
+  document.getElementById('bulk-count').textContent = selectedOrders.size;
+}
+
+async function bulkMoveOrders() {
+  const newStatus = document.getElementById('bulk-status').value;
+  if(selectedOrders.size === 0) return;
+  
+  const ids = Array.from(selectedOrders);
+  ids.forEach(id => {
+    const o = orders.find(x => x.id === id);
+    if(o) o.status = newStatus;
+  });
+  
+  toggleBulkMode();
+  
+  const {error} = await db.from('orders').update({status: newStatus}).in('id', ids);
+  if(error) toast('Error updating orders', 'err');
+  else toast('Moved ' + ids.length + ' orders', 'ok');
+}
+
+function printPullList() {
+  const pkgs = orders.filter(o => o.status === 'packaging');
+  if(pkgs.length === 0) return toast('No orders in Packaging column!', 'err');
+  
+  let html = '<html><head><title>Packing Slip</title><style>body{font-family:sans-serif;padding:20px;} h2{margin-bottom:5px;font-size:18px;} .order{border-bottom:1px solid #ccc;padding-bottom:15px;margin-bottom:15px;} ul{list-style:none;padding-left:0;} li{margin-bottom:8px;font-size:14px;} .check{display:inline-block;width:16px;height:16px;border:1.5px solid #000;margin-right:12px;position:relative;top:3px;border-radius:3px;}</style></head><body>';
+  html += '<h1>📦 Cadence Creatures — Packing List</h1><p>Date: ' + new Date().toLocaleDateString() + '</p><hr/>';
+  
+  pkgs.forEach(o => {
+    html += '<div class="order">';
+    html += '<h2>Order #' + (o.etsy_order_id||o.id.slice(0,8)) + ' - ' + (o.buyer_name||'No Name') + '</h2>';
+    html += '<ul>';
+    (o.items||[]).forEach(itm => {
+      const isDone = itm.startsWith('[x] ');
+      const text = isDone ? itm.slice(4) : itm;
+      html += '<li><div class="check"></div>' + text + '</li>';
+    });
+    html += '</ul></div>';
+  });
+  html += '</body></html>';
+  
+  const w = window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(()=>w.print(), 500);
+}
+</script>
+</div>
+</body>
+</html>
