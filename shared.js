@@ -271,7 +271,9 @@ styleShield.textContent = `
     color: #FAF6F0 !important; 
     margin: 0 !important; 
     padding: 0 !important;
-    font-family: 'Lora', serif !important;
+    font-family: 'Lora', serif;
+    font-size: 13px;
+    line-height: 1.6;
   }
 
   .topbar { 
