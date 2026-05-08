@@ -273,16 +273,15 @@ styleShield.textContent = `
     margin: 0 !important; 
     padding: 0 !important;
     font-family: 'Lora', serif;
-    font-size: 13px;
-    line-height: 1.6;
+    font-size: 14px;
+    line-height: 1.5;
     min-height: 100vh;
   }
 
   #app {
-    display: flex !important;
-    flex-direction: column !important;
     min-height: 100vh !important;
     width: 100% !important;
+    display: block !important;
   }
 
   .topbar { 
