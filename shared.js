@@ -213,6 +213,68 @@ async function sendFulfillmentEmail(order) {
   }
 }
 
+// UNIVERSAL DASHBOARD STYLES (Enforces symmetry across all pages)
+const styleShield = document.createElement('style');
+styleShield.textContent = `
+  .topbar { 
+    display: flex !important; 
+    justify-content: space-between !important; 
+    align-items: center !important; 
+    height: 64px !important; 
+    padding: 0 28px !important; 
+    background: rgba(28, 22, 18, 0.95) !important;
+    border-bottom: 1px solid rgba(201, 168, 76, 0.15) !important;
+  }
+  .topbar-left { display: flex !important; align-items: center !important; gap: 12px !important; }
+  .topbar-right { display: flex !important; align-items: center !important; gap: 20px !important; }
+  
+  #user-greet { 
+    font-family: 'Lora', serif !important; 
+    font-size: 11px !important; 
+    color: #E8D08A !important; 
+    letter-spacing: 0.05em !important;
+    border-right: 1px solid rgba(201, 168, 76, 0.2) !important;
+    padding-right: 20px !important;
+    height: 14px !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  .dash-nav { 
+    display: flex !important; 
+    background: rgba(0,0,0,0.2) !important; 
+    padding: 0 16px !important; 
+    gap: 0 !important;
+    border-bottom: 1px solid rgba(201, 168, 76, 0.1) !important;
+  }
+  .dash-nav a { 
+    font-family: 'Lora', serif !important;
+    font-size: 10px !important;
+    padding: 12px 16px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.15em !important;
+    color: rgba(196, 188, 178, 0.5) !important;
+    text-decoration: none !important;
+    border-bottom: 2px solid transparent !important;
+    transition: all 0.2s ease !important;
+  }
+  .dash-nav a.active { 
+    color: #E8D08A !important; 
+    border-bottom-color: #C9A84C !important;
+    background: rgba(201, 168, 76, 0.03) !important;
+  }
+  .topbar-link {
+    font-family: 'Lora', serif !important;
+    font-size: 10px !important;
+    letter-spacing: 0.15em !important;
+    color: rgba(196, 188, 178, 0.5) !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+  }
+  .topbar-link:hover { color: #E8D08A !important; }
+`;
+document.head.appendChild(styleShield);
+
 async function logActivity(action, orderId = null, details = null) {
   if(!currentUser) return;
   
