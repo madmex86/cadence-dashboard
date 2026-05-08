@@ -108,7 +108,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if(typeof showApp === 'function') showApp();
   } else {
     // Show login only if we are on the Hub and have no session
-    const loginCont = document.getElementById('login-container');
+    const loginCont = document.getElementById('login-screen');
     if(loginCont) loginCont.style.display = 'flex';
 
     // Force redirect to Hub if they are on a protected page without a session
@@ -331,6 +331,7 @@ styleShield.textContent = `
     text-decoration: none !important;
     cursor: pointer !important;
   }
+  #login-screen { display: none !important; }
   .topbar-link:hover { color: #E8D08A !important; }
 `;
 document.head.appendChild(styleShield);
