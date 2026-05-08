@@ -265,7 +265,23 @@ function initEmail() {
 // UNIVERSAL DASHBOARD STYLES (Enforces symmetry across all pages)
 const styleShield = document.createElement('style');
 styleShield.textContent = `
-  /* Global Reset & Core Wrappers */
+  /* Global Variables & Reset */
+  :root {
+    --gold: #C9A84C;
+    --gold-light: #E8D08A;
+    --gold-dim: rgba(201, 168, 76, 0.15);
+    --cream: #FAF6F0;
+    --cream-dim: rgba(196, 188, 178, 0.7);
+    --cream-faint: rgba(196, 188, 178, 0.4);
+    --ink: #0E0C09;
+    --border: rgba(201, 168, 76, 0.12);
+    --teal: #5BBFD4;
+    --red: #e09090;
+    --green: #7dc994;
+    --amber: #c97c2a;
+    --purple: #b89de8;
+  }
+
   html { font-size: 16px; }
   body { 
     background: #0E0C09 !important; 
