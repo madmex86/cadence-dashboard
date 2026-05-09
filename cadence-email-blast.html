@@ -244,6 +244,7 @@ async function sendBlast() {
 
   if (sent > 0) {
     saveHistory(subject, sent, from);
+    logActivity('Send email blast', null, 'Subject: "' + subject + '" — ' + sent + ' sent');
     document.getElementById('blast-subject').value = '';
     document.getElementById('blast-body').value = '';
     updatePreview();
@@ -288,6 +289,7 @@ async function saveTemplate() {
     name: name.trim(), subject: subject, body: body, from_address: from
   });
   if (res.error) { toast('Save failed: ' + res.error.message, 'err'); return; }
+  logActivity('Save email template', null, name.trim());
   toast('Template saved.', 'ok');
   await loadTemplates();
 }
@@ -304,8 +306,10 @@ function loadTemplate(id) {
 
 async function deleteTemplate(id) {
   if (!confirm('Delete this template?')) return;
+  var tpl = _templates.find(function(x) { return x.id === id; });
   var res = await db.from('email_templates').delete().eq('id', id);
   if (res.error) { toast('Delete failed: ' + res.error.message, 'err'); return; }
+  logActivity('Delete email template', null, tpl ? tpl.name : id);
   toast('Template deleted.', 'ok');
   await loadTemplates();
 }

@@ -131,6 +131,7 @@ async function inviteUser() {
     toast('Error: ' + error.message, 'err');
   } else {
     toast('Account created — verification email sent.', 'ok');
+    logActivity('Create account', null, `${full_name} (${email}) — role: ${role}`);
     document.getElementById('new-name').value = '';
     document.getElementById('new-email').value = '';
     document.getElementById('new-pw').value = '';
@@ -188,13 +189,15 @@ async function updateProfile(id) {
   const role = document.getElementById('role-'+id).value;
   const { error } = await db.from('profiles').update({ full_name, role }).eq('id', id);
   if(error) toast('Error updating profile', 'err');
-  else { sessionStorage.removeItem('cc_user_name'); toast('Profile updated!', 'ok'); }
+  else { sessionStorage.removeItem('cc_user_name'); logActivity('Update profile', null, `${full_name} — role: ${role}`); toast('Profile updated!', 'ok'); }
 }
 
 async function toggleDeactivate(id, deactivate) {
   if(deactivate && !confirm('Deactivate this account? They will be blocked on next page load.')) return;
   const { error } = await db.from('profiles').update({ deactivated: deactivate }).eq('id', id);
   if(error) { toast('Failed: ' + error.message, 'err'); return; }
+  const nameEl = document.getElementById('name-'+id);
+  logActivity(deactivate ? 'Deactivate account' : 'Reactivate account', null, nameEl ? nameEl.value : id);
   toast(deactivate ? 'Account deactivated.' : 'Account reactivated.', 'ok');
   loadTeam();
 }

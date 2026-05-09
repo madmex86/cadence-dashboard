@@ -276,6 +276,7 @@ async function importFromQueue(){
   const rows=newOrders.map(o=>({entry_type:'income',category:'Etsy Sale',description:`Order #${o.etsy_order_id||o.id.slice(0,8)}${o.buyer_name?' — '+o.buyer_name:''}`,amount:o.total_amount,entry_date:o.order_date||new Date().toISOString().slice(0,10),order_id:o.id}));
   const{error}=await db.from('finance').insert(rows);
   if(error){sync(false);toast('Import failed','err');return;}
+  logActivity('Import from queue', null, `${rows.length} order${rows.length!==1?'s':''} imported`);
   toast(`Imported ${rows.length} order${rows.length!==1?'s':''} from Queue`,'ok');
   document.getElementById('import-preview').textContent=`Imported ${rows.length} order${rows.length!==1?'s':''}.`;
   document.getElementById('import-preview').style.color='#7dc994';
@@ -352,9 +353,10 @@ async function saveFin(){
   sync(true);closeM('m-fin');
   const{error}=id?await db.from('finance').update(p).eq('id',id):await db.from('finance').insert(p);
   if(error){sync(false);toast('Save failed','err');return;}
+  logActivity(id?'Edit finance entry':'Add finance entry', null, `${p.entry_type}: ${p.description||''} $${p.amount}`);
   toast('Saved','ok');await load_fin();
 }
-async function delFin(id){if(!confirm('Delete?'))return;sync(true);const{error}=await db.from('finance').delete().eq('id',id);if(error){sync(false);toast('Failed','err');return;}toast('Deleted');await load_fin();}
+async function delFin(id){if(!confirm('Delete?'))return;const entry=fin.find(x=>x.id===id);sync(true);const{error}=await db.from('finance').delete().eq('id',id);if(error){sync(false);toast('Failed','err');return;}logActivity('Delete finance entry',null,entry?`${entry.entry_type}: ${entry.description||''} $${entry.amount}`:id);toast('Deleted');await load_fin();}
 
 function mModal(id=''){
   document.getElementById('mi-id').value=id;
@@ -368,9 +370,10 @@ async function saveMile(){
   sync(true);closeM('m-mile');
   const{error}=id?await db.from('mileage').update(p).eq('id',id):await db.from('mileage').insert(p);
   if(error){sync(false);toast('Save failed','err');return;}
+  logActivity(id?'Edit mileage':'Add mileage', null, `${p.miles} mi — ${p.purpose||''}`);
   toast('Saved','ok');await load_miles();
 }
-async function delMile(id){if(!confirm('Delete?'))return;sync(true);const{error}=await db.from('mileage').delete().eq('id',id);if(error){sync(false);toast('Failed','err');return;}toast('Deleted');await load_miles();}
+async function delMile(id){if(!confirm('Delete?'))return;const m=miles.find(x=>x.id===id);sync(true);const{error}=await db.from('mileage').delete().eq('id',id);if(error){sync(false);toast('Failed','err');return;}logActivity('Delete mileage',null,m?`${m.miles} mi — ${m.purpose||''}`:id);toast('Deleted');await load_miles();}
 
 function showApp() {
   document.getElementById('app').style.display = 'block';

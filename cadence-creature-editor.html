@@ -30,9 +30,9 @@
   .stock-lbl { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: .1em; }
 
   /* Modal */
-  .modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(6px); z-index:800; align-items:center; justify-content:center; padding:20px; }
+  .modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(6px); z-index:1100; align-items:flex-start; justify-content:center; padding:24px 20px 40px; overflow-y:auto; }
   .modal-bg.open { display:flex; }
-  .modal-box { background:#1a1612; border:1px solid rgba(201,168,76,0.22); border-radius:6px; max-width:520px; width:100%; max-height:88vh; overflow-y:auto; padding:20px 22px; position:relative; }
+  .modal-box { background:#1a1612; border:1px solid rgba(201,168,76,0.22); border-radius:6px; max-width:520px; width:100%; padding:20px 22px; position:relative; flex-shrink:0; }
   .modal-box::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(to right,var(--gold),var(--teal)); border-radius:6px 6px 0 0; }
   .modal-title { font-family:'Lora',serif; font-size:16px; color:var(--cream); margin-bottom:14px; }
   .modal-close { position:absolute; top:12px; right:14px; background:none; border:none; color:var(--dim); font-size:18px; cursor:pointer; }
@@ -195,10 +195,6 @@
           <input type="checkbox" id="f-featured"/> Featured on site
           <span class="help-tip" style="cursor:default;">?<span class="tip-text">Highlights this creature in the Featured section on the homepage. Best for new releases — don't check more than 2–3 at once.</span></span>
         </label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim);cursor:pointer;">
-          <input type="checkbox" id="f-revealed"/> Image revealed
-          <span class="help-tip" style="cursor:default;">?<span class="tip-text">When unchecked, the creature image is blurred on the site (teaser mode). Check this once you're ready to show the photo publicly.</span></span>
-        </label>
       </div>
     </div>
     <div style="margin-top:14px;display:flex;gap:10px;">
@@ -276,7 +272,6 @@
             <div class="toggle-row">
               <div class="tog ${c.active !== false ? 'on green' : ''}" onclick="toggle('${c.id}','active',${!(c.active !== false)})"><span class="tog-dot"></span>Active</div>
               <div class="tog ${c.is_featured ? 'on' : ''}" onclick="toggle('${c.id}','is_featured',${!c.is_featured})"><span class="tog-dot"></span>Featured</div>
-              <div class="tog ${c.is_revealed ? 'on teal' : ''}" onclick="toggle('${c.id}','is_revealed',${!c.is_revealed})"><span class="tog-dot"></span>Revealed</div>
             </div>
             <div class="stock-row">
               <button class="btn sm" onclick="adjustStock('${c.id}',-1)">−</button>
@@ -301,6 +296,8 @@
     const { error } = await db.from('creatures').update({ [field]: val }).eq('id', id);
     if (error) { serr(); toast('Failed', 'err'); return; }
     creatures = creatures.map(c => c.id === id ? { ...c, [field]: val } : c);
+    const cName = (creatures.find(x => x.id === id) || {}).name || id;
+    logActivity('Set ' + field, null, cName + ' → ' + val);
     sync(false);
     render();
   }
@@ -313,6 +310,8 @@
     const { error } = await db.from('creatures').update({ qty_on_hand: next }).eq('id', id);
     if (error) { serr(); toast('Failed', 'err'); return; }
     creatures = creatures.map(x => x.id === id ? { ...x, qty_on_hand: next } : x);
+    const cName = (creatures.find(x => x.id === id) || {}).name || id;
+    logActivity('Adjust stock', null, cName + ': qty → ' + next);
     sync(false);
     render();
   }
@@ -341,7 +340,6 @@
     document.getElementById('f-image-url').value = c?.image_url || '';
     document.getElementById('f-notes').value = c?.notes || '';
     document.getElementById('f-featured').checked = !!c?.is_featured;
-    document.getElementById('f-revealed').checked = !!c?.is_revealed;
     var story = Array.isArray(c?.lore_story) ? c.lore_story : [];
     document.getElementById('f-lore-location').value = c?.lore_location || '';
     document.getElementById('f-lore-date').value = c?.lore_entry_date || '';
@@ -404,7 +402,6 @@
       image_url: document.getElementById('f-image-url').value.trim(),
       notes: document.getElementById('f-notes').value.trim(),
       is_featured: document.getElementById('f-featured').checked,
-      is_revealed: document.getElementById('f-revealed').checked,
       lore_location: document.getElementById('f-lore-location').value.trim() || null,
       lore_entry_date: document.getElementById('f-lore-date').value.trim() || null,
       lore_story: [
@@ -422,6 +419,7 @@
       : await db.from('creatures').insert([payload]);
     if (error) { serr(); toast('Save failed', 'err'); return; }
     toast(id ? 'Saved' : 'Creature added');
+    logActivity(id ? 'Edit creature' : 'Add creature', null, payload.name);
     closeModal();
     await init();
   }
@@ -429,9 +427,11 @@
   async function deleteCreature() {
     const id = document.getElementById('edit-id').value;
     if (!id || !confirm('Delete this creature? This cannot be undone.')) return;
+    const delC = creatures.find(x => x.id === id);
     sync(true);
     const { error } = await db.from('creatures').delete().eq('id', id);
     if (error) { serr(); toast('Delete failed', 'err'); return; }
+    logActivity('Delete creature', null, delC ? delC.name : id);
     toast('Deleted');
     closeModal();
     await init();
@@ -473,6 +473,8 @@
       if (data?.publicUrl) {
         document.getElementById('f-image-url').value = data.publicUrl;
         previewImg();
+        const cName = document.getElementById('f-name').value.trim();
+        logActivity('Upload creature image', null, cName || 'unknown creature');
         toast('Image uploaded');
       }
     } catch(err) {

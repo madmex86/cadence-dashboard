@@ -209,9 +209,11 @@ async function applyRolePermissions() {
       if(!greet) {
         greet = document.createElement('div');
         greet.id = 'user-greet';
-        right.insertBefore(greet, right.firstChild);
+        right.appendChild(greet);
       }
-      greet.style = 'font-family:"Lora",serif; font-size:11px; color:#E8D08A; letter-spacing:0.05em; font-weight:500; margin-right:15px; border-right:1px solid rgba(201,168,76,0.15); padding-right:15px; display:flex; align-items:center; height:100%;';
+      const signOutLink = right.querySelector('.topbar-link');
+      if(signOutLink) right.insertBefore(greet, signOutLink);
+      greet.style = 'font-family:"Lora",serif; font-size:11px; color:#E8D08A; letter-spacing:0.05em; font-weight:500; margin-right:15px; border-left:1px solid rgba(201,168,76,0.15); padding-left:15px; display:flex; align-items:center; height:100%;';
       greet.textContent = `User: ${displayName.charAt(0).toUpperCase() + displayName.slice(1)}`;
     }
 
@@ -240,6 +242,10 @@ async function applyRolePermissions() {
         </div>
       `;
       updateMasterPrinterStatus();
+      // Reposition greet after conn-hub so order is: [conn-hub] [user] | Sign Out
+      const greetEl = document.getElementById('user-greet');
+      const signOutEl = right.querySelector('.topbar-link');
+      if(greetEl && signOutEl) right.insertBefore(greetEl, signOutEl);
     }
   }
 
@@ -536,7 +542,7 @@ styleShield.textContent = `
   .btn.pri { background: rgba(201, 168, 76, 0.14); border-color: #C9A84C; }
   .btn.pri:hover { background: rgba(201, 168, 76, .22); }
 
-  .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .7); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+  .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .7); z-index: 1000; display: none; align-items: flex-start; justify-content: center; padding: 40px 20px 20px; backdrop-filter: blur(4px); overflow-y: auto; }
   .overlay.open { display: flex; }
   .modal { background: #1e1a15; border: 1px solid rgba(201, 168, 76, .2); max-width: 500px; width: 100%; padding: 26px; max-height: 90vh; overflow-y: auto; border-radius: 3px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
   .modal-t { font-size: 14px; font-weight: 500; color: #E8D08A; margin-bottom: 18px; text-transform: uppercase; letter-spacing: 0.1em; }
@@ -601,17 +607,53 @@ styleShield.textContent = `
   /* Help tooltips — global */
   .help-tip { display: inline-flex; align-items: center; justify-content: center; width: 13px; height: 13px; border-radius: 50%; background: rgba(201,168,76,0.1); color: rgba(201,168,76,0.45); font-size: 8px; font-weight: 700; cursor: default; position: relative; margin-left: 5px; user-select: none; vertical-align: middle; transition: background .15s, color .15s; font-family: sans-serif; flex-shrink: 0; }
   .help-tip:hover, .help-tip.open { background: rgba(201,168,76,0.22); color: #C9A84C; }
-  .help-tip .tip-text { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: #1e1a14; border: 1px solid rgba(201,168,76,0.28); border-radius: 4px; padding: 9px 12px; font-size: 11px; color: rgba(196,188,178,0.85); line-height: 1.6; width: 215px; z-index: 9999; font-family: inherit; letter-spacing: 0; text-transform: none; font-weight: 400; pointer-events: none; box-shadow: 0 6px 24px rgba(0,0,0,0.55); white-space: normal; }
-  .help-tip .tip-text::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: rgba(201,168,76,0.28); }
-  .help-tip:hover .tip-text, .help-tip.open .tip-text { display: block; }
+  .help-tip .tip-text { display: none !important; }
+  #global-tip { display:none; position:fixed; background:#1e1a14; border:1px solid rgba(201,168,76,0.28); border-radius:4px; padding:9px 12px; font-size:11px; color:rgba(196,188,178,0.85); line-height:1.6; width:215px; z-index:99999; pointer-events:none; box-shadow:0 6px 24px rgba(0,0,0,0.55); white-space:normal; font-family:sans-serif; letter-spacing:0; text-transform:none; font-weight:400; }
+  #global-tip::after { content:''; position:absolute; left:50%; transform:translateX(-50%); border:5px solid transparent; }
+  #global-tip.tip-above::after { top:100%; border-top-color:rgba(201,168,76,0.28); }
+  #global-tip.tip-below::after { bottom:100%; border-bottom-color:rgba(201,168,76,0.28); }
 `;
 document.head.appendChild(styleShield);
 
-// Help tip click-toggle for touch devices
-document.addEventListener('click', function(e) {
-  const tip = e.target.closest('.help-tip');
-  if (tip) { tip.classList.toggle('open'); e.stopPropagation(); return; }
-  document.querySelectorAll('.help-tip.open').forEach(function(t) { t.classList.remove('open'); });
+// Fixed-position help tooltip — immune to overflow clipping
+document.addEventListener('DOMContentLoaded', function() {
+  var el = document.createElement('div');
+  el.id = 'global-tip';
+  document.body.appendChild(el);
+
+  function show(tip) {
+    var text = tip.querySelector('.tip-text');
+    if (!text) return;
+    el.textContent = text.textContent;
+    el.style.width = '215px';
+    el.style.display = 'block';
+    var r   = tip.getBoundingClientRect();
+    var th  = el.offsetHeight;
+    var tw  = 215;
+    var above = r.top > th + 14;
+    el.className = above ? 'tip-above' : 'tip-below';
+    var top  = above ? (r.top - th - 10) : (r.bottom + 10);
+    var left = Math.max(8, Math.min(r.left + r.width / 2 - tw / 2, window.innerWidth - tw - 8));
+    el.style.top  = top  + 'px';
+    el.style.left = left + 'px';
+  }
+
+  function hide() { el.style.display = 'none'; el.className = ''; }
+
+  document.addEventListener('mouseover', function(e) {
+    var t = e.target.closest('.help-tip');
+    if (t) show(t);
+  });
+  document.addEventListener('mouseout', function(e) {
+    var t = e.target.closest('.help-tip');
+    if (t && !t.contains(e.relatedTarget)) hide();
+  });
+  document.addEventListener('click', function(e) {
+    var t = e.target.closest('.help-tip');
+    if (t) { e.stopPropagation(); el.style.display === 'none' ? show(t) : hide(); return; }
+    hide();
+  });
+  document.addEventListener('scroll', hide, true);
 });
 
 async function sendFulfillmentEmail(order) {
@@ -633,17 +675,16 @@ async function sendFulfillmentEmail(order) {
 
 
 async function logActivity(action, orderId = null, details = null) {
-  if(!currentUser) return;
+  if(!currentUser) { console.warn('[activity] skipped — no currentUser'); return; }
   let name = sessionStorage.getItem('cc_user_name') || currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
-  try {
-    await db.from('activity_log').insert({
-      user_id: currentUser.id,
-      user_name: name.charAt(0).toUpperCase() + name.slice(1),
-      action: action,
-      order_id: orderId,
-      details: details
-    });
-  } catch(e) { console.error('Logging Failed:', e); }
+  const { error } = await db.from('activity_log').insert({
+    user_id: currentUser.id,
+    user_name: name.charAt(0).toUpperCase() + name.slice(1),
+    action: action,
+    order_id: orderId || null,
+    details: details
+  });
+  if (error) console.error('[activity] insert failed:', error.message, error);
 }
 
 // NAV HIGHLIGHTER

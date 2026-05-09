@@ -46,6 +46,27 @@
   .launched-date { font-family: 'Lora', serif; font-size: 15px; color: var(--goldl); }
   .reset-link { display: inline-block; margin-top: 20px; font-size: 11px; color: var(--dim); cursor: pointer; text-decoration: underline; opacity: .55; }
   .reset-link:hover { opacity: .9; }
+
+  .reveal-panel { background: rgba(201,168,76,0.03); border: 1px solid rgba(201,168,76,0.18); border-radius: 6px; padding: 24px 28px; margin-bottom: 28px; }
+  .reveal-panel-title { font-family: 'Lora', serif; font-size: 17px; color: var(--goldl); margin-bottom: 4px; }
+  .reveal-panel-sub { font-size: 11px; color: var(--dim); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 20px; }
+  .reveal-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid rgba(201,168,76,0.07); flex-wrap: wrap; }
+  .reveal-row:last-child { border-bottom: none; }
+  .reveal-row-name { font-size: 13px; color: var(--cream); min-width: 130px; flex: 0 0 130px; font-family: 'Lora', serif; }
+  .reveal-status-txt { font-size: 10px; letter-spacing: .08em; color: var(--dim); min-width: 160px; flex: 0 0 160px; }
+  .reveal-status-txt.active { color: rgba(201,168,76,0.7); }
+  .reveal-status-txt.released { color: #7dc994; }
+  .reveal-dt-input { background: rgba(255,255,255,0.04); border: 1px solid rgba(201,168,76,0.2); color: var(--cream); padding: 7px 10px; font-size: 12px; border-radius: 3px; flex: 1; min-width: 180px; color-scheme: dark; }
+  .reveal-dt-input:focus { outline: none; border-color: rgba(201,168,76,0.5); }
+  .rev-btn { font-size: 9px; letter-spacing: .12em; text-transform: uppercase; padding: 7px 13px; border: 1px solid; background: transparent; cursor: pointer; transition: all .2s; border-radius: 3px; white-space: nowrap; }
+  .rev-btn-sched  { border-color: rgba(201,168,76,0.35); color: rgba(201,168,76,0.7); }
+  .rev-btn-sched:hover  { background: rgba(201,168,76,0.1); color: var(--goldl); }
+  .rev-btn-addhr  { border-color: rgba(91,191,212,0.3); color: rgba(91,191,212,0.65); }
+  .rev-btn-addhr:hover  { background: rgba(91,191,212,0.08); color: #5BBFD4; }
+  .rev-btn-now    { border-color: rgba(125,201,148,0.3); color: rgba(125,201,148,0.75); }
+  .rev-btn-now:hover    { background: rgba(125,201,148,0.08); color: #7dc994; }
+  .rev-btn-clear  { border-color: rgba(255,255,255,0.08); color: var(--dim); }
+  .rev-btn-clear:hover  { border-color: rgba(232,112,112,0.3); color: #e87070; }
 </style>
 </head>
 <body>
@@ -95,6 +116,12 @@
           <div class="launch-note" id="launch-note"></div>
         </div>
 
+        <div class="reveal-panel">
+          <div class="reveal-panel-title">Scheduled Reveals</div>
+          <div class="reveal-panel-sub">Set a countdown reveal date per creature — the site auto-reveals live with no page refresh.</div>
+          <div id="reveal-list"><div style="color:var(--dim);font-size:12px;padding:16px 0;text-align:center;letter-spacing:.12em;text-transform:uppercase;">Loading…</div></div>
+        </div>
+
         <div class="launch-grid" id="launch-grid">
           <div style="color:var(--dim);font-size:12px;padding:40px;grid-column:1/-1;text-align:center;letter-spacing:.12em;text-transform:uppercase;">Loading creatures…</div>
         </div>
@@ -108,13 +135,14 @@ var _creatures = [];
 
 async function loadLaunchData() {
   const [cRes, sRes] = await Promise.all([
-    db.from('creatures').select('id,name,image_url,etsy_url,is_featured,is_revealed,qty_on_hand').order('log_number'),
+    db.from('creatures').select('id,name,image_url,etsy_url,is_featured,is_revealed,qty_on_hand,reveal_date').order('log_number'),
     db.from('subscribers').select('id', { count: 'exact', head: true })
   ]);
   if (cRes.error) { console.error('Launch load failed:', cRes.error); return; }
   _creatures = cRes.data || [];
   document.getElementById('stat-subs').textContent = sRes.count || 0;
   renderGrid();
+  renderRevealList();
 }
 
 function renderGrid() {
@@ -130,7 +158,6 @@ function renderGrid() {
       { label: 'Image set',  pass: !!(c.image_url && c.image_url.trim()) },
       { label: 'Etsy link',  pass: !!(c.etsy_url && c.etsy_url.trim()) },
       { label: 'Featured',   pass: !!c.is_featured },
-      { label: 'Revealed',   pass: !!c.is_revealed },
       { label: 'In stock',   pass: (c.qty_on_hand || 0) > 0 }
     ];
     var allPass = checks.every(function(ch) { return ch.pass; });
@@ -176,6 +203,7 @@ function launchDrop() {
   if (!confirm('Launch Drop 1 now?\n\nThis will mark the drop as live. The launch checklist will disappear from the nav.')) return;
   var ts = new Date().toISOString();
   localStorage.setItem('cc_drop1_launched', ts);
+  logActivity('Launch drop', null, 'Drop 1 launched');
   showLaunchedView(ts);
 }
 
@@ -205,6 +233,105 @@ async function showApp() {
   var launched = localStorage.getItem('cc_drop1_launched');
   if (launched) { showLaunchedView(launched); return; }
   await loadLaunchData();
+}
+
+// ── Scheduled Reveal ──────────────────────────────────────────────────────
+
+function pad2(n) { return String(n).padStart(2,'0'); }
+
+function dtLocalVal(d) {
+  return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())
+    +'T'+pad2(d.getHours())+':'+pad2(d.getMinutes());
+}
+
+function fmtRevealDate(iso) {
+  var d = new Date(iso);
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+    +' at '+d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+}
+
+function renderRevealList() {
+  var list = document.getElementById('reveal-list');
+  if (!list) return;
+  var pending = _creatures.filter(function(c) { return !c.is_revealed; });
+  if (!pending.length) {
+    list.innerHTML = '<div style="color:var(--dim);font-size:12px;padding:16px 0;text-align:center;letter-spacing:.1em;text-transform:uppercase;">All creatures released.</div>';
+    return;
+  }
+  list.innerHTML = pending.map(function(c) {
+    var rd = c.reveal_date ? new Date(c.reveal_date) : null;
+    var dtVal = rd ? dtLocalVal(rd) : '';
+    var statText = rd ? ('Scheduled: ' + fmtRevealDate(c.reveal_date)) : (c.is_revealed ? 'Released' : 'Not scheduled');
+    var statClass = rd ? 'reveal-status-txt active' : (c.is_revealed ? 'reveal-status-txt released' : 'reveal-status-txt');
+    return '<div class="reveal-row">'
+      + '<div class="reveal-row-name">' + (c.name || '(unnamed)') + '</div>'
+      + '<div class="' + statClass + '" id="rstat-' + c.id + '">' + statText + '</div>'
+      + '<input type="datetime-local" class="reveal-dt-input" id="rdt-' + c.id + '" value="' + dtVal + '">'
+      + '<button class="rev-btn rev-btn-sched"  onclick="scheduleReveal(\'' + c.id + '\')">Schedule</button>'
+      + '<button class="rev-btn rev-btn-addhr"  onclick="addHour(\'' + c.id + '\')"     >+1 Hr</button>'
+      + '<button class="rev-btn rev-btn-now"    onclick="releaseNow(\'' + c.id + '\')"  >Release Now</button>'
+      + '<button class="rev-btn rev-btn-clear"  onclick="clearReveal(\'' + c.id + '\')" >Clear</button>'
+      + '</div>';
+  }).join('');
+}
+
+async function scheduleReveal(id) {
+  var inp = document.getElementById('rdt-'+id);
+  if (!inp || !inp.value) { toast('Pick a date and time first.','warn'); return; }
+  var isoDate = new Date(inp.value).toISOString();
+  var { error } = await db.from('creatures').update({ reveal_date: isoDate, is_revealed: false }).eq('id', id);
+  if (error) { toast('Error: '+error.message,'warn'); return; }
+  var c = _creatures.find(function(x){ return x.id===id; });
+  if (c) c.reveal_date = isoDate;
+  var stat = document.getElementById('rstat-'+id);
+  if (stat) { stat.textContent = 'Scheduled: '+fmtRevealDate(isoDate); stat.className='reveal-status-txt active'; }
+  logActivity('Schedule reveal', null, ((c&&c.name)||id)+' → '+fmtRevealDate(isoDate));
+  toast(((c&&c.name)||'Creature')+' scheduled ✓','ok');
+}
+
+async function addHour(id) {
+  var c = _creatures.find(function(x){ return x.id===id; });
+  var base = c && c.reveal_date ? new Date(c.reveal_date) : new Date();
+  var newDate = new Date(base.getTime() + 3600000);
+  var isoDate = newDate.toISOString();
+  var { error } = await db.from('creatures').update({ reveal_date: isoDate }).eq('id', id);
+  if (error) { toast('Error: '+error.message,'warn'); return; }
+  if (c) c.reveal_date = isoDate;
+  var inp = document.getElementById('rdt-'+id);
+  if (inp) inp.value = dtLocalVal(newDate);
+  var stat = document.getElementById('rstat-'+id);
+  if (stat) { stat.textContent = 'Scheduled: '+fmtRevealDate(isoDate); stat.className='reveal-status-txt active'; }
+  logActivity('Add hour to reveal', null, ((c&&c.name)||id)+' → '+fmtRevealDate(isoDate));
+  toast('+1 hour added ✓','ok');
+}
+
+async function releaseNow(id) {
+  if (!confirm('Release this creature now?\n\nThis marks it as revealed and clears the scheduled date.')) return;
+  var { error } = await db.from('creatures').update({ is_revealed: true, reveal_date: null }).eq('id', id);
+  if (error) { toast('Error: '+error.message,'warn'); return; }
+  var c = _creatures.find(function(x){ return x.id===id; });
+  if (c) { c.is_revealed = true; c.reveal_date = null; }
+  var stat = document.getElementById('rstat-'+id);
+  if (stat) { stat.textContent = 'Released'; stat.className='reveal-status-txt released'; }
+  var inp = document.getElementById('rdt-'+id);
+  if (inp) inp.value = '';
+  logActivity('Release creature now', null, (c&&c.name)||id);
+  toast(((c&&c.name)||'Creature')+' released ✓','ok');
+  renderGrid();
+  renderRevealList();
+}
+
+async function clearReveal(id) {
+  var { error } = await db.from('creatures').update({ reveal_date: null }).eq('id', id);
+  if (error) { toast('Error: '+error.message,'warn'); return; }
+  var c = _creatures.find(function(x){ return x.id===id; });
+  if (c) c.reveal_date = null;
+  var stat = document.getElementById('rstat-'+id);
+  if (stat) { stat.textContent = c && c.is_revealed ? 'Released' : 'Not scheduled'; stat.className = c && c.is_revealed ? 'reveal-status-txt released' : 'reveal-status-txt'; }
+  var inp = document.getElementById('rdt-'+id);
+  if (inp) inp.value = '';
+  logActivity('Clear reveal date', null, (c&&c.name)||id);
+  toast('Reveal date cleared','ok');
 }
 </script>
 </div>
