@@ -95,7 +95,7 @@ function renderMessages() {
         <div class="msg-body">${m.message}</div>
         <div class="msg-actions">
           <button class="btn sm" onclick="event.stopPropagation(); markAsRead('${m.id}', true)">${m.is_read ? 'Mark Unread' : 'Mark as Read'}</button>
-          <a href="mailto:${m.email}" class="btn sm pri" onclick="event.stopPropagation()">Reply</a>
+          <a href="mailto:${m.email}?subject=RE: ${m.topic || 'Inquiry'} - Cadence Creatures&body=%0A%0A--- Original Message from ${m.name} ---%0A${encodeURIComponent(m.message)}" class="btn sm pri" onclick="event.stopPropagation()">Reply</a>
         </div>
       </div>
     `;
