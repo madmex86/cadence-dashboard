@@ -66,6 +66,7 @@ async function tryLogin(){
     if(ls) ls.style.display = 'none';
     injectWordSmithBranding();
     await applyRolePermissions();
+    highlightNav();
     if(typeof showApp === 'function') showApp();
   }
 }
@@ -142,6 +143,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     await applyRolePermissions();
+    highlightNav();
     const ls = document.getElementById('login-screen');
     if(ls) ls.style.display = 'none';
     injectWordSmithBranding();
@@ -161,117 +163,119 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
+// CENTRALIZED NAVIGATION MASTER
+const NAV_LINKS = [
+  { label: 'Hub', href: 'index.html' },
+  { label: 'Queue', href: 'cadence-queue.html' },
+  { label: 'Fulfillment', href: 'cadence-fulfillment.html' },
+  { label: 'Customers', href: 'cadence-customers.html' },
+  { label: 'Messages', href: 'cadence-messages.html', badge: 'msg-badge' },
+  { label: 'Creatures', href: 'cadence-creature-editor.html', adminOnly: true },
+  { label: 'Email Blast', href: 'cadence-email-blast.html', adminOnly: true },
+  { label: '🚀 Launch', href: 'cadence-drop-launch.html', adminOnly: true, hideIfLaunched: true },
+  { label: 'P&L', href: 'cadence-creatures-pl-tracker.html', adminOnly: true },
+  { label: 'Links', href: 'cadence-links.html' },
+  { label: 'Activity', href: 'cadence-activity.html', adminOnly: true },
+  { label: 'Admin', href: 'cadence-admin.html', adminOnly: true },
+  { label: 'Site', href: 'cadence-site.html' },
+  { label: 'Live Site ↗', href: 'https://cadencecreatures.com', external: true },
+  { label: 'Etsy Shop ↗', href: 'https://etsy.com/shop/CadenceCreatures', external: true }
+];
+
 async function applyRolePermissions() {
   if(!currentUser) return;
   const role = currentUser.user_metadata?.role || 'user';
-  
+  const isOwner = currentUser.email === 'stevenportugal86@gmail.com';
+  const path = window.location.pathname.replace(/\/$/, '') || '/index.html';
+  const currentFile = path.split('/').pop().replace('.html', '');
+
+  // 1. INJECT NAVIGATION
   const nav = document.querySelector('.dash-nav');
   if(nav) {
-    const links = nav.querySelectorAll('a');
-    links.forEach(a => {
-      const href = a.getAttribute('href');
-      if(!href) return;
-      const path = window.location.pathname;
+    try {
+      nav.innerHTML = NAV_LINKS.map(link => {
+        // Role Visibility
+        if (!isOwner) {
+          if (link.adminOnly && role !== 'admin') return '';
+          if (link.hideIfLaunched && localStorage.getItem('cc_drop1_launched')) return '';
+          if (role === 'finance' && (link.href.includes('fulfillment') || link.href.includes('queue'))) return '';
+          if (role === 'fulfillment' && link.adminOnly) return '';
+        }
+        
+        const target = link.external ? ' target="_blank"' : '';
+        const badge = link.badge ? ` <span id="${link.badge}" class="nav-badge" style="display:none">0</span>` : '';
+        const linkFile = link.href.split('/').pop().replace('.html', '');
+        const activeClass = (linkFile === currentFile) ? ' class="active"' : '';
+        
+        return `<a href="${link.href}"${target}${activeClass}>${link.label}${badge}</a>`;
+      }).join('');
+    } catch(e) { console.error('Nav injection failed:', e); }
+  }
 
-      // Smart Active Match: If path ends with href, or if at root and href is index.html
-      const isActive = path.endsWith(href) || (path.endsWith('/') && href === 'index.html');
-      if(isActive) a.classList.add('active');
-
-      // ADMIN ONLY TABS (P&L, Activity, Admin, Creature Editor, Email Blast, Drop Launch)
-      const isAdminOnly = href.includes('pl-tracker') || href.includes('activity') || href.includes('admin')
-        || href.includes('creature-editor') || href.includes('email-blast') || href.includes('drop-launch');
-      if(isAdminOnly && role !== 'admin') a.style.display = 'none';
-
-      // Hide drop-launch nav link after drop has launched
-      if(href.includes('drop-launch') && localStorage.getItem('cc_drop1_launched')) a.style.display = 'none';
-
-      // Messages Badge Injection
-      if(href.includes('cadence-messages')) {
-        a.innerHTML = 'Messages <span id="msg-badge" class="nav-badge" style="display:none">0</span>';
-      }
-
-      // ROLE-BASED VISIBILITY
-      if(role === 'fulfillment' && isAdminOnly) a.style.display = 'none';
-      if(role === 'finance' && (href.includes('fulfillment') || href.includes('queue'))) a.style.display = 'none';
-    });
-
-    // DISPLAY USER NAME (With Session Caching)
-    let displayName = sessionStorage.getItem('cc_user_name');
-    if(!displayName) {
-      displayName = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
-      try {
+  // 2. INJECT TOPBAR ELEMENTS
+  const right = document.querySelector('.topbar-right');
+  if(right) {
+    try {
+      // User Greeting
+      let displayName = sessionStorage.getItem('cc_user_name');
+      if(!displayName) {
+        displayName = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
         const { data: profile } = await db.from('profiles').select('full_name').eq('id', currentUser.id).single();
         if(profile && profile.full_name) {
           displayName = profile.full_name;
           sessionStorage.setItem('cc_user_name', displayName);
         }
-      } catch(e) { console.warn('Profile fetch failed'); }
-    }
+      }
 
-    const right = document.querySelector('.topbar-right');
-    if(right) {
       let greet = document.getElementById('user-greet');
       if(!greet) {
         greet = document.createElement('div');
         greet.id = 'user-greet';
-        right.appendChild(greet);
+        greet.style = 'font-family:"Lora",serif; font-size:11px; color:#E8D08A; letter-spacing:0.05em; font-weight:500; margin-right:15px; border-left:1px solid rgba(201,168,76,0.15); padding-left:15px; display:flex; align-items:center; height:100%;';
+        right.insertBefore(greet, right.querySelector('.topbar-link'));
       }
-      const signOutLink = right.querySelector('.topbar-link');
-      if(signOutLink) right.insertBefore(greet, signOutLink);
-      greet.style = 'font-family:"Lora",serif; font-size:11px; color:#E8D08A; letter-spacing:0.05em; font-weight:500; margin-right:15px; border-left:1px solid rgba(201,168,76,0.15); padding-left:15px; display:flex; align-items:center; height:100%;';
       greet.textContent = `User: ${displayName.charAt(0).toUpperCase() + displayName.slice(1)}`;
-    }
 
-    // HIDE REVENUE KPI FOR NON-ADMINS
-    const revCard = document.getElementById('kpi-revenue-card');
-    if(revCard && role !== 'admin') revCard.style.display = 'none';
-
-    // INJECT UNIFIED CONNECTION HUB
-    if(right) {
+      // Connection Hub
       let connHub = document.getElementById('conn-hub');
       if(!connHub) {
         connHub = document.createElement('div');
         connHub.id = 'conn-hub';
         connHub.style = 'display:flex; align-items:center; gap:16px; margin-right:15px;';
-        right.insertBefore(connHub, right.querySelector('.topbar-link'));
+        right.insertBefore(connHub, greet);
       }
       connHub.innerHTML = `
         <div class="conn-item" title="Supabase Real-time Database">
           <div class="conn-dot" style="background:#4a8c5c;"></div> Cloud Sync
         </div>
-        <div class="conn-item" title="EmailJS Notification Engine">
+        <div class="conn-item" title="Email Engine">
           <div class="conn-dot" style="background:#4a8c5c;"></div> Mail Engine
         </div>
-        <div id="master-printer-pill" class="conn-pill">
-          🖨 Vision: Loading...
-        </div>
+        <div id="master-printer-pill" class="conn-pill">🖨 Vision: Loading...</div>
       `;
       updateMasterPrinterStatus();
-      // Reposition greet after conn-hub so order is: [conn-hub] [user] | Sign Out
-      const greetEl = document.getElementById('user-greet');
-      const signOutEl = right.querySelector('.topbar-link');
-      if(greetEl && signOutEl) right.insertBefore(greetEl, signOutEl);
-    }
+    } catch(e) { console.error('Topbar injection failed:', e); }
   }
 
-  db.channel('master-printers')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'printers' }, () => updateMasterPrinterStatus())
-    .subscribe();
+  // 3. INITIALIZE REAL-TIME WATCHERS
+  try {
+    db.channel('master-printers')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'printers' }, () => updateMasterPrinterStatus())
+      .subscribe();
 
-  // Real-time Message Watcher
-  db.channel('contact-messages')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'contact_submissions' }, () => refreshMessageBadge())
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'contact_submissions' }, () => refreshMessageBadge())
-    .subscribe();
-  
-  refreshMessageBadge();
+    db.channel('contact-messages')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contact_submissions' }, () => refreshMessageBadge())
+      .subscribe();
+    
+    refreshMessageBadge();
+  } catch(e) { console.error('Real-time init failed:', e); }
 
-  const path = window.location.pathname;
-  const isOwner = currentUser.email === 'stevenportugal86@gmail.com';
-  
-  if((path.includes('cadence-admin.html') || path.includes('cadence-activity.html')) && role !== 'admin' && !isOwner) window.location.href = 'index.html';
-  if(path.includes('cadence-creatures-pl-tracker.html') && role === 'fulfillment' && !isOwner) window.location.href='index.html';
-  if((path.includes('cadence-fulfillment.html') || path.includes('cadence-queue.html')) && role === 'finance' && !isOwner) window.location.href='index.html';
+  // 4. SECURITY REDIRECTS
+  if(!isOwner) {
+    if((path.includes('cadence-admin') || path.includes('cadence-activity')) && role !== 'admin') window.location.href = 'index.html';
+    if(path.includes('pl-tracker') && role === 'fulfillment') window.location.href='index.html';
+    if((path.includes('fulfillment') || path.includes('queue')) && role === 'finance') window.location.href='index.html';
+  }
 }
 
 async function updateMasterPrinterStatus() {
@@ -485,12 +489,12 @@ styleShield.textContent = `
     top: 64px !important;
     z-index: 999 !important;
   }
-  .dash-nav a { 
+  .dash-nav a {
     font-family: 'Lora', serif !important;
     font-size: 10px !important;
-    padding: 14px 20px !important;
+    padding: 12px 13px !important;
     text-transform: uppercase !important;
-    letter-spacing: 0.15em !important;
+    letter-spacing: 0.12em !important;
     color: rgba(196, 188, 178, 0.6) !important;
     text-decoration: none !important;
     border-bottom: 3px solid transparent !important;
@@ -657,7 +661,7 @@ styleShield.textContent = `
     .topbar { padding: 0 16px !important; }
     .main-content { padding: 24px 16px !important; }
     .dash-nav { padding: 0 8px !important; }
-    .dash-nav a { padding: 12px 14px !important; font-size: 9px !important; }
+    .dash-nav a { padding: 10px 11px !important; font-size: 9px !important; }
     #user-greet { display: none !important; }
     .conn-item { display: none !important; }
     .conn-pill { font-size: 9px !important; padding: 4px 10px !important; }
