@@ -299,6 +299,7 @@
     creatures = creatures.map(c => c.id === id ? { ...c, [field]: val } : c);
     const cName = (creatures.find(x => x.id === id) || {}).name || id;
     logActivity('Set ' + field, null, cName + ' → ' + val);
+    sendDiscordAlert('⚡ Toggle: ' + field, `**${cName}** set to **${val}**`);
     sync(false);
     render();
   }
@@ -313,6 +314,7 @@
     creatures = creatures.map(x => x.id === id ? { ...x, qty_on_hand: next } : x);
     const cName = (creatures.find(x => x.id === id) || {}).name || id;
     logActivity('Adjust stock', null, cName + ': qty → ' + next);
+    sendDiscordAlert('📦 Stock Update', `**${cName}** inventory adjusted to **${next}**`, next === 0 ? 0xE87070 : 0xC9A84C);
     sync(false);
     render();
   }
@@ -421,6 +423,7 @@
     if (error) { serr(); toast('Save failed', 'err'); return; }
     toast(id ? 'Saved' : 'Creature added');
     logActivity(id ? 'Edit creature' : 'Add creature', null, payload.name);
+    sendDiscordAlert(id ? '✏️ Creature Updated' : '✨ New Discovery', `**${payload.name}** has been ${id ? 'updated' : 'added to the workshop log'}.`);
     closeModal();
     await init();
   }
@@ -433,6 +436,7 @@
     const { error } = await db.from('creatures').delete().eq('id', id);
     if (error) { serr(); toast('Delete failed', 'err'); return; }
     logActivity('Delete creature', null, delC ? delC.name : id);
+    sendDiscordAlert('🗑️ Creature Deleted', `**${delC ? delC.name : id}** has been removed from the log.`);
     toast('Deleted');
     closeModal();
     await init();
