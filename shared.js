@@ -161,39 +161,45 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
+// CENTRALIZED NAV DEFINITION
+const NAV_LINKS = [
+  { label: 'Hub', href: 'index.html' },
+  { label: 'Queue', href: 'cadence-queue.html' },
+  { label: 'Fulfillment', href: 'cadence-fulfillment.html' },
+  { label: 'Customers', href: 'cadence-customers.html' },
+  { label: 'Messages', href: 'cadence-messages.html', badge: 'msg-badge' },
+  { label: 'Creatures', href: 'cadence-creature-editor.html', adminOnly: true },
+  { label: 'Email Blast', href: 'cadence-email-blast.html', adminOnly: true },
+  { label: '🚀 Launch', href: 'cadence-drop-launch.html', adminOnly: true, hideIfLaunched: true },
+  { label: 'P&L', href: 'cadence-creatures-pl-tracker.html', adminOnly: true },
+  { label: 'Links', href: 'cadence-links.html' },
+  { label: 'Activity', href: 'cadence-activity.html', adminOnly: true },
+  { label: 'Admin', href: 'cadence-admin.html', adminOnly: true },
+  { label: 'Site', href: 'cadence-site.html' },
+  { label: 'Live Site ↗', href: 'https://cadencecreatures.com', external: true },
+  { label: 'Etsy Shop ↗', href: 'https://etsy.com/shop/CadenceCreatures', external: true }
+];
+
 async function applyRolePermissions() {
   if(!currentUser) return;
   const role = currentUser.user_metadata?.role || 'user';
   
   const nav = document.querySelector('.dash-nav');
   if(nav) {
-    const links = nav.querySelectorAll('a');
-    links.forEach(a => {
-      const href = a.getAttribute('href');
-      if(!href) return;
-      const path = window.location.pathname;
+    // Inject centralized nav
+    nav.innerHTML = NAV_LINKS.map(link => {
+      if (link.adminOnly && role !== 'admin') return '';
+      if (link.hideIfLaunched && localStorage.getItem('cc_drop1_launched')) return '';
+      if (role === 'finance' && (link.href.includes('fulfillment') || link.href.includes('queue'))) return '';
+      
+      const target = link.external ? ' target="_blank"' : '';
+      const badge = link.badge ? ` <span id="${link.badge}" class="nav-badge" style="display:none">0</span>` : '';
+      return `<a href="${link.href}"${target}>${link.label}${badge}</a>`;
+    }).join('');
 
-      // Smart Active Match: If path ends with href, or if at root and href is index.html
-      const isActive = path.endsWith(href) || (path.endsWith('/') && href === 'index.html');
-      if(isActive) a.classList.add('active');
-
-      // ADMIN ONLY TABS (P&L, Activity, Admin, Creature Editor, Email Blast, Drop Launch)
-      const isAdminOnly = href.includes('pl-tracker') || href.includes('activity') || href.includes('admin')
-        || href.includes('creature-editor') || href.includes('email-blast') || href.includes('drop-launch');
-      if(isAdminOnly && role !== 'admin') a.style.display = 'none';
-
-      // Hide drop-launch nav link after drop has launched
-      if(href.includes('drop-launch') && localStorage.getItem('cc_drop1_launched')) a.style.display = 'none';
-
-      // Messages Badge Injection
-      if(href.includes('cadence-messages')) {
-        a.innerHTML = 'Messages <span id="msg-badge" class="nav-badge" style="display:none">0</span>';
-      }
-
-      // ROLE-BASED VISIBILITY
-      if(role === 'fulfillment' && isAdminOnly) a.style.display = 'none';
-      if(role === 'finance' && (href.includes('fulfillment') || href.includes('queue'))) a.style.display = 'none';
-    });
+    // Re-highlight after injection
+    highlightNav();
+  }
 
     // DISPLAY USER NAME (With Session Caching)
     let displayName = sessionStorage.getItem('cc_user_name');
@@ -265,6 +271,9 @@ async function applyRolePermissions() {
     .subscribe();
   
   refreshMessageBadge();
+
+  // Re-assert active nav state after all role-based DOM mutations
+  highlightNav();
 
   const path = window.location.pathname;
   const isOwner = currentUser.email === 'stevenportugal86@gmail.com';
@@ -423,10 +432,11 @@ styleShield.textContent = `
   .sec-title { font-size: 13px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold-light); font-weight: 600; }
 
   /* Dashboard Building Blocks */
-  .tabs { display: flex !important; padding: 0 28px !important; border-bottom: 1px solid var(--border) !important; gap: 2px !important; background: rgba(0,0,0,0.2) !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
-  .tab { font-family: 'Lora', serif !important; padding: 14px 20px !important; font-size: 11px !important; letter-spacing: .12em !important; text-transform: uppercase !important; color: var(--cream-faint) !important; cursor: pointer !important; border: none !important; background: none !important; border-bottom: 3px solid transparent !important; transition: all 0.2s !important; white-space: nowrap !important; flex-shrink: 0 !important; }
-  .tab:hover { color: var(--gold-light) !important; background: var(--gold-dim) !important; }
-  .tab.active { color: var(--gold-light) !important; border-bottom-color: var(--gold) !important; background: rgba(201, 168, 76, 0.05) !important; }
+  .tabs { display: flex !important; padding: 0 20px !important; border-bottom: 1px solid rgba(201, 168, 76, 0.15) !important; gap: 2px !important; background: rgba(0,0,0,0.1) !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; scrollbar-width: none !important; }
+  .tabs::-webkit-scrollbar { display: none !important; }
+  .tab { font-family: 'Lora', serif !important; padding: 14px 24px !important; font-size: 11px !important; letter-spacing: .12em !important; text-transform: uppercase !important; color: var(--cream-faint) !important; cursor: pointer !important; border: none !important; background: none !important; border-bottom: 3px solid transparent !important; transition: all 0.2s !important; white-space: nowrap !important; flex-shrink: 0 !important; margin-bottom: -1px !important; position: relative !important; z-index: 1 !important; }
+  .tab:hover { color: var(--gold-light) !important; background: rgba(201, 168, 76, 0.04) !important; }
+  .tab.active { color: var(--gold-light) !important; border-bottom-color: var(--gold) !important; background: rgba(201, 168, 76, 0.06) !important; z-index: 2 !important; }
 
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 24px; }
   .kpi { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); padding: 22px; border-radius: 4px; text-align: center; }
@@ -476,22 +486,25 @@ styleShield.textContent = `
   .dash-nav { 
     display: flex !important; 
     background: rgba(20, 18, 15, 0.95) !important; 
-    backdrop-filter: blur(10px) !important;
-    padding: 0 16px !important; 
+    backdrop-filter: blur(12px) !important;
+    padding: 0 20px !important; 
     gap: 0 !important;
-    border-bottom: 1px solid rgba(201, 168, 76, 0.1) !important;
+    border-bottom: 1px solid rgba(201, 168, 76, 0.15) !important;
     overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
     position: sticky !important;
     top: 64px !important;
     z-index: 999 !important;
+    scrollbar-width: none !important;
   }
+  .dash-nav::-webkit-scrollbar { display: none !important; }
   .dash-nav a { 
     font-family: 'Lora', serif !important;
     font-size: 10px !important;
-    padding: 14px 20px !important;
+    padding: 18px 24px !important;
     text-transform: uppercase !important;
     letter-spacing: 0.15em !important;
-    color: rgba(196, 188, 178, 0.6) !important;
+    color: rgba(196, 188, 178, 0.5) !important;
     text-decoration: none !important;
     border-bottom: 3px solid transparent !important;
     transition: all 0.2s ease !important;
@@ -499,6 +512,7 @@ styleShield.textContent = `
     display: inline-block !important;
     white-space: nowrap !important;
     flex-shrink: 0 !important;
+    margin-bottom: -1px !important;
   }
   .dash-nav a:hover {
     color: #E8D08A !important;
@@ -506,8 +520,9 @@ styleShield.textContent = `
   }
   .dash-nav a.active { 
     color: #E8D08A !important; 
-    border-bottom: 3px solid #C9A84C !important;
+    border-bottom-color: #C9A84C !important;
     background: rgba(201, 168, 76, 0.08) !important;
+    z-index: 2 !important;
   }
   .topbar-link {
     font-family: 'Lora', serif !important;
@@ -760,19 +775,52 @@ async function logActivity(action, orderId = null, details = null) {
   if (error) console.error('[activity] insert failed:', error.message, error);
 }
 
-// NAV HIGHLIGHTER
 function highlightNav() {
-  let path = window.location.pathname.split('/').pop() || 'index.html';
-  // Handle extension-less URLs (like localhost:4321/cadence-queue)
-  if (path && !path.includes('.')) path += '.html';
+  const path = window.location.pathname.replace(/\/$/, '') || '/index.html';
+  const pathParts = path.split('/');
+  const currentFile = pathParts[pathParts.length - 1] || 'index.html';
+  const cleanPath = currentFile.replace('.html', '');
 
   document.querySelectorAll('.dash-nav a').forEach(a => {
     const href = a.getAttribute('href');
-    if (href === path) {
+    if (!href) return;
+    
+    // Ignore absolute links to other domains
+    if (href.startsWith('http')) {
+      a.classList.remove('active');
+      return;
+    }
+
+    const hrefParts = href.split('/');
+    const hrefFile = hrefParts[hrefParts.length - 1];
+    const cleanHref = hrefFile.replace('.html', '');
+
+    if (cleanHref === cleanPath) {
       a.classList.add('active');
     } else {
       a.classList.remove('active');
     }
+  });
+}
+
+// Helper for page-specific sub-tabs
+function initSubTabs(activeTab, callback) {
+  const buttons = document.querySelectorAll('.tab');
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabId = btn.getAttribute('data-tab') || 
+                    (btn.getAttribute('onclick') || '').match(/'([^']+)'/)?.[1];
+      if (!tabId) return;
+      
+      buttons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (callback) callback(tabId);
+    });
+    
+    // Set initial state
+    const tabId = btn.getAttribute('data-tab') || 
+                  (btn.getAttribute('onclick') || '').match(/'([^']+)'/)?.[1];
+    if (tabId === activeTab) btn.classList.add('active');
   });
 }
 
