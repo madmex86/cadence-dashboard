@@ -185,6 +185,11 @@ async function applyRolePermissions() {
       // Hide drop-launch nav link after drop has launched
       if(href.includes('drop-launch') && localStorage.getItem('cc_drop1_launched')) a.style.display = 'none';
 
+      // Messages Badge Injection
+      if(href.includes('cadence-messages')) {
+        a.innerHTML = 'Messages <span id="msg-badge" class="nav-badge" style="display:none">0</span>';
+      }
+
       // ROLE-BASED VISIBILITY
       if(role === 'fulfillment' && isAdminOnly) a.style.display = 'none';
       if(role === 'finance' && (href.includes('fulfillment') || href.includes('queue'))) a.style.display = 'none';
@@ -249,10 +254,17 @@ async function applyRolePermissions() {
     }
   }
 
-  // Real-time Printer Watcher
   db.channel('master-printers')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'printers' }, () => updateMasterPrinterStatus())
     .subscribe();
+
+  // Real-time Message Watcher
+  db.channel('contact-messages')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'contact_submissions' }, () => refreshMessageBadge())
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'contact_submissions' }, () => refreshMessageBadge())
+    .subscribe();
+  
+  refreshMessageBadge();
 
   const path = window.location.pathname;
   const isOwner = currentUser.email === 'stevenportugal86@gmail.com';
@@ -284,6 +296,18 @@ async function updateMasterPrinterStatus() {
   } catch(e) { console.warn('Printer status update failed'); }
 }
 
+async function refreshMessageBadge() {
+  try {
+    const { count, error } = await db.from('contact_submissions').select('id', { count: 'exact', head: true }).eq('is_read', false);
+    if(error) throw error;
+    const badge = document.getElementById('msg-badge');
+    if(badge) {
+      badge.textContent = count;
+      badge.style.display = count > 0 ? 'inline-flex' : 'none';
+    }
+  } catch(e) { console.warn('Message badge refresh failed'); }
+}
+
 function initEmail() {}
 
 // UNIVERSAL DASHBOARD STYLES (Enforces symmetry across all pages)
@@ -304,6 +328,22 @@ styleShield.textContent = `
     --green: #7dc994;
     --amber: #c97c2a;
     --purple: #b89de8;
+    --red-badge: #e87070;
+  }
+
+  .nav-badge {
+    background: var(--red-badge);
+    color: #fff;
+    font-size: 9px;
+    font-weight: bold;
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin-left: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 14px;
+    box-shadow: 0 0 10px rgba(232, 112, 112, 0.4);
   }
 
   html { font-size: 16px; }
