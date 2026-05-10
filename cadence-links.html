@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cadence Creatures — Links Editor</title>
+<link rel="icon" href="/favicon.ico?v=2"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared.js"></script>
+<style>
+  .two-col { display: flex; gap: 20px; padding: 20px; min-height: calc(100vh - 96px); }
+  .editor-col { width: 420px; min-width: 420px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
+  .preview-col { flex: 1; display: flex; flex-direction: column; }
+  .preview-label { font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: var(--cream-faint); margin-bottom: 8px; }
+  .preview-frame { flex: 1; min-height: 600px; border: 1px solid var(--border); border-radius: 4px; background: #0E0C09; }
+
+  .brand-card { background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 4px; padding: 18px; }
+  .brand-card h2 { font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold-light); opacity: .6; margin-bottom: 14px; }
+  .fi { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+  .fi label { font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--cream-faint); }
+  .fi input { background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--cream); padding: 8px 10px; font-size: 12px; font-family: inherit; width: 100%; }
+  .fi input:focus { outline: none; border-color: rgba(201,168,76,.4); }
+
+  .links-card { background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 4px; padding: 18px; }
+  .links-card h2 { font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold-light); opacity: .6; margin-bottom: 14px; }
+  .link-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+
+  .link-row {
+    background: rgba(0,0,0,0.25);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 12px;
+    transition: border-color .2s;
+  }
+  .link-row.disabled-row { opacity: .45; }
+  .link-row.drag-over { border-color: rgba(201,168,76,.5); }
+  .lr-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .drag-handle { cursor: grab; color: var(--cream-faint); font-size: 14px; line-height: 1; padding: 2px 3px; flex-shrink: 0; }
+  .drag-handle:active { cursor: grabbing; }
+  .lr-label-input { flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--cream); padding: 6px 8px; font-size: 12px; font-family: inherit; }
+  .lr-label-input:focus { outline: none; border-color: rgba(201,168,76,.4); }
+  .lr-toggle { appearance: none; width: 28px; height: 16px; border-radius: 8px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.15); cursor: pointer; position: relative; flex-shrink: 0; transition: background .2s; }
+  .lr-toggle:checked { background: rgba(201,168,76,.6); border-color: rgba(201,168,76,.6); }
+  .lr-toggle::after { content: ''; position: absolute; width: 10px; height: 10px; border-radius: 50%; background: #fff; top: 2px; left: 2px; transition: left .2s; }
+  .lr-toggle:checked::after { left: 14px; }
+  .lr-del { background: none; border: 1px solid rgba(168,68,68,.35); color: #e09090; padding: 4px 8px; font-size: 10px; cursor: pointer; flex-shrink: 0; font-family: inherit; transition: background .2s; }
+  .lr-del:hover { background: rgba(168,68,68,.15); }
+  .lr-mid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+  .lr-sub-input, .lr-icon-select { background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--cream); padding: 5px 8px; font-size: 11px; font-family: inherit; width: 100%; }
+  .lr-sub-input:focus, .lr-icon-select:focus { outline: none; border-color: rgba(201,168,76,.4); }
+  .lr-icon-select option { background: #1C1612; }
+  .lr-url-row { display: flex; gap: 6px; align-items: center; }
+  .lr-url-input { flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--cream); padding: 5px 8px; font-size: 11px; font-family: inherit; }
+  .lr-url-input:focus { outline: none; border-color: rgba(201,168,76,.4); }
+  .lr-arrows { display: flex; flex-direction: column; gap: 2px; }
+  .lr-arr { background: none; border: 1px solid var(--border); color: var(--cream-faint); width: 20px; height: 18px; font-size: 9px; cursor: pointer; padding: 0; line-height: 1; transition: color .2s; }
+  .lr-arr:hover { color: var(--gold-light); border-color: rgba(201,168,76,.4); }
+
+  .add-btn { width: 100%; background: none; border: 1px dashed rgba(201,168,76,.25); color: rgba(201,168,76,.5); padding: 10px; font-size: 11px; letter-spacing: .1em; cursor: pointer; font-family: inherit; transition: all .2s; }
+  .add-btn:hover { border-color: rgba(201,168,76,.5); color: var(--gold-light); background: rgba(201,168,76,.04); }
+
+  .actions-row { display: flex; gap: 10px; }
+  .dl-btn { flex: 1; background: var(--gold); color: #1C1612; border: none; padding: 12px 20px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; cursor: pointer; font-family: inherit; font-weight: 600; transition: background .2s; }
+  .dl-btn:hover { background: var(--gold-light); }
+  .preview-btn { background: none; border: 1px solid var(--border); color: var(--cream-faint); padding: 12px 16px; font-size: 10px; letter-spacing: .12em; cursor: pointer; font-family: inherit; transition: all .2s; }
+  .preview-btn:hover { border-color: rgba(201,168,76,.4); color: var(--gold-light); }
+</style>
+</head>
+<body>
+
+<div id="login-screen" style="display:none"></div>
+
+<div id="app" style="display:none">
+<div class="topbar">
+  <div class="topbar-left">
+    <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round"/><rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C"/><circle cx="36" cy="4" r="5.5" fill="#E8D08A"/><circle cx="6" cy="18" r="4" fill="#5BBFD4"/><circle cx="66" cy="18" r="4" fill="#5BBFD4"/></svg>
+    <div><div class="topbar-name">Cadence Creatures</div><div class="topbar-sub">Back Office</div></div>
+  </div>
+  <div class="topbar-right">
+    <div id="user-greet"></div>
+    <a class="topbar-link" onclick="signOut()">Sign Out</a>
+  </div>
+</div>
+
+<div class="dash-nav">
+  <a href="index.html">Hub</a>
+  <a href="cadence-queue.html">Queue</a>
+  <a href="cadence-fulfillment.html">Fulfillment</a>
+  <a href="cadence-customers.html">Customers</a>
+  <a href="cadence-creature-editor.html">Creatures</a>
+  <a href="cadence-email-blast.html">Email Blast</a>
+  <a href="cadence-drop-launch.html">🚀 Launch</a>
+  <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
+  <a href="cadence-links.html" class="active">Links</a>
+  <a href="cadence-activity.html">Activity</a>
+  <a href="cadence-admin.html">Admin</a>
+  <a href="cadence-site.html">Site</a>
+  <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
+  <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
+</div>
+
+<div class="two-col">
+
+  <div class="editor-col">
+
+    <div class="brand-card">
+      <h2>Brand</h2>
+      <div class="fi">
+        <label>Tagline</label>
+        <input type="text" id="f-tagline" oninput="save();updatePreview()"/>
+      </div>
+      <div class="fi" style="margin-bottom:0">
+        <label>Footer Signature</label>
+        <input type="text" id="f-footer" oninput="save();updatePreview()"/>
+      </div>
+    </div>
+
+    <div class="links-card">
+      <h2>Links</h2>
+      <div class="link-rows" id="link-rows"></div>
+      <button class="add-btn" onclick="addLink()">+ Add Link</button>
+    </div>
+
+    <div class="actions-row">
+      <button class="dl-btn" onclick="downloadHtml()">⬇ Download links.html</button>
+      <button class="preview-btn" onclick="updatePreview()">↺ Refresh Preview</button>
+    </div>
+
+  </div>
+
+  <div class="preview-col">
+    <div class="preview-label">Live Preview — cadencecreatures.com/links</div>
+    <iframe id="preview-frame" class="preview-frame" sandbox="allow-same-origin allow-scripts"></iframe>
+  </div>
+
+</div>
+</div>
+
+<script>
+var ICONS = {
+  shop:      '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
+  instagram: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>',
+  tiktok:    '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.27 8.27 0 0 0 4.83 1.55V6.78a4.85 4.85 0 0 1-1.06-.09z"/></svg>',
+  notes:     '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+  email:     '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
+  globe:     '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+  youtube:   '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75,15.02 15.5,12 9.75,8.98 9.75,15.02" fill="#fff"/></svg>',
+  facebook:  '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>',
+  link:      '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>'
+};
+
+var ICON_NAMES = { shop:'Shop', instagram:'Instagram', tiktok:'TikTok', notes:'Field Notes', email:'Email', globe:'Website', youtube:'YouTube', facebook:'Facebook', link:'Link' };
+
+var DEFAULT_CONFIG = {
+  tagline: 'Born from love. Built to be held.',
+  footer: 'Made with love in Visalia, CA',
+  links: [
+    { id: 'etsy',      label: 'Etsy Shop',    sub: 'Shop all creatures',           url: 'https://www.etsy.com/shop/CadenceCreatures', icon: 'shop',      enabled: true },
+    { id: 'instagram', label: 'Instagram',    sub: '@cadencecreatures',             url: 'https://instagram.com/cadencecreatures',    icon: 'instagram', enabled: true },
+    { id: 'tiktok',    label: 'TikTok',       sub: '@cadencecreatures',             url: 'https://tiktok.com/@cadencecreatures',      icon: 'tiktok',    enabled: true },
+    { id: 'notes',     label: 'Field Notes',  sub: 'Creature lore & journals', url: 'https://cadencecreatures.com/logs/',        icon: 'notes',     enabled: true },
+    { id: 'contact',   label: 'Contact',      sub: 'hello@cadencecreatures.com',    url: 'mailto:hello@cadencecreatures.com',         icon: 'email',     enabled: true }
+  ]
+};
+
+var config;
+var dragIdx = null;
+
+function loadConfig() {
+  try {
+    var raw = localStorage.getItem('cc_links_config');
+    config = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  } catch(e) {
+    config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  }
+}
+
+function save() {
+  config.tagline = document.getElementById('f-tagline').value;
+  config.footer  = document.getElementById('f-footer').value;
+  localStorage.setItem('cc_links_config', JSON.stringify(config));
+}
+
+function uid() { return Math.random().toString(36).slice(2, 9); }
+
+function addLink() {
+  config.links.push({ id: uid(), label: 'New Link', sub: '', url: '', icon: 'link', enabled: true });
+  save();
+  renderLinks();
+  updatePreview();
+}
+
+function removeLink(id) {
+  config.links = config.links.filter(function(l) { return l.id !== id; });
+  save();
+  renderLinks();
+  updatePreview();
+}
+
+function moveLink(id, dir) {
+  var idx = config.links.findIndex(function(l) { return l.id === id; });
+  var to = idx + dir;
+  if (to < 0 || to >= config.links.length) return;
+  var tmp = config.links[idx];
+  config.links[idx] = config.links[to];
+  config.links[to] = tmp;
+  save();
+  renderLinks();
+  updatePreview();
+}
+
+function updateLink(id, field, value) {
+  var l = config.links.find(function(x) { return x.id === id; });
+  if (!l) return;
+  l[field] = value;
+  if (field === 'enabled') {
+    var row = document.querySelector('[data-link-id="' + id + '"]');
+    if (row) row.classList.toggle('disabled-row', !value);
+  }
+  save();
+  updatePreview();
+}
+
+function renderLinks() {
+  var container = document.getElementById('link-rows');
+  container.innerHTML = config.links.map(function(l, i) {
+    var iconOpts = Object.keys(ICONS).map(function(k) {
+      return '<option value="' + k + '"' + (l.icon === k ? ' selected' : '') + '>' + ICON_NAMES[k] + '</option>';
+    }).join('');
+    return '<div class="link-row' + (l.enabled ? '' : ' disabled-row') + '" data-link-id="' + l.id + '" draggable="true">'
+      + '<div class="lr-top">'
+      + '<span class="drag-handle" title="Drag to reorder">⠿</span>'
+      + '<input class="lr-label-input" type="text" value="' + esc(l.label) + '" placeholder="Label" oninput="updateLink(\'' + l.id + '\',\'label\',this.value)"/>'
+      + '<input type="checkbox" class="lr-toggle"' + (l.enabled ? ' checked' : '') + ' title="Toggle on/off" onchange="updateLink(\'' + l.id + '\',\'enabled\',this.checked)"/>'
+      + '<button class="lr-del" onclick="removeLink(\'' + l.id + '\')">✕</button>'
+      + '</div>'
+      + '<div class="lr-mid">'
+      + '<input class="lr-sub-input" type="text" value="' + esc(l.sub) + '" placeholder="Sub-label" oninput="updateLink(\'' + l.id + '\',\'sub\',this.value)"/>'
+      + '<select class="lr-icon-select" onchange="updateLink(\'' + l.id + '\',\'icon\',this.value)">' + iconOpts + '</select>'
+      + '</div>'
+      + '<div class="lr-url-row">'
+      + '<input class="lr-url-input" type="text" value="' + esc(l.url) + '" placeholder="URL or mailto:…" oninput="updateLink(\'' + l.id + '\',\'url\',this.value)"/>'
+      + '<div class="lr-arrows">'
+      + '<button class="lr-arr" onclick="moveLink(\'' + l.id + '\',-1)" title="Move up">▲</button>'
+      + '<button class="lr-arr" onclick="moveLink(\'' + l.id + '\',1)" title="Move down">▼</button>'
+      + '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+
+  // Drag-and-drop
+  container.querySelectorAll('.link-row').forEach(function(row, i) {
+    row.addEventListener('dragstart', function(e) {
+      dragIdx = i;
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      row.classList.add('drag-over');
+    });
+    row.addEventListener('dragleave', function() {
+      row.classList.remove('drag-over');
+    });
+    row.addEventListener('drop', function(e) {
+      e.preventDefault();
+      row.classList.remove('drag-over');
+      if (dragIdx === null || dragIdx === i) return;
+      var moved = config.links.splice(dragIdx, 1)[0];
+      config.links.splice(i, 0, moved);
+      dragIdx = null;
+      save();
+      renderLinks();
+      updatePreview();
+    });
+  });
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function generateLinksHtml() {
+  var enabledLinks = config.links.filter(function(l) { return l.enabled; });
+  var linksHtml = enabledLinks.map(function(l) {
+    var isExternal = l.url && (l.url.startsWith('http://') || l.url.startsWith('https://'));
+    var target = isExternal ? ' target="_blank" rel="noopener"' : '';
+    var iconSvg = ICONS[l.icon] || ICONS['link'];
+    var subHtml = l.sub ? '<span class="slbl">' + escHtml(l.sub) + '</span>' : '';
+    return '      <a class="lnk" href="' + escHtml(l.url) + '"' + target + '>\n'
+      + '        <div class="ico">' + iconSvg + '</div>\n'
+      + '        <div class="txt"><span class="lbl">' + escHtml(l.label) + '</span>' + subHtml + '</div>\n'
+      + '        <span class="arr">↗</span>\n'
+      + '      </a>';
+  }).join('\n');
+
+  return '<!DOCTYPE html>\n<html lang="en">\n<head>\n'
+    + '  <meta charset="UTF-8"/>\n'
+    + '  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>\n'
+    + '  <title>Cadence Creatures — Links</title>\n'
+    + '  <meta name="description" content="Handcrafted 3D-printed flexi creatures, born from love, built to be held."/>\n'
+    + '  <link rel="icon" href="/favicon.ico"/>\n'
+    + '  <link rel="preconnect" href="https://fonts.googleapis.com"/>\n'
+    + '  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>\n'
+    + '  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Tenor+Sans&display=swap" rel="stylesheet"/>\n'
+    + '  <style>\n'
+    + '    :root{--gold:#C9A84C;--goldl:#E8D08A;--petal:#E8A0B0;--cream:#FAF6F0;--dim:#C4BCB2;--fd:\'Playfair Display\',Georgia,serif;--fb:\'Tenor Sans\',Helvetica,sans-serif;}\n'
+    + '    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}\n'
+    + '    body{background:#0E0C09;color:var(--cream);font-family:var(--fb);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:52px 20px;position:relative;}\n'
+    + '    body::before{content:\'\';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.85\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E");background-size:180px;opacity:0.038;pointer-events:none;z-index:0;}\n'
+    + '    body::after{content:\'\';position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:700px;height:500px;background:radial-gradient(ellipse,rgba(201,168,76,0.05) 0%,transparent 70%);pointer-events:none;z-index:0;}\n'
+    + '    .wrap{position:relative;z-index:1;width:100%;max-width:460px;display:flex;flex-direction:column;align-items:center;}\n'
+    + '    .hd{text-align:center;margin-bottom:40px;}\n'
+    + '    .crown{margin-bottom:22px;display:flex;justify-content:center;}\n'
+    + '    .brand-cadence{font-family:var(--fd);font-weight:700;font-size:36px;letter-spacing:0.22em;color:var(--goldl);text-transform:uppercase;line-height:1;margin-bottom:6px;}\n'
+    + '    .brand-creatures{font-family:var(--fb);font-size:10px;letter-spacing:0.52em;text-transform:uppercase;color:var(--petal);margin-bottom:16px;}\n'
+    + '    .brand-tagline{font-family:var(--fb);font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(201,168,76,0.55);}\n'
+    + '    .rule{width:100%;height:1px;margin-bottom:32px;background:linear-gradient(to right,transparent,rgba(201,168,76,0.3),transparent);}\n'
+    + '    .links{width:100%;display:flex;flex-direction:column;gap:10px;margin-bottom:44px;}\n'
+    + '    .lnk{display:flex;align-items:center;gap:14px;width:100%;padding:15px 20px;background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.18);color:var(--cream);text-decoration:none;transition:background .25s,border-color .25s,transform .2s;}\n'
+    + '    .lnk:hover{background:rgba(201,168,76,0.07);border-color:rgba(201,168,76,0.42);transform:translateY(-1px);}\n'
+    + '    .ico{width:30px;height:30px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--gold);}\n'
+    + '    .txt{flex:1;}\n'
+    + '    .lbl{font-size:13px;letter-spacing:0.06em;display:block;}\n'
+    + '    .slbl{font-size:10px;letter-spacing:0.1em;color:var(--dim);opacity:0.65;display:block;margin-top:2px;}\n'
+    + '    .arr{color:rgba(201,168,76,0.32);font-size:14px;flex-shrink:0;}\n'
+    + '    .foot{text-align:center;}\n'
+    + '    .sig{font-family:var(--fd);font-style:italic;font-size:11px;color:rgba(201,168,76,0.32);}\n'
+    + '  </style>\n</head>\n<body>\n'
+    + '  <div class="wrap">\n'
+    + '    <div class="hd">\n'
+    + '      <div class="crown"><svg width="44" height="32" viewBox="0 -2 76 52" fill="none"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round"/><rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C"/><circle cx="36" cy="4" r="5.5" fill="#E8D08A"/><circle cx="6" cy="18" r="4" fill="#5BBFD4"/><circle cx="66" cy="18" r="4" fill="#5BBFD4"/></svg></div>\n'
+    + '      <div class="brand-cadence">Cadence</div>\n'
+    + '      <div class="brand-creatures">Creatures</div>\n'
+    + '      <div class="brand-tagline">' + escHtml(config.tagline) + '</div>\n'
+    + '    </div>\n'
+    + '    <div class="rule"></div>\n'
+    + '    <div class="links">\n'
+    + linksHtml + '\n'
+    + '    </div>\n'
+    + '    <div class="foot"><div class="sig">' + escHtml(config.footer) + '</div></div>\n'
+    + '  </div>\n</body>\n</html>';
+}
+
+var _previewTimer = null;
+function updatePreview() {
+  clearTimeout(_previewTimer);
+  _previewTimer = setTimeout(function() {
+    var frame = document.getElementById('preview-frame');
+    if (frame) frame.srcdoc = generateLinksHtml();
+  }, 150);
+}
+
+function downloadHtml() {
+  var html = generateLinksHtml();
+  var blob = new Blob([html], { type: 'text/html' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'links.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  logActivity('Download links.html', null, config.links.filter(function(l){return l.enabled;}).length + ' active links');
+  toast('links.html downloaded — commit to Vercel to go live.', 'ok');
+}
+
+function showApp() {
+  document.getElementById('app').style.display = 'block';
+  loadConfig();
+  document.getElementById('f-tagline').value = config.tagline || '';
+  document.getElementById('f-footer').value  = config.footer  || '';
+  renderLinks();
+  updatePreview();
+}
+</script>
+</div>
+</body>
+</html>
