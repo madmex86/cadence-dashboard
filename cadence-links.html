@@ -62,8 +62,11 @@
   .add-btn:hover { border-color: rgba(201,168,76,.5); color: var(--gold-light); background: rgba(201,168,76,.04); }
 
   .actions-row { display: flex; gap: 10px; }
-  .dl-btn { flex: 1; background: var(--gold); color: #1C1612; border: none; padding: 12px 20px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; cursor: pointer; font-family: inherit; font-weight: 600; transition: background .2s; }
-  .dl-btn:hover { background: var(--gold-light); }
+  .save-btn { flex: 1; background: var(--gold); color: #1C1612; border: none; padding: 12px 20px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; cursor: pointer; font-family: inherit; font-weight: 600; transition: background .2s; }
+  .save-btn:hover { background: var(--gold-light); }
+  .save-btn:disabled { opacity: .5; cursor: default; }
+  .dl-btn { background: none; border: 1px solid var(--border); color: var(--cream-faint); padding: 12px 16px; font-size: 10px; letter-spacing: .12em; cursor: pointer; font-family: inherit; transition: all .2s; }
+  .dl-btn:hover { border-color: rgba(201,168,76,.4); color: var(--gold-light); }
   .preview-btn { background: none; border: 1px solid var(--border); color: var(--cream-faint); padding: 12px 16px; font-size: 10px; letter-spacing: .12em; cursor: pointer; font-family: inherit; transition: all .2s; }
   .preview-btn:hover { border-color: rgba(201,168,76,.4); color: var(--gold-light); }
 </style>
@@ -124,8 +127,9 @@
     </div>
 
     <div class="actions-row">
-      <button class="dl-btn" onclick="downloadHtml()">⬇ Download links.html</button>
-      <button class="preview-btn" onclick="updatePreview()">↺ Refresh Preview</button>
+      <button class="save-btn" id="save-btn" onclick="saveToSupabase()">✓ Save Changes Live</button>
+      <button class="dl-btn" onclick="downloadHtml()" title="Download as HTML file">⬇</button>
+      <button class="preview-btn" onclick="updatePreview()">↺</button>
     </div>
 
   </div>
@@ -168,13 +172,36 @@ var DEFAULT_CONFIG = {
 var config;
 var dragIdx = null;
 
-function loadConfig() {
+async function loadConfig() {
+  // Try Supabase first, fall back to localStorage, then defaults
+  try {
+    var res = await db.from('site_settings').select('links_config').eq('id', 1).single();
+    if (res.data && res.data.links_config) {
+      config = res.data.links_config;
+      localStorage.setItem('cc_links_config', JSON.stringify(config));
+      return;
+    }
+  } catch(e) { /* fall through */ }
   try {
     var raw = localStorage.getItem('cc_links_config');
     config = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(DEFAULT_CONFIG));
   } catch(e) {
     config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
   }
+}
+
+async function saveToSupabase() {
+  save();
+  var btn = document.getElementById('save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  var { error } = await db.from('site_settings').update({ links_config: config }).eq('id', 1);
+  if (error) {
+    toast('Save failed: ' + error.message, 'err');
+  } else {
+    logActivity('Save links page', null, config.links.filter(function(l){return l.enabled;}).length + ' active links');
+    toast('Links page updated — changes are live.', 'ok');
+  }
+  btn.disabled = false; btn.textContent = '✓ Save Changes Live';
 }
 
 function save() {
@@ -370,9 +397,9 @@ function downloadHtml() {
   toast('links.html downloaded — commit to Vercel to go live.', 'ok');
 }
 
-function showApp() {
+async function showApp() {
   document.getElementById('app').style.display = 'block';
-  loadConfig();
+  await loadConfig();
   document.getElementById('f-tagline').value = config.tagline || '';
   document.getElementById('f-footer').value  = config.footer  || '';
   renderLinks();
