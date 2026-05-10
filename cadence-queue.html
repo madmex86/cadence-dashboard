@@ -24,6 +24,12 @@
   .tab.active { color: var(--gold-light); border-bottom-color: var(--gold); background: rgba(201, 168, 76, 0.05); }
 
   .badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 10px; background: rgba(168,68,68,.25); color: #e09090; font-size: 10px; margin-left: 6px; }
+  .spool-adj { display: flex; align-items: center; gap: 5px; }
+  .spool-adj-btn { background: none; border: 1px solid rgba(201,168,76,.2); color: var(--cream-faint); width: 24px; height: 24px; font-size: 14px; line-height: 1; cursor: pointer; transition: all .15s; padding: 0; flex-shrink: 0; }
+  .spool-adj-btn:hover { border-color: rgba(201,168,76,.5); color: var(--gold-light); }
+  .spool-adj-inp { width: 42px; text-align: center; background: rgba(0,0,0,.3); border: 1px solid rgba(201,168,76,.18); color: var(--cream); font-size: 15px; font-weight: 600; font-family: 'Lora',serif; padding: 3px 4px; }
+  .spool-adj-inp:focus { outline: none; border-color: rgba(201,168,76,.5); }
+  .spool-adj-inp.low { color: #e09090; }
   
   .printer-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; padding: 4px 10px; border: 1px solid rgba(91,191,212,.25); color: #5BBFD4; border-radius: 12px; background: rgba(91,191,212,0.05); }
   
@@ -750,13 +756,46 @@ function render_inv(){
       <td style="color:var(--cream-faint)">${s.brand||'—'}</td>
       <td>${s.color||'—'}</td>
       <td style="font-size:12px;color:var(--cream-dim)">${s.material||'PLA'}</td>
-      <td style="font-size:18px;font-weight:600;color:${low?'#e09090':count>2?'#7dc994':'#c97c2a'}">${count}</td>
+      <td><div class="spool-adj">
+        <button class="spool-adj-btn" onclick="adjustSpool('${s.id}',-1)">−</button>
+        <input class="spool-adj-inp${low?' low':''}" type="number" min="0" value="${count}" id="sc-${s.id}"
+          onchange="setSpoolCount('${s.id}',this.value)"
+          onkeydown="if(event.key==='Enter'){this.blur();}"/>
+        <button class="spool-adj-btn" onclick="adjustSpool('${s.id}',1)">+</button>
+      </div></td>
       <td style="font-size:12px;color:var(--cream-faint)">${thr}</td>
       <td style="color:var(--cream-faint);font-size:12px">${s.cost_per_spool?fmt$(s.cost_per_spool):'-'}</td>
       <td style="white-space:nowrap"><button class="btn sm" onclick="iModal('${s.id}')">Edit</button>${s.purchase_url?`<a class="btn sm grn" href="${s.purchase_url}" target="_blank" rel="noopener" style="margin-left:4px;text-decoration:none;display:inline-block">Order Now ↗</a>`:''}<button class="btn sm red" style="margin-left:4px" onclick="delInv('${s.id}')">✕</button></td>
     </tr>`;
   }).join('');
 }
+async function adjustSpool(id, delta) {
+  const s = inv.find(x => x.id === id);
+  if (!s) return;
+  const next = Math.max(0, (s.spool_count ?? 0) + delta);
+  const inp = document.getElementById('sc-' + id);
+  if (inp) { inp.value = next; inp.classList.toggle('low', next <= (s.reorder_spool_threshold ?? 1)); }
+  s.spool_count = next;
+  const { error } = await db.from('inventory').update({ spool_count: next }).eq('id', id);
+  if (error) { serr(); toast('Failed', 'err'); return; }
+  logActivity('Adjust spool count', null, `${s.spool_name}: qty → ${next}`);
+  update_badges(); check_alerts();
+}
+
+async function setSpoolCount(id, val) {
+  const s = inv.find(x => x.id === id);
+  if (!s) return;
+  const next = Math.max(0, parseInt(val) || 0);
+  const inp = document.getElementById('sc-' + id);
+  if (inp) { inp.value = next; inp.classList.toggle('low', next <= (s.reorder_spool_threshold ?? 1)); }
+  if (next === (s.spool_count ?? 0)) return;
+  s.spool_count = next;
+  const { error } = await db.from('inventory').update({ spool_count: next }).eq('id', id);
+  if (error) { serr(); toast('Failed', 'err'); return; }
+  logActivity('Set spool count', null, `${s.spool_name}: qty → ${next}`);
+  update_badges(); check_alerts();
+}
+
 function iModal(id=''){
   document.getElementById('i-id').value=id;document.getElementById('it').textContent=id?'Edit Spool':'Add Spool';
   // only show the finance log checkbox for new spools

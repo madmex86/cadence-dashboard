@@ -307,12 +307,11 @@ styleShield.textContent = `
   }
 
   html { font-size: 16px; }
-  body { 
-    background: #0E0C09 !important; 
-    color: #FAF6F0 !important; 
-    margin: 0 !important; 
+  body {
+    background: #0E0C09 !important;
+    color: #FAF6F0 !important;
+    margin: 0 !important;
     min-height: 100vh;
-    overflow-x: hidden;
     font-family: 'Lora', serif !important;
     font-size: 11px !important;
     line-height: 1.6 !important;
@@ -346,7 +345,7 @@ styleShield.textContent = `
 
 
   /* Core Layout Components */
-  .main { flex: 1; display: flex; flex-direction: column; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow-x: hidden; }
   .main-content { padding: 32px 28px; max-width: 1200px; margin: 0 auto; width: 100%; box-sizing: border-box; }
   
   /* Buttons & Interactive Elements */
@@ -610,8 +609,37 @@ styleShield.textContent = `
   .help-tip .tip-text { display: none !important; }
   #global-tip { display:none; position:fixed; background:#1e1a14; border:1px solid rgba(201,168,76,0.28); border-radius:4px; padding:9px 12px; font-size:11px; color:rgba(196,188,178,0.85); line-height:1.6; width:215px; z-index:99999; pointer-events:none; box-shadow:0 6px 24px rgba(0,0,0,0.55); white-space:normal; font-family:sans-serif; letter-spacing:0; text-transform:none; font-weight:400; }
   #global-tip::after { content:''; position:absolute; left:50%; transform:translateX(-50%); border:5px solid transparent; }
-  #global-tip.tip-above::after { top:100%; border-top-color:rgba(201,168,76,0.28); }
-  #global-tip.tip-below::after { bottom:100%; border-bottom-color:rgba(201,168,76,0.28); }
+  #global-tip.tip-above::after { top:100%; border-top-color:rgba(201, 168, 76,0.28); }
+  #global-tip.tip-below::after { bottom:100%; border-bottom-color:rgba(201, 168, 76,0.28); }
+
+  /* --- MOBILE OPTIMIZATIONS --- */
+  @media (max-width: 768px) {
+    .topbar { padding: 0 16px !important; }
+    .main-content { padding: 24px 16px !important; }
+    .dash-nav { padding: 0 8px !important; }
+    .dash-nav a { padding: 12px 14px !important; font-size: 9px !important; }
+    #user-greet { display: none !important; }
+    .conn-item { display: none !important; }
+    .conn-pill { font-size: 9px !important; padding: 4px 10px !important; }
+    .topbar-sub { font-size: 8px !important; }
+  }
+
+  @media (max-width: 480px) {
+    .topbar-sub { display: none !important; }
+    .topbar-name { font-size: 12px !important; }
+    .topbar-right { gap: 12px !important; }
+    .topbar-link { font-size: 9px !important; }
+    .dash-nav { -webkit-overflow-scrolling: touch !important; }
+    .dash-nav::-webkit-scrollbar { display: none !important; }
+    .dash-nav { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+    
+    .fr { grid-template-columns: 1fr !important; }
+    .kpi-grid { grid-template-columns: 1fr !important; }
+    
+    /* Fix left-edge clipping on iOS */
+    body, #app { overflow-x: hidden !important; width: 100% !important; position: relative !important; }
+    .main-content { overflow-x: hidden !important; }
+  }
 `;
 document.head.appendChild(styleShield);
 

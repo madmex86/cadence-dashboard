@@ -16,13 +16,19 @@
   <style>
     /* Hub Specifics */
     .kpi-section { margin-bottom: 28px; }
-    .notifications-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    .notifications-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
     .notification-panel { border: 1px solid rgba(201, 168, 76, 0.12); background: rgba(255, 255, 255, 0.02); padding: 18px 20px; border-radius: 6px; }
     .notif-item { font-size: 13px; line-height: 1.5; color: var(--cream); padding: 12px 14px; border: 1px solid rgba(201, 168, 76, 0.08); border-radius: 4px; background: rgba(255, 255, 255, 0.015); margin-bottom: 8px; }
     .notif-item.critical { border-color: rgba(224, 144, 144, 0.22); background: rgba(224, 144, 144, 0.08); }
     .notif-empty { font-size: 12px; color: var(--dim); padding: 12px 14px; border: 1px dashed rgba(201, 168, 76, 0.14); border-radius: 4px; }
     .hub-header { text-align: center; margin-bottom: 24px; }
     .hub-date { font-family: var(--fc); font-size: 17px; color: var(--dim); }
+
+    @media (max-width: 600px) {
+      .notifications-section { grid-template-columns: 1fr; }
+      .hub-title { font-size: 20px; }
+      .btn { width: 100%; box-sizing: border-box; }
+    }
   </style>
 </head>
 
