@@ -19,7 +19,9 @@
   .stat-v.blue { color: #5BBFD4; } .stat-v.gold { color: var(--gold-light); } .stat-v.purple { color: #b89de8; } .stat-v.green { color: #7dc994; }
 
   .tabs { display: flex; padding: 0 28px; border-bottom: 1px solid var(--border); gap: 2px; background: rgba(0,0,0,0.1); }
-  /* Tabs already handled by shared.js */
+  .tab { font-family: 'Lora', serif; padding: 12px 20px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--cream-faint); cursor: pointer; border: none; background: none; border-bottom: 3px solid transparent; transition: all 0.2s; }
+  .tab:hover { color: var(--gold-light); background: rgba(201, 168, 76, 0.03); }
+  .tab.active { color: var(--gold-light); border-bottom-color: var(--gold); background: rgba(201, 168, 76, 0.05); }
 
   .badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 10px; background: rgba(168,68,68,.25); color: #e09090; font-size: 10px; margin-left: 6px; }
   .spool-adj { display: flex; align-items: center; gap: 5px; }
@@ -66,7 +68,23 @@
   </div>
 </div>
 
-  <div class="dash-nav"></div>
+  <div class="dash-nav">
+    <a href="index.html">Hub</a>
+    <a href="cadence-queue.html">Queue</a>
+    <a href="cadence-fulfillment.html">Fulfillment</a>
+    <a href="cadence-customers.html">Customers</a>
+    <a href="cadence-messages.html">Messages</a>
+    <a href="cadence-creature-editor.html">Creatures</a>
+    <a href="cadence-email-blast.html">Email Blast</a>
+    <a href="cadence-drop-launch.html">🚀 Launch</a>
+    <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
+    <a href="cadence-links.html">Links</a>
+    <a href="cadence-activity.html">Activity</a>
+    <a href="cadence-admin.html">Admin</a>
+    <a href="cadence-site.html">Site</a>
+    <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
+    <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
+  </div>
 
 <div class="tabs">
   <button class="tab active" onclick="go('orders')">Orders <span class="badge" id="b-orders" style="display:none"></span></button>

@@ -33,58 +33,9 @@
   .chk-item.done .chk-box::after { content: '✓'; color: #1C1612; font-size: 13px; font-weight: bold; }
   .chk-item.done span { text-decoration: line-through; opacity: 0.4; }
 
-  /* Production Summary Bar */
-  .prod-summary {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    padding: 0 24px;
-    background: rgba(0,0,0,0.25);
-    border-bottom: 1px solid rgba(201,168,76,0.1);
-    flex-wrap: wrap;
-  }
-  .ps-block {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 14px 28px;
-    border-right: 1px solid rgba(201,168,76,0.1);
-    min-width: 110px;
-  }
-  .ps-block:last-child { border-right: none; }
-  .ps-val { font-size: 26px; font-weight: 600; color: #E8D08A; letter-spacing: -0.02em; line-height: 1; }
-  .ps-label { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(196,188,178,0.45); margin-top: 5px; }
-  .ps-sub { font-size: 9px; color: rgba(196,188,178,0.3); margin-top: 2px; text-align: center; }
-  .ps-badges { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
-  .ps-badge {
-    font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
-    padding: 3px 10px; border-radius: 12px; font-weight: 600;
-  }
-  .ps-badge.head { background: rgba(91,191,212,0.12); color: #5BBFD4; }
-  .ps-badge.body { background: rgba(201,168,76,0.12); color: #E8D08A; }
-  .ps-badge.other { background: rgba(147,112,219,0.12); color: #b89de8; }
-  .ps-sync-block {
-    display: flex; flex-direction: column; align-items: center;
-    padding: 14px 28px; margin-left: auto;
-    font-size: 9px; color: rgba(196,188,178,0.35);
-    letter-spacing: 0.1em; text-transform: uppercase; gap: 4px;
-  }
-  .ps-sync-dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: #4a8c5c; box-shadow: 0 0 6px rgba(74,140,92,0.4);
-    transition: background 0.3s;
-  }
-  .ps-sync-dot.syncing { background: #E8D08A; box-shadow: 0 0 8px rgba(232,208,138,0.5); animation: pulse-sync 1s infinite; }
-  .ps-sync-dot.err { background: #e09090; box-shadow: 0 0 6px rgba(224,144,144,0.4); }
-  @keyframes pulse-sync { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-  #last-synced-ts { color: rgba(196,188,178,0.5); }
-
   @media (max-width: 768px) {
     .board { flex-direction: column; }
     .col { min-width: 100%; }
-    .prod-summary { gap: 0; }
-    .ps-block { padding: 10px 16px; min-width: 80px; }
-    .ps-val { font-size: 20px; }
   }
 </style>
 </head>
@@ -104,8 +55,24 @@
     <a class="topbar-link" onclick="signOut()">Sign Out</a>
   </div>
 </div>
-
-  <div class="dash-nav"></div>
+  
+  <div class="dash-nav">
+    <a href="index.html">Hub</a>
+    <a href="cadence-queue.html">Queue</a>
+    <a href="cadence-fulfillment.html">Fulfillment</a>
+    <a href="cadence-customers.html">Customers</a>
+    <a href="cadence-messages.html">Messages</a>
+    <a href="cadence-creature-editor.html">Creatures</a>
+    <a href="cadence-email-blast.html">Email Blast</a>
+    <a href="cadence-drop-launch.html">🚀 Launch</a>
+    <a href="cadence-creatures-pl-tracker.html">P&amp;L</a>
+    <a href="cadence-links.html">Links</a>
+    <a href="cadence-activity.html">Activity</a>
+    <a href="cadence-admin.html">Admin</a>
+    <a href="cadence-site.html">Site</a>
+    <a href="https://cadencecreatures.com" target="_blank">Live Site ↗</a>
+    <a href="https://etsy.com/shop/CadenceCreatures" target="_blank">Etsy Shop ↗</a>
+  </div>
 
   <div class="main">
     <div class="header" style="justify-content:space-between; flex-direction:row; align-items:flex-end;">
@@ -116,37 +83,6 @@
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;">
         <button class="btn" onclick="toggleBulkMode()">⚡ Batch Actions</button>
         <button class="btn" onclick="printPullList()">🖨 Print Packing Slip</button>
-      </div>
-    </div>
-
-    <!-- Production Summary Bar -->
-    <div class="prod-summary" id="prod-summary">
-      <div class="ps-block">
-        <div class="ps-val" id="ps-in-progress">—</div>
-        <div class="ps-label">In Progress</div>
-        <div class="ps-sub">Printing + Printed</div>
-      </div>
-      <div class="ps-block">
-        <div class="ps-label" style="margin-top:0;margin-bottom:6px;">Batch Breakdown</div>
-        <div class="ps-badges" id="ps-batch-badges">
-          <span class="ps-badge head" id="ps-heads">0 Heads</span>
-          <span class="ps-badge body" id="ps-bodies">0 Bodies</span>
-          <span class="ps-badge other" id="ps-other" style="display:none">0 Other</span>
-        </div>
-        <div class="ps-sub">parts in Printing</div>
-      </div>
-      <div class="ps-block">
-        <div class="ps-val" id="ps-printing-count">—</div>
-        <div class="ps-label">Printing</div>
-      </div>
-      <div class="ps-block">
-        <div class="ps-val" id="ps-printed-count">—</div>
-        <div class="ps-label">Printed</div>
-      </div>
-      <div class="ps-sync-block">
-        <div class="ps-sync-dot" id="rt-dot"></div>
-        <span>Live Sync</span>
-        <span id="last-synced-ts">—</span>
       </div>
     </div>
 
@@ -173,7 +109,7 @@
       </div>
     </div>
   </div>
-
+  
   <!-- Bulk Action Bar -->
   <div id="bulk-bar" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(201,168,76,0.15);border:1px solid var(--gold);padding:14px 24px;border-radius:8px;backdrop-filter:blur(8px);z-index:100;align-items:center;gap:16px;">
     <div style="color:var(--goldl);font-weight:500;"><span id="bulk-count">0</span> Selected</div>
@@ -201,17 +137,16 @@
 
 <div class="toast" id="tst"></div>
 
+<!-- shared.js moved to head -->
 <script>
 let orders = [];
 let creatures = [];
 let selectedOrders = new Set();
 let bulkMode = false;
-let realtimeChannel = null;
 
 function showApp(){
   document.getElementById('app').style.display = 'flex';
   loadData();
-  subscribeRealtime();
 }
 
 async function loadData(){
@@ -220,71 +155,16 @@ async function loadData(){
     if(error) return console.error(error);
     orders = data || [];
     renderBoard();
+    initSortable();
   }catch(e){console.error(e);}
 }
-
-// ─── Realtime ────────────────────────────────────────────────────────────────
-
-function subscribeRealtime() {
-  if (realtimeChannel) {
-    db.removeChannel(realtimeChannel);
-    realtimeChannel = null;
-  }
-
-  realtimeChannel = db.channel('fulfillment-orders')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, handleRealtimeUpdate)
-    .subscribe((status) => {
-      const dot = document.getElementById('rt-dot');
-      if (!dot) return;
-      if (status === 'SUBSCRIBED') {
-        dot.className = 'ps-sync-dot';
-        updateLastSynced();
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        dot.className = 'ps-sync-dot err';
-      } else {
-        dot.className = 'ps-sync-dot syncing';
-      }
-    });
-}
-
-function handleRealtimeUpdate(payload) {
-  const dot = document.getElementById('rt-dot');
-  if (dot) { dot.className = 'ps-sync-dot syncing'; setTimeout(() => { if(dot) dot.className = 'ps-sync-dot'; }, 800); }
-
-  const { eventType, new: newRec, old: oldRec } = payload;
-  const boardStatuses = ['queued','printing','printed','packaging','shipped'];
-
-  if (eventType === 'UPDATE' || eventType === 'INSERT') {
-    const idx = orders.findIndex(o => o.id === newRec.id);
-    if (boardStatuses.includes(newRec.status)) {
-      if (idx !== -1) orders[idx] = newRec;
-      else orders.push(newRec);
-    } else {
-      if (idx !== -1) orders.splice(idx, 1);
-    }
-  } else if (eventType === 'DELETE') {
-    orders = orders.filter(o => o.id !== oldRec.id);
-  }
-
-  renderBoardSoft();
-  updateLastSynced();
-}
-
-function updateLastSynced() {
-  const el = document.getElementById('last-synced-ts');
-  if (!el) return;
-  const now = new Date();
-  el.textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}
-
-// ─── Sortable ─────────────────────────────────────────────────────────────────
 
 let sortables = [];
 function initSortable() {
   sortables.forEach(s => s.destroy());
   sortables = [];
-  if(bulkMode) return;
-
+  if(bulkMode) return; 
+  
   ['queued','printing','printed','packaging','shipped'].forEach(col => {
     const el = document.getElementById('list-'+col);
     if(!el) return;
@@ -312,115 +192,29 @@ function savePriority() {
   localStorage.setItem('cc_board_priority', JSON.stringify(customOrder));
 }
 
-// ─── Render ───────────────────────────────────────────────────────────────────
-
 function renderBoard(){
-  renderBoardSoft();
-  initSortable();
-}
-
-function renderBoardSoft() {
-  // If a drag is in progress, defer to avoid disrupting the active operation
-  if (typeof Sortable !== 'undefined' && Sortable.active) {
-    setTimeout(renderBoardSoft, 500);
-    return;
-  }
-
-  ['queued','printing','printed','packaging','shipped'].forEach(st => {
-    let colOrders = orders.filter(o => o.status === st);
-
+  ['queued','printing','printed','packaging','shipped'].forEach(st=>{
+    let colOrders = orders.filter(o=>o.status===st);
+    
     try {
-      const p = JSON.parse(localStorage.getItem('cc_board_priority') || '[]');
+      const p = JSON.parse(localStorage.getItem('cc_board_priority')||'[]');
       if(p.length) {
-        colOrders.sort((a, b) => {
-          let ia = p.indexOf(a.id), ib = p.indexOf(b.id);
-          if(ia === -1) ia = 9999;
-          if(ib === -1) ib = 9999;
+        colOrders.sort((a,b) => {
+          let ia = p.indexOf(a.id);
+          let ib = p.indexOf(b.id);
+          if(ia===-1) ia=9999;
+          if(ib===-1) ib=9999;
           return ia - ib;
         });
       }
-    } catch(e) {}
-
+    }catch(e){}
+    
     const div = document.getElementById('list-'+st);
-    if (div) div.innerHTML = colOrders.map(createCard).join('');
-    const cnt = document.getElementById('cnt-'+st);
-    if (cnt) cnt.textContent = colOrders.length;
+    div.innerHTML = colOrders.map(createCard).join('');
+    document.getElementById('cnt-'+st).textContent = colOrders.length;
   });
-
-  updateProductionSummary();
+  if(!bulkMode) initSortable();
 }
-
-// ─── Production Summary ───────────────────────────────────────────────────────
-
-function updateProductionSummary() {
-  const printing = orders.filter(o => o.status === 'printing');
-  const printed  = orders.filter(o => o.status === 'printed');
-  const totalInProgress = printing.length + printed.length;
-
-  let heads = 0, bodies = 0, other = 0;
-  printing.forEach(o => {
-    (Array.isArray(o.items) ? o.items : []).forEach(itm => {
-      const text = itm.replace('[x] ', '').toLowerCase();
-      if (text.includes('head')) heads++;
-      else if (text.includes('body') || text.includes('torso')) bodies++;
-      else if (text.trim()) other++;
-    });
-  });
-
-  const ipEl = document.getElementById('ps-in-progress');
-  const pEl  = document.getElementById('ps-printing-count');
-  const prEl = document.getElementById('ps-printed-count');
-  const hEl  = document.getElementById('ps-heads');
-  const bEl  = document.getElementById('ps-bodies');
-  const oEl  = document.getElementById('ps-other');
-
-  if (ipEl) ipEl.textContent = totalInProgress;
-  if (pEl)  pEl.textContent  = printing.length;
-  if (prEl) prEl.textContent = printed.length;
-  if (hEl)  hEl.textContent  = heads + ' Head' + (heads !== 1 ? 's' : '');
-  if (bEl)  bEl.textContent  = bodies + ' ' + (bodies !== 1 ? 'Bodies' : 'Body');
-  if (oEl)  { oEl.textContent = other + ' Other'; oEl.style.display = other > 0 ? '' : 'none'; }
-}
-
-// ─── Inventory Sync ──────────────────────────────────────────────────────────
-
-async function decrementInventory(order) {
-  try {
-    const items = Array.isArray(order.items) ? order.items : [];
-    const names = new Set();
-
-    items.forEach(itm => {
-      const text = itm.replace('[x] ', '').trim();
-      // Expect format like "Head: Patches" or "Body: Stompy"
-      const colonIdx = text.indexOf(':');
-      if (colonIdx !== -1) {
-        const name = text.slice(colonIdx + 1).trim();
-        if (name) names.add(name);
-      } else if (text) {
-        // Fallback: treat the whole item as the creature name if no colon
-        names.add(text);
-      }
-    });
-
-    for (const name of names) {
-      const { data: creature, error } = await db.from('creatures')
-        .select('id, qty_on_hand, name')
-        .ilike('name', name)
-        .maybeSingle();
-
-      if (error) { console.warn('Inventory lookup failed for', name, error); continue; }
-      if (!creature) { console.warn('No creature matched:', name); continue; }
-
-      const newQty = Math.max(0, (creature.qty_on_hand || 0) - 1);
-      await db.from('creatures').update({ qty_on_hand: newQty }).eq('id', creature.id);
-      console.log(`Inventory: ${creature.name} qty_on_hand ${creature.qty_on_hand} → ${newQty}`);
-    }
-  } catch(e) {
-    console.error('Inventory sync error:', e);
-  }
-}
-
-// ─── Card Builder ─────────────────────────────────────────────────────────────
 
 function createCard(o){
   const items = Array.isArray(o.items) ? o.items : [];
@@ -432,7 +226,7 @@ function createCard(o){
       <span>${rawText}</span>
     </div>`;
   }).join('');
-
+  
   let actBtn = '';
   if(o.status==='queued') actBtn = `<button class="btn" onclick="moveOrder('${o.id}','printing')">Start Printing →</button>`;
   else if(o.status==='printing') actBtn = `<button class="btn" onclick="moveOrder('${o.id}','printed')">Mark Printed →</button>`;
@@ -467,8 +261,6 @@ function createCard(o){
   `;
 }
 
-// ─── Actions ──────────────────────────────────────────────────────────────────
-
 async function toggleItem(orderId, itemIndex){
   const order = orders.find(o=>o.id===orderId);
   if(!order) return;
@@ -476,57 +268,52 @@ async function toggleItem(orderId, itemIndex){
   const itm = newItems[itemIndex];
   if(itm.startsWith('[x] ')) newItems[itemIndex] = itm.slice(4);
   else newItems[itemIndex] = '[x] ' + itm;
-
+  
   order.items = newItems;
-  renderBoardSoft();
-
+  renderBoard(); // optimistic update
+  
   await db.from('orders').update({items: newItems}).eq('id', orderId);
 }
 
 async function moveOrder(id, newStatus, skipRender=false){
   const order = orders.find(o=>o.id===id);
   if(!order) return;
-  const prevStatus = order.status;
   order.status = newStatus;
-  if(!skipRender) renderBoardSoft();
-
+  if(!skipRender) renderBoard(); // optimistic
+  
   await db.from('orders').update({status: newStatus}).eq('id', id);
   logActivity(`Moved #${order.etsy_order_id || id.slice(0,8)} to ${newStatus}`, id);
   toast('Moved to ' + newStatus);
-
-  if (newStatus === 'shipped' && prevStatus !== 'shipped') {
-    await decrementInventory(order);
-  }
 }
 
 async function quickShip(id) {
-  const trackEl = document.getElementById('track-'+id);
-  const track = trackEl ? trackEl.value : '';
+  const track = document.getElementById('track-'+id).value;
   if(!track && !confirm('Ship without tracking?')) return;
-
+  
   const order = orders.find(o => o.id === id);
   if(!order) return;
 
   const btn = document.querySelector(`button[onclick="quickShip('${id}')"]`);
-  const originalHtml = btn ? btn.innerHTML : '';
-  if(btn) { btn.disabled = true; btn.innerHTML = '<span>⌛</span> Shipping...'; }
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span>⌛</span> Shipping...';
 
   const {error} = await db.from('orders').update({
     status: 'shipped',
     tracking_number: track,
     shipped_date: new Date().toISOString().slice(0,10)
   }).eq('id', id);
-
-  if(error) {
-    toast('Error shipping', 'err');
-    if(btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
-    return;
+  
+  if(error) { 
+    toast('Error shipping', 'err'); 
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+    return; 
   }
-
+  
   toast('Order Shipped!', 'ok');
   logActivity(`Shipped #${order.etsy_order_id || id.slice(0,8)} with tracking: ${track}`, id);
   sendFulfillmentEmail({ ...order, tracking_number: track });
-  await decrementInventory(order);
   loadData();
 }
 
@@ -544,7 +331,7 @@ async function saveShipping(){
   const tracking_number = document.getElementById('s-track').value;
   const carrier = document.getElementById('s-carrier').value;
   const shipping_note = document.getElementById('s-note').value;
-
+  
   const order = orders.find(o=>o.id===id);
   if(order){
     order.tracking_number = tracking_number;
@@ -552,23 +339,21 @@ async function saveShipping(){
     order.shipping_note = shipping_note;
     order.status = 'shipped';
   }
-
+  
   document.getElementById('m-ship').classList.remove('open');
-
+  
   const {error} = await db.from('orders').update({
     status: 'shipped',
     shipped_date: new Date().toISOString().slice(0,10),
     tracking_number, carrier, shipping_note
   }).eq('id', id);
-
+  
   if(error){toast('Error','err'); return;}
-
+  
   toast('Order Shipped!','ok');
-  logActivity(`Shipped #${order?.etsy_order_id || id.slice(0,8)} via Modal`, id);
-  if(order) {
-    sendFulfillmentEmail(order);
-    await decrementInventory(order);
-  }
+  logActivity(`Shipped #${order.etsy_order_id || id.slice(0,8)} via Modal`, id);
+  sendFulfillmentEmail(order);
+  // Remove from local array since it's no longer in the 4 board columns
   orders = orders.filter(o=>o.id!==id);
   renderBoard();
 }
@@ -584,22 +369,22 @@ function toggleOrderSelection(id) {
   if(!bulkMode) return;
   if(selectedOrders.has(id)) selectedOrders.delete(id);
   else selectedOrders.add(id);
-  renderBoardSoft();
+  renderBoard();
   document.getElementById('bulk-count').textContent = selectedOrders.size;
 }
 
 async function bulkMoveOrders() {
   const newStatus = document.getElementById('bulk-status').value;
   if(selectedOrders.size === 0) return;
-
+  
   const ids = Array.from(selectedOrders);
   ids.forEach(id => {
     const o = orders.find(x => x.id === id);
     if(o) o.status = newStatus;
   });
-
+  
   toggleBulkMode();
-
+  
   const {error} = await db.from('orders').update({status: newStatus}).in('id', ids);
   if(error) toast('Error updating orders', 'err');
   else toast('Moved ' + ids.length + ' orders', 'ok');
@@ -608,10 +393,10 @@ async function bulkMoveOrders() {
 function printPullList() {
   const pkgs = orders.filter(o => o.status === 'packaging');
   if(pkgs.length === 0) return toast('No orders in Packaging column!', 'err');
-
+  
   let html = '<html><head><title>Packing Slip</title><style>body{font-family:sans-serif;padding:20px;} h2{margin-bottom:5px;font-size:18px;} .order{border-bottom:1px solid #ccc;padding-bottom:15px;margin-bottom:15px;} ul{list-style:none;padding-left:0;} li{margin-bottom:8px;font-size:14px;} .check{display:inline-block;width:16px;height:16px;border:1.5px solid #000;margin-right:12px;position:relative;top:3px;border-radius:3px;}</style></head><body>';
   html += '<h1>📦 Cadence Creatures — Packing List</h1><p>Date: ' + new Date().toLocaleDateString() + '</p><hr/>';
-
+  
   pkgs.forEach(o => {
     html += '<div class="order">';
     html += '<h2>Order #' + (o.etsy_order_id||o.id.slice(0,8)) + ' - ' + (o.buyer_name||'No Name') + '</h2>';
@@ -624,7 +409,7 @@ function printPullList() {
     html += '</ul></div>';
   });
   html += '</body></html>';
-
+  
   const w = window.open('','_blank');
   w.document.write(html);
   w.document.close();
