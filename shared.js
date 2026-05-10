@@ -629,16 +629,21 @@ styleShield.textContent = `
     .topbar-name { font-size: 12px !important; }
     .topbar-right { gap: 12px !important; }
     .topbar-link { font-size: 9px !important; }
-    .dash-nav { -webkit-overflow-scrolling: touch !important; }
+    .dash-nav {
+      overflow-x: scroll !important;
+      -webkit-overflow-scrolling: touch !important;
+      overscroll-behavior-x: contain !important;
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
     .dash-nav::-webkit-scrollbar { display: none !important; }
-    .dash-nav { scrollbar-width: none !important; -ms-overflow-style: none !important; }
-    
+
     .fr { grid-template-columns: 1fr !important; }
     .kpi-grid { grid-template-columns: 1fr !important; }
-    
-    /* Fix left-edge clipping on iOS */
-    body, #app { overflow-x: hidden !important; width: 100% !important; position: relative !important; }
-    .main-content { overflow-x: hidden !important; }
+
+    #app { width: 100% !important; max-width: 100vw !important; }
+    .main { overflow-x: hidden !important; }
+    .main-content { overflow-x: hidden !important; padding: 20px 16px !important; }
   }
 `;
 document.head.appendChild(styleShield);
