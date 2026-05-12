@@ -139,7 +139,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         window.location.href = 'index.html';
         return;
       }
-      db.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', currentUser.id);
+      // Update last_seen and clear pending status
+      const { error: upError } = await db.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', currentUser.id);
+      if (upError) console.error('Failed to update last_seen:', upError);
+      else console.log('Login verified: Pending status cleared.');
     }
 
     await applyRolePermissions();
