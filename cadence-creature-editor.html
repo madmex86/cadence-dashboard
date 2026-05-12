@@ -323,19 +323,6 @@
                 } catch(e) { return ''; }
               })()}
             </div>
-              ${(()=>{
-                if(!c.print_recipe) return '';
-                try {
-                  const data = JSON.parse(c.print_recipe);
-                  const recipe = Array.isArray(data) ? data : (data.recipe || []);
-                  if(!recipe.length) return '';
-                  return recipe.map(r => {
-                    const spool = inv.find(s => s.id === r.filId);
-                    const name = spool ? spool.spool_name : (r.label || 'Unknown');
-                    return `<div style="border-left:2px solid ${colorFromName(spool?spool.color:r.label)};padding-left:6px;margin-top:3px;">${name}</div>`;
-                  }).join('');
-                } catch(e) { return ''; }
-              })()}
             </div>
             <div class="toggle-row">
               <div class="tog ${c.active !== false ? 'on green' : ''}" onclick="toggle('${c.id}','active',${!(c.active !== false)})"><span class="tog-dot"></span>Active</div>
