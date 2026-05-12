@@ -121,7 +121,7 @@ var _creatures = [];
 
 async function loadLaunchData() {
   const [cRes, sRes] = await Promise.all([
-    db.from('creatures').select('id,name,image_url,etsy_url,is_featured,is_revealed,qty_on_hand,reveal_date').order('log_number'),
+    db.from('creatures').select('id,name,image_url,etsy_url,is_featured,is_revealed,qty_on_hand,reveal_date,in_launch_queue').eq('in_launch_queue', true).order('log_number'),
     db.from('subscribers').select('id', { count: 'exact', head: true })
   ]);
   if (cRes.error) { console.error('Launch load failed:', cRes.error); return; }
@@ -134,7 +134,7 @@ async function loadLaunchData() {
 function renderGrid() {
   const grid = document.getElementById('launch-grid');
   if (!_creatures.length) {
-    grid.innerHTML = '<div style="color:var(--dim);font-size:12px;padding:40px;grid-column:1/-1;text-align:center;letter-spacing:.12em;text-transform:uppercase;">No creatures found.</div>';
+    grid.innerHTML = '<div style="color:var(--dim);font-size:12px;padding:40px;grid-column:1/-1;text-align:center;letter-spacing:.12em;text-transform:uppercase;">No creatures in the launch queue. Check "Add to Launch Queue" in the Creatures tab to start.</div>';
     return;
   }
 
@@ -242,7 +242,7 @@ function renderRevealList() {
   if (!list) return;
   var pending = _creatures.filter(function(c) { return !c.is_revealed; });
   if (!pending.length) {
-    list.innerHTML = '<div style="color:var(--dim);font-size:12px;padding:16px 0;text-align:center;letter-spacing:.1em;text-transform:uppercase;">All creatures released.</div>';
+    list.innerHTML = '<div style="color:var(--dim);font-size:12px;padding:16px 0;text-align:center;letter-spacing:.1em;text-transform:uppercase;">All queued creatures are revealed. Uncheck "In Launch Queue" in the editor to clear this list.</div>';
     return;
   }
   list.innerHTML = pending.map(function(c) {
