@@ -517,6 +517,13 @@
 
     if (!payload.name) { toast('Name is required', 'err'); return; }
     sync(true);
+    
+    // Auto-hide new creatures to prevent spoilers
+    if (!id) {
+      payload.is_revealed = false;
+      payload.reveal_date = null;
+    }
+
     const { error } = id
       ? await db.from('creatures').update(payload).eq('id', id)
       : await db.from('creatures').insert([payload]);
