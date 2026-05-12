@@ -140,6 +140,12 @@
           <option value="fantasy">Fantasy</option><option value="holiday">Holiday</option><option value="space">Space</option>
         </select>
       </div>
+      <div class="form-full" style="background:rgba(255,255,255,0.02);border:1px solid rgba(201,168,76,0.1);padding:16px;border-radius:4px;margin-bottom:12px;">
+        <label class="fl" style="margin-bottom:12px;display:block;">Print Recipe / Filament Mapping</label>
+        <div id="recipe-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+        <button type="button" class="btn sm" onclick="addRecipeRow()" style="margin-top:12px;background:rgba(201,168,76,0.05);">+ Add Color / Part</button>
+        <input type="hidden" id="f-filament-color"/> <!-- Keep for legacy display string -->
+      </div>
       <div><label class="fl">Retail Price ($)<span class="help-tip">?<span class="tip-text">What you charge for direct sales — website, in-person, events. Set before any platform fees.</span></span></label><input class="fi" type="number" id="f-price-retail" placeholder="18.00" step="0.01"/></div>
       <div><label class="fl">Etsy Price ($)<span class="help-tip">?<span class="tip-text">Listing price on Etsy. Set ~8–10% higher than retail to cover Etsy's 6.5% transaction fee plus listing fees.</span></span></label><input class="fi" type="number" id="f-price-etsy" placeholder="18.00" step="0.01"/></div>
       <div><label class="fl">Stock On Hand<span class="help-tip">?<span class="tip-text">How many finished, ready-to-ship copies exist right now. Drives the Out / Low badges on the creature grid.</span></span></label><input class="fi" type="number" id="f-qty" placeholder="0"/></div>
@@ -196,14 +202,55 @@
 
 <script>
   let creatures = [];
+  let inv = [];
+
+  function colorFromName(name){
+    const n=(name||'').toLowerCase();
+    if(n.includes('black'))return'#222';
+    if(n.includes('white'))return'#f0f0f0';
+    if(n.includes('red')||n.includes('scarlet'))return'#c44';
+    if(n.includes('blue'))return'#4477cc';
+    if(n.includes('green')||n.includes('forest')||n.includes('olive'))return'#4a8c5c';
+    if(n.includes('yellow')||n.includes('gold'))return'#C9A84C';
+    if(n.includes('orange')||n.includes('amber'))return'#c97c2a';
+    if(n.includes('purple')||n.includes('violet'))return'#7766cc';
+    if(n.includes('pink')||n.includes('rose'))return'#cc6688';
+    if(n.includes('teal')||n.includes('cyan'))return'#5BBFD4';
+    if(n.includes('brown')||n.includes('tan'))return'#8B6347';
+    if(n.includes('grey')||n.includes('gray'))return'#888';
+    if(n.includes('crystal'))return'#aee0f0';
+    if(n.includes('glow')||n.includes('lumin'))return'#aaee66';
+    return'#7a6f62';
+  }
+
+  function addRecipeRow(data = {}) {
+    const cont = document.getElementById('recipe-list');
+    if(!cont) return;
+    const div = document.createElement('div');
+    div.className = 'recipe-row';
+    div.style = 'display:grid;grid-template-columns:1fr 1.5fr 32px;gap:8px;align-items:center;';
+    div.innerHTML = `
+      <input class="fi" placeholder="e.g. Body" value="${esc(data.label || '')}" style="padding:6px 8px;"/>
+      <select class="fi" style="padding:6px 8px;">
+        <option value="">-- Select Spool --</option>
+        ${inv.map(s => `<option value="${esc(s.id)}" ${s.id === data.filId ? 'selected' : ''}>${esc(s.spool_name)} (${esc(s.brand || 'No Brand')})</option>`).join('')}
+      </select>
+      <button type="button" class="btn sm" onclick="this.parentElement.remove()" style="padding:0;color:var(--red);border-color:transparent;background:transparent;font-size:16px;">×</button>
+    `;
+    cont.appendChild(div);
+  }
 
   function showApp() { document.getElementById('app').style.display = 'flex'; init(); }
 
   async function init() {
     sync(true);
-    const { data, error } = await db.from('creatures').select('*').order('log_number');
-    if (error) { serr(); return; }
-    creatures = data || [];
+    const [cRes, iRes] = await Promise.all([
+      db.from('creatures').select('*').order('log_number'),
+      db.from('inventory').select('id, spool_name, color, purchase_url, brand')
+    ]);
+    if (cRes.error || iRes.error) { serr(); return; }
+    creatures = cRes.data || [];
+    inv = iRes.data || [];
     sync(false);
     filterRender();
   }
@@ -255,6 +302,41 @@
           <div class="card-body">
             <div class="card-name">${esc(c.name)}</div>
             <div class="card-meta">${logStr} · ${c.species || 'Creature'} · ${c.environment || '—'}</div>
+            <div style="font-size:9px;color:var(--cream-faint);margin-bottom:12px;font-family:sans-serif;letter-spacing:0.02em;text-transform:none;">
+              ${(()=>{
+                if(!c.print_recipe) return '<div style="color:var(--gold-light);opacity:0.6;font-style:italic">No recipe set</div>';
+                try {
+                  const data = typeof c.print_recipe === 'string' ? JSON.parse(c.print_recipe) : c.print_recipe;
+                  const recipe = Array.isArray(data) ? data : (data.recipe || []);
+                  if(!recipe.length) return '<div style="color:var(--gold-light);opacity:0.6;font-style:italic">No recipe set</div>';
+                  return recipe.map(r => {
+                    const spool = inv.find(s => s.id === r.filId);
+                    const name = spool ? spool.spool_name : (r.label || 'Unknown');
+                    const color = spool ? colorFromName(spool.color) : colorFromName(r.label);
+                    const buyLink = (spool && spool.purchase_url) ? `<a href="${spool.purchase_url}" target="_blank" style="text-decoration:none;margin-left:auto;font-size:12px;" title="Reorder">🛒</a>` : '';
+                    return `<div style="display:flex;align-items:center;gap:6px;border-left:2px solid ${color};padding-left:8px;margin-top:4px;">
+                      <span style="color:rgba(196,188,178,0.5);width:45px;flex-shrink:0;">${esc(r.label || 'Part')}:</span>
+                      <span style="color:var(--gold-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</span>
+                      ${buyLink}
+                    </div>`;
+                  }).join('');
+                } catch(e) { return ''; }
+              })()}
+            </div>
+              ${(()=>{
+                if(!c.print_recipe) return '';
+                try {
+                  const data = JSON.parse(c.print_recipe);
+                  const recipe = Array.isArray(data) ? data : (data.recipe || []);
+                  if(!recipe.length) return '';
+                  return recipe.map(r => {
+                    const spool = inv.find(s => s.id === r.filId);
+                    const name = spool ? spool.spool_name : (r.label || 'Unknown');
+                    return `<div style="border-left:2px solid ${colorFromName(spool?spool.color:r.label)};padding-left:6px;margin-top:3px;">${name}</div>`;
+                  }).join('');
+                } catch(e) { return ''; }
+              })()}
+            </div>
             <div class="toggle-row">
               <div class="tog ${c.active !== false ? 'on green' : ''}" onclick="toggle('${c.id}','active',${!(c.active !== false)})"><span class="tog-dot"></span>Active</div>
               <div class="tog ${c.is_featured ? 'on' : ''}" onclick="toggle('${c.id}','is_featured',${!c.is_featured})"><span class="tog-dot"></span>Featured</div>
@@ -319,6 +401,22 @@
     document.getElementById('f-kch-suffix').value = hasKch ? skuParts[2] : '';
     document.getElementById('f-log').value = c?.log_number || '';
     document.getElementById('f-env').value = c?.environment || 'forest';
+    
+    // Populate Recipe Editor
+    const recList = document.getElementById('recipe-list');
+    recList.innerHTML = '';
+    try {
+      if(c?.print_recipe) {
+        const data = typeof c.print_recipe === 'string' ? JSON.parse(c.print_recipe) : c.print_recipe;
+        const recipe = Array.isArray(data) ? data : (data.recipe || []);
+        recipe.forEach(r => addRecipeRow(r));
+      } else if (c?.filament_color) {
+        // Migration: convert old string to first recipe row
+        addRecipeRow({ label: 'Body', filId: inv.find(s=>s.spool_name===c.filament_color)?.id });
+      }
+    } catch(e) { console.error('Recipe parse error:', e); }
+    if(recList.children.length === 0) addRecipeRow({ label: 'Body' }); // Start with one row
+    
     document.getElementById('f-price-retail').value = c?.price_retail || '';
     document.getElementById('f-price-etsy').value = c?.price_etsy || '';
     document.getElementById('f-qty').value = c?.qty_on_hand ?? c?.inventory_count ?? 0;
@@ -400,6 +498,34 @@
       lore_observations: document.getElementById('f-lore-obs').value
         .split('\n').map(function(s){ return s.trim(); }).filter(Boolean),
     };
+
+    // Gather Recipe
+    const rows = document.querySelectorAll('.recipe-row');
+    const recipe = [];
+    rows.forEach(r => {
+      const label = r.querySelector('input').value.trim();
+      const filId = r.querySelector('select').value;
+      if(label || filId) recipe.push({ label, filId });
+    });
+    
+    // Preserve batch and pkg if they already exist in the creature's recipe
+    const oldRecipe = creatures.find(c => c.id === id)?.print_recipe;
+    let batch = 1, pkg = 0.75;
+    if(oldRecipe) {
+      try {
+        const data = typeof oldRecipe === 'string' ? JSON.parse(oldRecipe) : oldRecipe;
+        if(data.batch) batch = data.batch;
+        if(data.pkg) pkg = data.pkg;
+      } catch(e) {}
+    }
+    payload.print_recipe = JSON.stringify({ batch, pkg, recipe });
+    
+    // Legacy support: set filament_color to the first spool name
+    if(recipe.length > 0) {
+      const spool = inv.find(s => s.id === recipe[0].filId);
+      if(spool) payload.filament_color = spool.spool_name;
+    }
+
     if (!payload.name) { toast('Name is required', 'err'); return; }
     sync(true);
     const { error } = id
