@@ -166,6 +166,7 @@ function renderGrid() {
       + '</div>'
       + '<div class="check-badge ' + (allPass ? 'badge-ready' : 'badge-warn') + '">'
       + (allPass ? '✓ Ready' : '⚠ Not ready') + '</div>'
+      + (c.is_revealed ? '<div class="check-badge" style="background:rgba(125,201,148,0.1);color:#7dc994;border:1px solid rgba(125,201,148,0.25);margin-left:5px;">Released</div>' : '')
       + '</div></div>';
   }).join('');
 
@@ -240,12 +241,12 @@ function fmtRevealDate(iso) {
 function renderRevealList() {
   var list = document.getElementById('reveal-list');
   if (!list) return;
-  var pending = _creatures.filter(function(c) { return !c.is_revealed; });
-  if (!pending.length) {
-    list.innerHTML = '<div style="color:var(--dim);font-size:12px;padding:16px 0;text-align:center;letter-spacing:.1em;text-transform:uppercase;">All queued creatures are revealed. Uncheck "In Launch Queue" in the editor to clear this list.</div>';
+  var items = _creatures; // Show all in queue
+  if (!items.length) {
+    list.innerHTML = '<div style="color:var(--dim);font-size:12px;padding:16px 0;text-align:center;letter-spacing:.1em;text-transform:uppercase;">No creatures in the launch queue. Check "Add to Launch Queue" in the Creatures tab to start.</div>';
     return;
   }
-  list.innerHTML = pending.map(function(c) {
+  list.innerHTML = items.map(function(c) {
     var rd = c.reveal_date ? new Date(c.reveal_date) : null;
     var dtVal = rd ? dtLocalVal(rd) : '';
     var statText = rd ? ('Scheduled: ' + fmtRevealDate(c.reveal_date)) : (c.is_revealed ? 'Released' : 'Not scheduled');
