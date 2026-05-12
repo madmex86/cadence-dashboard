@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/inventory", "destination": "/cadence-inventory.html" },
+    { "source": "/story-forge", "destination": "/cadence-story-forge.html" },
+    { "source": "/lure-forge", "destination": "/cadence-lure-forge.html" },
+    { "source": "/editor", "destination": "/cadence-creature-editor.html" },
+    { "source": "/launch", "destination": "/cadence-drop-launch.html" },
+    { "source": "/queue", "destination": "/index.html" }
+  ]
+}
