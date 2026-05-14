@@ -1,3 +1,16 @@
+// Synchronous auth gate — runs immediately while HTML is still parsing.
+// Hides the page on any non-hub URL so data never flashes before the async
+// session check resolves. Removed on auth success; body is wiped on failure.
+(function() {
+  const isHub = /\/(index(\.html)?)?$/.test(window.location.pathname);
+  if (!isHub) {
+    document.documentElement.classList.add('auth-gate');
+    const s = document.createElement('style');
+    s.textContent = 'html.auth-gate body { visibility: hidden !important; }';
+    document.head.appendChild(s);
+  }
+})();
+
 async function signOut(){
   sessionStorage.removeItem('cc_user_name');
   try {
@@ -122,7 +135,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const { data: { session } } = await db.auth.getSession();
   if(session) {
     currentUser = session.user;
-    
+
     // Auto-create profile if missing, otherwise check deactivated + stamp last_seen
     const { data: hasProfile } = await db.from('profiles').select('id,deactivated').eq('id', currentUser.id).single();
     if(!hasProfile) {
@@ -135,13 +148,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     } else {
       if(hasProfile.deactivated) {
         await db.auth.signOut();
+        document.body.innerHTML = '';
         window.location.href = 'index.html';
         return;
       }
-      // Update last_seen and clear pending status
       const { error: upError } = await db.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', currentUser.id);
       if (upError) console.error('Failed to update last_seen:', upError);
     }
+
+    // Lift the synchronous gate — session confirmed, safe to render
+    document.documentElement.classList.remove('auth-gate');
 
     await applyRolePermissions();
     highlightNav();
@@ -150,14 +166,15 @@ window.addEventListener('DOMContentLoaded', async () => {
     injectWordSmithBranding();
     if(typeof showApp === 'function') showApp();
   } else {
-    // Show login only if we are on the Hub and have no session
-    const loginCont = document.getElementById('login-screen');
-    if(loginCont) {
-      loginCont.style.setProperty('display', 'flex', 'important');
-    }
-
-    // Force redirect to Hub if they are on a protected page without a session
-    if(!window.location.pathname.includes('index.html') && !window.location.pathname.endsWith('/')) {
+    const isHub = /\/(index(\.html)?)?$/.test(window.location.pathname);
+    if(isHub) {
+      // On the login hub: lift gate and show the login form
+      document.documentElement.classList.remove('auth-gate');
+      const loginCont = document.getElementById('login-screen');
+      if(loginCont) loginCont.style.setProperty('display', 'flex', 'important');
+    } else {
+      // Protected page, no session — wipe DOM so data never shows, then redirect
+      document.body.innerHTML = '';
       window.location.href = 'index.html';
     }
   }
