@@ -451,7 +451,7 @@ function go(tab){
   if(tab==='lore')load_lore();
 }
 
-async function load_orders(){sync(true);const{data,error}=await db.from('orders').select('*').order('created_at',{ascending:false});if(error){serr();return;}orders=data;sync(false);render_orders();update_order_kpis();update_badges();check_alerts();}
+async function load_orders(){sync(true);const{data,error}=await db.from('orders').select('id,etsy_order_id,buyer_name,buyer_email,items,status,printer,total_amount,tracking_number,carrier,ship_note,order_date,created_at,margin').order('created_at',{ascending:false});if(error){serr();return;}orders=data;sync(false);render_orders();update_order_kpis();update_badges();check_alerts();}
 function render_orders(){
   const tb=document.getElementById('otb');
   const hideCompleted = document.getElementById('hide-completed-cb') ? document.getElementById('hide-completed-cb').checked : true;
@@ -753,7 +753,25 @@ function render_stock(){
 }
 
 
-async function load_creatures(){sync(true);const[{data:cData,error:cErr},{data:compData}]=await Promise.all([db.from('creatures').select('*').order('log_number'),db.from('creature_components').select('*')]);if(cErr){serr();return;}creatures=cData;components=compData||[];sync(false);render_stock();update_stats_widget();}
+async function load_creatures(){
+  sync(true);
+  const [
+    {data:cData, error:cErr},
+    {data:compData, error:compErr}
+  ] = await Promise.all([
+    db.from('creatures')
+      .select('id,name,species,log_number,environment,sku,qty_on_hand,inventory_count,filament_color,print_recipe,price_etsy,price_retail,active,is_cami_edition,created_at')
+      .order('log_number'),
+    db.from('creature_components').select('*')
+  ]);
+  if (cErr) { serr(); return; }
+  if (compErr) console.error('Components load failed:', compErr.message);
+  creatures = cData || [];
+  components = compData || [];
+  sync(false);
+  render_stock();
+  update_stats_widget();
+}
 
 function renderCompRow(c){
   const cComps=components.filter(cp=>cp.creature_id===c.id);
