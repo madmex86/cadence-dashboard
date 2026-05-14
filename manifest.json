@@ -7,18 +7,18 @@
   "theme_color": "#C9A84C",
   "icons": [
     {
-      "src": "https://cadencecreatures.com/favicon.ico",
-      "sizes": "64x64",
-      "type": "image/x-icon"
+      "src": "./apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
     },
     {
-      "src": "https://cadencecreatures.com/logo192.png",
+      "src": "https://cadencecreatures.com/public/android-chrome-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "https://cadencecreatures.com/logo512.png",
+      "src": "https://cadencecreatures.com/public/android-chrome-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
