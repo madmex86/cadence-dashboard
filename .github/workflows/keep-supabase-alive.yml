@@ -9,13 +9,9 @@ on:
 jobs:
   keep-alive:
     runs-on: ubuntu-latest
-    env:
-      SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
     steps:
       - name: Ping Supabase Database
-        env:
-          SUPABASE_KEY: ${{ env.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          curl -i -X GET "https://ufqiysdgmxrhonnfsgts.supabase.co/rest/v1/creatures?select=id&limit=1" \
-          -H "apikey: $SUPABASE_KEY" \
-          -H "Authorization: Bearer $SUPABASE_KEY"
+          curl -sf -X GET "https://ufqiysdgmxrhonnfsgts.supabase.co/rest/v1/creatures?select=id&limit=1" \
+          -H "apikey: sb_publishable_7mkBL1lsKUNJEmqSd2HT9Q_Z4xHoBec" \
+          -H "Authorization: Bearer sb_publishable_7mkBL1lsKUNJEmqSd2HT9Q_Z4xHoBec"
