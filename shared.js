@@ -409,7 +409,6 @@ async function refreshMessageBadge() {
   } catch(e) { console.warn('Message badge refresh failed'); }
 }
 
-function initEmail() {}
 
 // ── HUD Data Functions ────────────────────────────────────────────────────
 
