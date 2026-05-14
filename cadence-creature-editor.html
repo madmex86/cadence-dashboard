@@ -173,6 +173,20 @@
         </div>
         <img id="img-preview" class="img-preview" alt="preview"/>
       </div>
+      <div class="form-full">
+        <label class="fl">3D Model (GLB) <span style="font-size:9px;color:var(--cream-faint);text-transform:none;letter-spacing:0">Upload a .glb file — powers the ⬡ 3D viewer on the Bestiary</span></label>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input class="fi" id="f-model-url" placeholder="https://… or upload below" style="flex:1;font-size:11px;"/>
+          <label class="btn" style="cursor:pointer;margin:0;padding:9px 14px;font-size:11px;display:flex;align-items:center;gap:5px;white-space:nowrap;">
+            <span id="model-upload-lbl">Upload GLB</span>
+            <input type="file" accept=".glb,.gltf" style="display:none;" onchange="uploadModel(event)"/>
+          </label>
+        </div>
+        <div id="model-preview-row" style="display:none;margin-top:6px;font-size:10px;color:var(--cream-faint);display:flex;align-items:center;gap:8px;">
+          <span style="color:#7dc994;">✓ Model linked</span>
+          <a id="model-preview-link" href="#" target="_blank" rel="noopener" style="color:var(--gold-light);font-size:10px;">Preview ↗</a>
+        </div>
+      </div>
       <div class="form-full"><label class="fl">Notes</label><textarea class="fi" id="f-notes" style="min-height:52px;resize:vertical;" placeholder="Internal notes…"></textarea></div>
 
       <div class="form-full" style="border-top:1px solid rgba(201,168,76,.1);padding-top:16px;margin-top:4px;">
@@ -414,6 +428,11 @@
     document.getElementById('f-tagline').value = c?.tagline || '';
     document.getElementById('f-etsy-url').value = c?.etsy_url || '';
     document.getElementById('f-image-url').value = c?.image_url || '';
+    const modelUrl = c?.model_url || '';
+    document.getElementById('f-model-url').value = modelUrl;
+    const mpr = document.getElementById('model-preview-row');
+    const mpl = document.getElementById('model-preview-link');
+    if (modelUrl) { mpr.style.display = 'flex'; mpl.href = modelUrl; } else { mpr.style.display = 'none'; }
     document.getElementById('f-notes').value = c?.notes || '';
     document.getElementById('f-featured').checked = !!c?.is_featured;
     document.getElementById('f-launch-queue').checked = !!c?.in_launch_queue;
@@ -477,6 +496,7 @@
       tagline: document.getElementById('f-tagline').value.trim(),
       etsy_url: document.getElementById('f-etsy-url').value.trim(),
       image_url: document.getElementById('f-image-url').value.trim(),
+      model_url: document.getElementById('f-model-url').value.trim() || null,
       notes: document.getElementById('f-notes').value.trim(),
       is_featured: document.getElementById('f-featured').checked,
       in_launch_queue: document.getElementById('f-launch-queue').checked,
@@ -597,6 +617,34 @@
       toast('Upload failed — check the creature-images bucket in Supabase.', 'err');
     } finally {
       lbl.textContent = 'Upload';
+      e.target.value = '';
+    }
+  }
+
+  async function uploadModel(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const lbl = document.getElementById('model-upload-lbl');
+    lbl.textContent = 'Uploading…';
+    try {
+      const ext = file.name.split('.').pop().toLowerCase();
+      const fileName = 'creature_' + Date.now() + '.' + ext;
+      const { error } = await db.storage.from('creature-models').upload(fileName, file);
+      if (error) throw error;
+      const { data } = db.storage.from('creature-models').getPublicUrl(fileName);
+      if (data?.publicUrl) {
+        document.getElementById('f-model-url').value = data.publicUrl;
+        const mpr = document.getElementById('model-preview-row');
+        const mpl = document.getElementById('model-preview-link');
+        mpr.style.display = 'flex';
+        mpl.href = data.publicUrl;
+        toast('Model uploaded — save the creature to publish it');
+      }
+    } catch(err) {
+      console.error(err);
+      toast('Upload failed — check the creature-models bucket in Supabase.', 'err');
+    } finally {
+      lbl.textContent = 'Upload GLB';
       e.target.value = '';
     }
   }
