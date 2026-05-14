@@ -116,6 +116,12 @@
     </div>
   </div>
   <div id="alert-box"></div>
+  <div id="etsy-webhook-bar" style="display:flex;align-items:center;gap:12px;background:rgba(91,191,212,.05);border:1px solid rgba(91,191,212,.18);border-radius:3px;padding:10px 16px;margin-bottom:16px;flex-wrap:wrap;">
+    <span style="font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#5BBFD4;flex-shrink:0;">⚡ Etsy Webhook</span>
+    <code id="etsy-wh-url" style="font-size:11px;color:var(--cream-dim);background:rgba(0,0,0,.25);padding:3px 8px;border-radius:2px;cursor:pointer;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="Click to copy" onclick="copyWebhookUrl()">https://ufqiysdgmxrhonnfsgts.supabase.co/functions/v1/etsy-webhook</code>
+    <button class="btn sm" onclick="copyWebhookUrl()" style="flex-shrink:0;">Copy URL</button>
+    <span style="font-size:10px;color:var(--cream-faint);flex-shrink:0;">Set <code style="font-size:10px;background:rgba(0,0,0,.2);padding:1px 4px;">ETSY_HMAC_KEY</code> in Supabase secrets to enable signature verification</span>
+  </div>
   <div class="sec-hdr">
     <span class="sec-title">Orders</span>
     <div style="display:flex;gap:8px;align-items:center">
@@ -382,6 +388,7 @@ const FAILURE_RATE_BUFFER = 0.05;
 let orders=[],creatures=[],inv=[],fin=[],printers=[],components=[];
 
 function fmt$(v){return'$'+Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function copyWebhookUrl(){const url='https://ufqiysdgmxrhonnfsgts.supabase.co/functions/v1/etsy-webhook';navigator.clipboard.writeText(url).then(()=>toast('Webhook URL copied','ok')).catch(()=>toast('Copy failed','err'));}
 
 
 
