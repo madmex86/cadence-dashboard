@@ -31,27 +31,14 @@ const db = supabase.createClient(supabaseUrl, supabaseKey);
 
 let currentUser = null;
 
-// Set window.CC_DISCORD_WEBHOOK in config.js (gitignored) — never hardcode here.
-const DISCORD_WEBHOOK_URL = (typeof window !== 'undefined' && window.CC_DISCORD_WEBHOOK) || null;
-
+// Discord alerts route through the send-discord-alert Edge Function.
+// Set DISCORD_WEBHOOK_URL in Supabase Dashboard → Edge Functions → Secrets.
+// The webhook URL never touches client-side code.
 async function sendDiscordAlert(title, message, color=0xE8D08A) {
-  if (!DISCORD_WEBHOOK_URL) return;
   try {
-    const payload = {
-      embeds: [{
-        title: title,
-        description: message,
-        color: color,
-        timestamp: new Date().toISOString()
-      }]
-    };
-    await fetch(DISCORD_WEBHOOK_URL, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload)
-    });
+    await db.functions.invoke('send-discord-alert', { body: { title, message, color } });
   } catch(e) {
-    console.error('Discord Webhook Failed:', e);
+    console.error('Discord alert failed:', e);
   }
 }
 
