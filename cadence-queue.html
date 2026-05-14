@@ -49,6 +49,23 @@
     .stats-widget { grid-template-columns: repeat(3, 1fr); }
     .kpis { grid-template-columns: 1fr 1fr; }
   }
+  .comp-row td { background: rgba(0,0,0,.18); padding: 0 !important; border-bottom: none; }
+  .comp-panel { padding: 6px 14px 10px 28px; }
+  .comp-hdr { font-size: 9px; letter-spacing: .15em; text-transform: uppercase; color: rgba(201,168,76,.4); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .comp-item { display: inline-flex; align-items: center; gap: 6px; margin: 0 14px 4px 0; font-size: 11px; }
+  .comp-name { color: var(--cream-dim); }
+  .comp-per { font-size: 10px; color: var(--cream-faint); }
+  .comp-adj { background: none; border: 1px solid rgba(201,168,76,.18); color: var(--cream-faint); width: 20px; height: 20px; font-size: 13px; line-height: 1; cursor: pointer; padding: 0; }
+  .comp-adj:hover { border-color: rgba(201,168,76,.5); color: var(--gold-light); }
+  .comp-stock { font-size: 13px; font-weight: 600; min-width: 20px; text-align: center; }
+  .comp-max { font-size: 10px; background: rgba(201,168,76,.08); color: var(--gold-light); padding: 1px 8px; border-radius: 10px; }
+  .comp-max.zero { background: rgba(224,144,144,.12); color: #e09090; }
+  .comp-del { background: none; border: none; color: rgba(201,168,76,.25); cursor: pointer; font-size: 11px; padding: 0 2px; line-height: 1; }
+  .comp-del:hover { color: #e09090; }
+  .comp-add-form { display: none; align-items: center; gap: 6px; margin-top: 6px; }
+  .comp-inp { background: rgba(0,0,0,.3); border: 1px solid rgba(201,168,76,.2); color: var(--cream); font-size: 11px; padding: 3px 6px; width: 130px; font-family: 'Lora', serif; }
+  .comp-add-btn { font-size: 9px !important; padding: 2px 8px !important; opacity: 0.65; margin-left: auto; }
+  .comp-add-btn:hover { opacity: 1; }
 </style>
 </head>
 <body>
@@ -362,7 +379,7 @@ document.addEventListener('keydown', (e) => {
   if(e.key.toLowerCase() === 'o') { e.preventDefault(); oModal(); }
 });
 const FAILURE_RATE_BUFFER = 0.05;
-let orders=[],creatures=[],inv=[],fin=[],printers=[];
+let orders=[],creatures=[],inv=[],fin=[],printers=[],components=[];
 
 function fmt$(v){return'$'+Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 
@@ -614,10 +631,21 @@ async function quickStock(id, delta) {
   const current = c.qty_on_hand ?? c.inventory_count ?? 0;
   const next = Math.max(0, current + delta);
   c.qty_on_hand = next;
+  if(delta < 0) {
+    components.filter(cp => cp.creature_id === id).forEach(cp => {
+      cp.stock_count = Math.max(0, cp.stock_count - (Math.abs(delta) * (cp.units_per_assembly || 1)));
+    });
+  }
   render_stock();
   update_badges();
-  const {error} = await db.from('creatures').update({qty_on_hand: next}).eq('id', id);
-  if(error) { toast('Failed to update stock', 'err'); }
+  const updates = [db.from('creatures').update({qty_on_hand: next}).eq('id', id)];
+  if(delta < 0) {
+    components.filter(cp => cp.creature_id === id).forEach(cp => {
+      updates.push(db.from('creature_components').update({stock_count: cp.stock_count}).eq('id', cp.id));
+    });
+  }
+  const results = await Promise.allSettled(updates);
+  if(results.some(r => r.value?.error)) { toast('Failed to update stock', 'err'); }
 }
 
 function render_stock(){
@@ -681,12 +709,57 @@ function render_stock(){
         <button class="btn sm" title="Print this creature" onclick="openAssign('${c.id}')">🖨</button>
         <button class="btn sm" style="margin-left:4px" title="Print label" onclick="openCreatureLabel('${c.id}')">🏷</button>
       </td>
-    </tr>`;
+    </tr>${renderCompRow(c)}`;
   }).join('');
 }
 
 
-async function load_creatures(){sync(true);const{data,error}=await db.from('creatures').select('*').order('log_number');if(error){serr();return;}creatures=data;sync(false);render_stock();update_stats_widget();}
+async function load_creatures(){sync(true);const[{data:cData,error:cErr},{data:compData}]=await Promise.all([db.from('creatures').select('*').order('log_number'),db.from('creature_components').select('*')]);if(cErr){serr();return;}creatures=cData;components=compData||[];sync(false);render_stock();update_stats_widget();}
+
+function renderCompRow(c){
+  const comps=components.filter(cp=>cp.creature_id===c.id);
+  const maxAsm=comps.length?Math.min(...comps.map(cp=>Math.floor(cp.stock_count/(cp.units_per_assembly||1)))):null;
+  const maxBadge=maxAsm!==null?`<span class="comp-max${maxAsm===0?' zero':''}">&#9889; Max assemblies: ${maxAsm}</span>`:'';
+  const items=comps.map(cp=>{
+    const sc=cp.stock_count===0?'#e09090':cp.stock_count<3?'#c97c2a':'#7dc994';
+    const per=cp.units_per_assembly>1?`<span class="comp-per">&times;${cp.units_per_assembly} per</span>`:'';
+    return`<div class="comp-item"><button class="comp-adj" onclick="adjComp('${cp.id}',-1)">&minus;</button><span class="comp-stock" style="color:${sc}">${cp.stock_count}</span><button class="comp-adj" onclick="adjComp('${cp.id}',1)">+</button><span class="comp-name">${cp.component_name}</span>${per}<button class="comp-del" onclick="delComp('${cp.id}','${c.id}')" title="Remove">&times;</button></div>`;
+  }).join('');
+  const empty=comps.length===0?'<span style="font-size:11px;color:var(--cream-faint);font-style:italic;">No components tracked yet</span>':'';
+  return`<tr class="comp-row"><td colspan="10"><div class="comp-panel"><div class="comp-hdr"><span>Components</span>${maxBadge}<button class="btn sm comp-add-btn" onclick="addComponent('${c.id}')">+ Add</button></div>${items}${empty}<div class="comp-add-form" id="comp-add-${c.id}"><input id="comp-name-inp-${c.id}" class="comp-inp" placeholder="Component name" type="text"/><input id="comp-units-inp-${c.id}" class="comp-inp" style="width:55px" placeholder="&times;/ea" type="number" min="1" value="1"/><button class="btn sm" onclick="saveComponent('${c.id}')">Save</button><button class="btn sm" onclick="document.getElementById('comp-add-${c.id}').style.display='none'">Cancel</button></div></div></td></tr>`;
+}
+async function adjComp(id,delta){
+  const cp=components.find(x=>x.id===id);
+  if(!cp)return;
+  cp.stock_count=Math.max(0,cp.stock_count+delta);
+  render_stock();
+  const{error}=await db.from('creature_components').update({stock_count:cp.stock_count}).eq('id',id);
+  if(error)toast('Failed to update component','err');
+}
+function addComponent(creatureId){
+  const panel=document.getElementById('comp-add-'+creatureId);
+  if(panel)panel.style.display=panel.style.display==='none'?'flex':'none';
+}
+async function saveComponent(creatureId){
+  const nameEl=document.getElementById('comp-name-inp-'+creatureId);
+  const unitsEl=document.getElementById('comp-units-inp-'+creatureId);
+  if(!nameEl||!unitsEl)return;
+  const name=nameEl.value.trim();
+  const units=parseInt(unitsEl.value)||1;
+  if(!name){toast('Enter a component name','err');return;}
+  const{data,error}=await db.from('creature_components').insert({creature_id:creatureId,component_name:name,stock_count:0,units_per_assembly:units}).select().single();
+  if(error){toast('Failed to add component','err');return;}
+  components.push(data);
+  render_stock();
+  toast('Component added','ok');
+}
+async function delComp(id,creatureId){
+  if(!confirm('Remove this component?'))return;
+  const{error}=await db.from('creature_components').delete().eq('id',id);
+  if(error){toast('Failed to remove component','err');return;}
+  components=components.filter(x=>x.id!==id);
+  render_stock();
+}
 // Map color names to approximate CSS colors for swatches
 function colorFromName(name){
   const n=(name||'').toLowerCase();
