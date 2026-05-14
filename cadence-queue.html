@@ -281,6 +281,18 @@
         <div><div style="font-size:9px; letter-spacing:.15em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:8px">Net Margin</div><div style="font-size:20px; font-weight:600" id="pc-r-margin">—</div></div>
       </div>
       <div style="text-align:center; margin-top:18px; font-size:11px; color:var(--cream-faint); border-top:1px solid rgba(201,168,76,0.1); padding-top:14px;" id="pc-r-detail">Select a creature to start</div>
+      
+      <!-- Smart Pricing Suggestions -->
+      <div id="pc-suggestions" style="margin-top:20px; display:none; justify-content:center; gap:12px; border-top:1px solid rgba(201,168,76,0.1); padding-top:18px;">
+        <div style="background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.3); padding:8px 16px; border-radius:4px; text-align:center; min-width:140px;">
+          <div style="font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--gold-light); margin-bottom:4px">Suggested Retail</div>
+          <div id="suggested-retail" style="font-size:18px; font-weight:600; color:var(--gold-light)">$0.00</div>
+        </div>
+        <div style="background:rgba(91,191,212,0.1); border:1px solid rgba(91,191,212,0.3); padding:8px 16px; border-radius:4px; text-align:center; min-width:140px;">
+          <div style="font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--teal); margin-bottom:4px">Suggested Etsy</div>
+          <div id="suggested-etsy" style="font-size:18px; font-weight:600; color:var(--teal)">$0.00</div>
+        </div>
+      </div>
     </div>
   </div>
   <div class="modal-act"><button class="btn" onclick="closeModal('m-printcost')">Cancel</button><button class="btn pri" onclick="saveRecipeToCreature()">Save Recipe &amp; COGS</button></div>
@@ -350,6 +362,7 @@ document.addEventListener('keydown', (e) => {
   if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
   if(e.key.toLowerCase() === 'o') { e.preventDefault(); oModal(); }
 });
+const FAILURE_RATE_BUFFER = 0.05;
 let orders=[],creatures=[],inv=[],fin=[],printers=[];
 
 function fmt$(v){return'$'+Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -979,23 +992,43 @@ function calcPrintCost(){
     totalGrams += rowGrams;
   });
 
-  const filPerUnit = totalFilCost / batch;
+  const filPerUnit = (totalFilCost * (1 + FAILURE_RATE_BUFFER)) / batch;
   const totalCogs = filPerUnit + pkg;
   const etsyFee = etsysPrice * 0.065;
   const net = etsysPrice - totalCogs - etsyFee;
   const margin = etsysPrice > 0 ? Math.round((net / etsysPrice) * 100) : null;
+
+  // Suggested Pricing Logic
+  const suggestedRetail = totalCogs * 3;
+  const suggestedEtsy = suggestedRetail * 1.10;
 
   document.getElementById('pc-r-fil-total').textContent = fmt$(filPerUnit);
   document.getElementById('pc-r-cogs').textContent = fmt$(totalCogs);
   document.getElementById('pc-r-net').textContent = fmt$(net);
   
   const mg = document.getElementById('pc-r-margin');
-  mg.textContent = margin !== null ? margin + '%' : '—';
-  mg.style.color = margin === null ? 'var(--cream-faint)' : margin >= 60 ? '#7dc994' : margin >= 40 ? '#E8D08A' : '#e09090';
+  if (margin !== null) {
+    mg.innerHTML = margin + '%' + (margin > 75 ? ' <span style="font-size:9px; vertical-align:middle; background:var(--gold); color:black; padding:1px 4px; border-radius:2px; margin-left:4px;">HIGH MARGIN</span>' : '');
+    // Margin coloring: <60% red, 60-75% gold, >75% teal/gold (high margin)
+    mg.style.color = margin >= 75 ? '#7dc994' : margin >= 60 ? '#E8D08A' : '#e09090';
+  } else {
+    mg.textContent = '—';
+    mg.style.color = 'var(--cream-faint)';
+  }
+  
+  // Show suggestions if COGS is valid
+  const sugWrap = document.getElementById('pc-suggestions');
+  if (totalCogs > pkg) {
+    sugWrap.style.display = 'flex';
+    document.getElementById('suggested-retail').textContent = fmt$(suggestedRetail);
+    document.getElementById('suggested-etsy').textContent = fmt$(suggestedEtsy);
+  } else {
+    sugWrap.style.display = 'none';
+  }
   
   document.getElementById('pc-r-detail').textContent = etsysPrice > 0 
-    ? `Plate Weight: ${totalGrams.toFixed(1)}g · Per Unit: ${(totalGrams/batch).toFixed(1)}g`
-    : `Plate Weight: ${totalGrams.toFixed(1)}g · Batch: ${batch}x`;
+    ? `Plate Weight: ${totalGrams.toFixed(1)}g · Per Unit: ${(totalGrams/batch).toFixed(1)}g (incl. 5% failure buffer)`
+    : `Plate Weight: ${totalGrams.toFixed(1)}g · Batch: ${batch}x (incl. 5% failure buffer)`;
 }
 
 async function saveRecipeToCreature(){
@@ -1031,7 +1064,7 @@ async function saveRecipeToCreature(){
     totalFilCost += ((m + p + t) * (spoolCost / 1000));
   });
 
-  const totalCogs = parseFloat(((totalFilCost / batch) + pkg).toFixed(2));
+  const totalCogs = parseFloat((((totalFilCost * (1 + FAILURE_RATE_BUFFER)) / batch) + pkg).toFixed(2));
 
   sync(true);
   const { error } = await db.from('creatures').update({ 
