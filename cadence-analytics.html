@@ -73,17 +73,20 @@
     <div class="kpi-card">
       <div class="kpi-label">Today</div>
       <div class="kpi-val" id="kpi-today">—</div>
-      <div class="kpi-sub" id="kpi-today-sub"></div>
+      <div class="kpi-delta" id="kpi-today-delta"></div>
+      <div class="kpi-sub">vs yesterday</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">This Week</div>
       <div class="kpi-val" id="kpi-week">—</div>
-      <div class="kpi-sub" id="kpi-week-sub"></div>
+      <div class="kpi-delta" id="kpi-week-delta"></div>
+      <div class="kpi-sub">vs last week</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">This Month</div>
       <div class="kpi-val" id="kpi-month">—</div>
-      <div class="kpi-sub" id="kpi-month-sub"></div>
+      <div class="kpi-delta" id="kpi-month-delta"></div>
+      <div class="kpi-sub">vs last month</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">All Time</div>
@@ -159,6 +162,17 @@ function incomeInRange(start, end){
   }).reduce((s,e)=>s+Number(e.amount),0);
 }
 
+function fmtDelta(current, prev, el){
+  if(!el) return;
+  if(prev===0 && current===0){ el.textContent=''; return; }
+  if(prev===0){ el.innerHTML='<span style="color:#7dc994;font-weight:600">New ↑</span>'; return; }
+  const pct=Math.round((current-prev)/prev*100);
+  const sign=pct>=0?'+':'';
+  const color=pct>=0?'#7dc994':'#e09090';
+  const arrow=pct>=0?'↑':'↓';
+  el.innerHTML=`<span style="color:${color};font-weight:600">${sign}${pct}% ${arrow}</span>`;
+}
+
 function updateKPIs(){
   const now=new Date();
   const todayStart=startOfDay(now);
@@ -166,18 +180,31 @@ function updateKPIs(){
   const weekStart=startOfWeek(now);
   const monthStart=startOfMonth(now);
 
+  // previous period boundaries
+  const yesterdayStart=new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate()-1);
+  const yesterdayEnd=new Date(todayStart); yesterdayEnd.setMilliseconds(-1);
+  const lastWeekStart=new Date(weekStart); lastWeekStart.setDate(lastWeekStart.getDate()-7);
+  const lastWeekEnd=new Date(weekStart); lastWeekEnd.setMilliseconds(-1);
+  const lastMonthStart=new Date(monthStart); lastMonthStart.setMonth(lastMonthStart.getMonth()-1);
+  const lastMonthEnd=new Date(monthStart); lastMonthEnd.setMilliseconds(-1);
+
   const today=incomeInRange(todayStart,todayEnd);
+  const yesterday=incomeInRange(yesterdayStart,yesterdayEnd);
   const week=incomeInRange(weekStart,now);
+  const lastWeek=incomeInRange(lastWeekStart,lastWeekEnd);
   const month=incomeInRange(monthStart,now);
+  const lastMonth=incomeInRange(lastMonthStart,lastMonthEnd);
   const allRev=sum(fin,'income');
   const allExp=sum(fin,'expense');
   const net=allRev-allExp;
   const margin=allRev>0?Math.round(net/allRev*100):0;
 
   document.getElementById('kpi-today').textContent=fmt$(today);
-  document.getElementById('kpi-today-sub').textContent=today===0?'No sales today':today>0?'Revenue':'';
+  fmtDelta(today,yesterday,document.getElementById('kpi-today-delta'));
   document.getElementById('kpi-week').textContent=fmt$(week);
+  fmtDelta(week,lastWeek,document.getElementById('kpi-week-delta'));
   document.getElementById('kpi-month').textContent=fmt$(month);
+  fmtDelta(month,lastMonth,document.getElementById('kpi-month-delta'));
   document.getElementById('kpi-alltime').textContent=fmt$(allRev);
 
   const netEl=document.getElementById('kpi-net');
