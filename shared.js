@@ -451,12 +451,12 @@ styleShield.textContent = `
   td { padding: 12px 14px; border-bottom: 1px solid rgba(201, 168, 76, 0.05); vertical-align: middle; }
   tr:hover td { background: rgba(201, 168, 76, 0.04); }
 
-  .topbar { 
-    display: flex !important; 
-    justify-content: space-between !important; 
-    align-items: center !important; 
-    height: 64px !important; 
-    padding: 0 28px !important; 
+  .topbar {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    height: calc(64px + env(safe-area-inset-top)) !important;
+    padding: env(safe-area-inset-top) 28px 0 !important;
     background: rgba(28, 22, 18, 0.98) !important;
     backdrop-filter: blur(10px) !important;
     border-bottom: 1px solid rgba(201, 168, 76, 0.15) !important;
