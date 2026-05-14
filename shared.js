@@ -227,9 +227,9 @@ async function applyRolePermissions() {
         ].join('');
         document.head.appendChild(s);
 
-        // Close dropdowns when clicking outside any nav-group
+        // Close dropdowns when clicking outside nav
         document.addEventListener('click', function(e) {
-          if (!e.target.closest('.nav-group')) {
+          if (!e.target.closest('.nav-group') && !e.target.closest('.nav-dropdown')) {
             document.querySelectorAll('.nav-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
           }
         });
@@ -244,6 +244,9 @@ async function applyRolePermissions() {
         }
         return true;
       }
+
+      // Remove stale body-level dropdowns from any prior call
+      document.querySelectorAll('body > .nav-dropdown[data-nav-idx]').forEach(function(d) { d.remove(); });
 
       nav.innerHTML = NAV_GROUPS.map(group => {
         if (!group.children) {
@@ -264,21 +267,32 @@ async function applyRolePermissions() {
           const active = linkFile === currentFile ? ' class="active"' : '';
           return `<a href="${link.href}"${target}${active}>${link.label}${badge}</a>`;
         }).join('');
-        // No onclick attribute — listeners bound directly below
         return `<div class="nav-group"><button class="nav-group-btn${groupActive ? ' active' : ''}" type="button">${group.label}</button><div class="nav-dropdown">${childLinks}</div></div>`;
       }).join('');
 
-      // Bind click listeners directly to every group button after innerHTML is set
+      // backdrop-filter on .dash-nav creates a new CSS containing block, which breaks
+      // position:fixed on child elements. Move each dropdown to document.body so it
+      // positions relative to the viewport instead of the clipped nav bar.
+      nav.querySelectorAll('.nav-group').forEach(function(group, i) {
+        var btn = group.querySelector('.nav-group-btn');
+        var dd  = group.querySelector('.nav-dropdown');
+        if (!btn || !dd) return;
+        btn.dataset.navIdx = i;
+        dd.dataset.navIdx  = i;
+        document.body.appendChild(dd);
+      });
+
+      // Bind click listeners
       nav.querySelectorAll('.nav-group-btn').forEach(function(btn) {
         btn.addEventListener('click', function(e) {
-          e.stopPropagation(); // prevent document handler from immediately closing
-          var dd = btn.parentElement.querySelector('.nav-dropdown');
+          e.stopPropagation();
+          var dd = document.body.querySelector('.nav-dropdown[data-nav-idx="' + btn.dataset.navIdx + '"]');
+          if (!dd) return;
           var isOpen = dd.classList.contains('open');
-          // Close all first
           document.querySelectorAll('.nav-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
           if (!isOpen) {
             var rect = btn.getBoundingClientRect();
-            dd.style.top  = (rect.bottom) + 'px';
+            dd.style.top  = rect.bottom + 'px';
             dd.style.left = rect.left + 'px';
             dd.classList.add('open');
           }
