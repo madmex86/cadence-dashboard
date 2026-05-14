@@ -1103,6 +1103,22 @@ async function sendLowStockAlert(item) {
   ]);
 }
 
+async function sendManifestationAlert(creature) {
+  const name = creature.name || 'Unknown';
+  const species = creature.species || 'Creature';
+  const title = '⬡ ̷C̷H̷R̷O̷N̷O̷S̷ ̷K̷I̷N̷ ̷M̷A̷N̷I̷F̷E̷S̷T̷E̷D̷: ' + name;
+  const description = [
+    '```',
+    'CLASSIFICATION : RESTRICTED',
+    'DESIGNATION    : ' + name + ' (Flexi ' + species + ')',
+    'STATUS         : Manifested — Outside Log Sequence',
+    '```',
+    'A Chronos Kin creature has been sealed into the hidden archive.',
+    '⚠️ Verify lore is complete before activating public visibility.'
+  ].join('\n');
+  await sendDiscordAlert(title, description, 0x6b3fa0);
+}
+
 // ── Command Palette (Cmd+K / Ctrl+K) ─────────────────────────────────────────
 (function() {
   const ACTIONS = [

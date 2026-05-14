@@ -153,6 +153,15 @@
       <div><label class="fl">Etsy Price ($)<span class="help-tip">?<span class="tip-text">Listing price on Etsy. Set ~8–10% higher than retail to cover Etsy's 6.5% transaction fee plus listing fees.</span></span></label><input class="fi" type="number" id="f-price-etsy" placeholder="18.00" step="0.01"/></div>
       <div><label class="fl">Stock On Hand<span class="help-tip">?<span class="tip-text">How many finished, ready-to-ship copies exist right now. Drives the Out / Low badges on the creature grid.</span></span></label><input class="fi" type="number" id="f-qty" placeholder="0"/></div>
       <div class="form-full"><label class="fl">Tagline<span class="help-tip">?<span class="tip-text">1–2 sentences of flavor text shown under the creature's name on the site. Keep it evocative and in-universe.</span></span></label><input class="fi" id="f-tagline" placeholder="Found wandering the forest floor…"/></div>
+      <div class="form-full">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;padding:12px 14px;border:1px solid rgba(201,168,76,.12);background:rgba(201,168,76,.03);border-radius:3px;">
+          <input type="checkbox" id="f-special" style="width:auto;margin:0;accent-color:#C9A84C;"/>
+          <div>
+            <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-light);font-weight:500;">⬡ Chronos Kin — Hidden Edition</div>
+            <div style="font-size:10px;color:var(--cream-faint);margin-top:2px;">Appears only in the Secret Archive (/secret-archive.html). Triggers a classified Discord alert on save. Not shown in public Bestiary.</div>
+          </div>
+        </label>
+      </div>
       <div style="display:none">
         <input type="checkbox" id="f-featured"/>
         <input type="checkbox" id="f-launch-queue"/>
@@ -427,6 +436,7 @@
     document.getElementById('f-active').value = String(c?.active !== false);
     document.getElementById('f-tagline').value = c?.tagline || '';
     document.getElementById('f-etsy-url').value = c?.etsy_url || '';
+    document.getElementById('f-special').checked = !!c?.is_special;
     document.getElementById('f-image-url').value = c?.image_url || '';
     const modelUrl = c?.model_url || '';
     document.getElementById('f-model-url').value = modelUrl;
@@ -497,6 +507,7 @@
       etsy_url: document.getElementById('f-etsy-url').value.trim(),
       image_url: document.getElementById('f-image-url').value.trim(),
       model_url: document.getElementById('f-model-url').value.trim() || null,
+      is_special: document.getElementById('f-special').checked,
       notes: document.getElementById('f-notes').value.trim(),
       is_featured: document.getElementById('f-featured').checked,
       in_launch_queue: document.getElementById('f-launch-queue').checked,
@@ -553,7 +564,8 @@
     if (error) { serr(); toast('Save failed', 'err'); return; }
     toast(id ? 'Saved' : 'Creature added');
     logActivity(id ? 'Edit creature' : 'Add creature', null, payload.name);
-    sendDiscordAlert(id ? '✏️ Creature Updated' : '✨ New Discovery', `**${payload.name}** has been ${id ? 'updated' : 'added to the workshop log'}.`);
+    if (payload.is_special && !id) sendManifestationAlert(payload);
+    else sendDiscordAlert(id ? '✏️ Creature Updated' : '✨ New Discovery', `**${payload.name}** has been ${id ? 'updated' : 'added to the workshop log'}.`);
     closeModal();
     await init();
   }
