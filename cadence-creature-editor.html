@@ -44,6 +44,8 @@
   .img-preview { width:100%; height:100px; object-fit:cover; border-radius:3px; margin-top:5px; display:none; }
   .add-btn { position:fixed; bottom:28px; right:28px; background:var(--gold); color:var(--ink); border:none; border-radius:50%; width:52px; height:52px; font-size:22px; cursor:pointer; box-shadow:0 4px 16px rgba(201,168,76,0.35); transition:background .2s; z-index:100; }
   .add-btn:hover { background:var(--goldl); }
+  .filament-pill { display:inline-flex; align-items:center; gap:4px; font-size:10px; padding:3px 10px; background:rgba(0,0,0,.2); border:1px solid rgba(201,168,76,.15); color:var(--cream-faint); cursor:pointer; border-radius:10px; transition:all .15s; font-family:inherit; white-space:nowrap; }
+  .filament-pill.on { border-color:rgba(201,168,76,.5); background:rgba(201,168,76,.1); color:var(--goldl); }
 
   /* Environment accent */
   .creature-card { border-top: 2px solid transparent; }
@@ -158,10 +160,30 @@
         </select>
       </div>
       <div class="form-full" style="background:rgba(255,255,255,0.02);border:1px solid rgba(201,168,76,0.1);padding:16px;border-radius:4px;margin-bottom:12px;">
-        <label class="fl" style="margin-bottom:12px;display:block;">Print Recipe / Filament Mapping</label>
-        <div id="recipe-list" style="display:flex;flex-direction:column;gap:10px;"></div>
-        <button type="button" class="btn sm" onclick="addRecipeRow()" style="margin-top:12px;background:rgba(201,168,76,0.05);">+ Add Color / Part</button>
-        <input type="hidden" id="f-filament-color"/> <!-- Keep for legacy display string -->
+        <label class="fl" style="margin-bottom:16px;display:block;">Print Recipe — Parts &amp; Filaments</label>
+        <div style="display:flex;flex-direction:column;gap:20px;">
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <span style="font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:rgba(201,168,76,.55);">Body</span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <label style="font-size:10px;color:var(--cream-faint);white-space:nowrap;">Parts on hand:</label>
+                <input class="fi" type="number" id="comp-body-qty" min="0" value="0" style="width:64px;padding:4px 8px;font-size:13px;"/>
+              </div>
+            </div>
+            <div id="body-filaments" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;"></div>
+          </div>
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <span style="font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:rgba(201,168,76,.55);">Head</span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <label style="font-size:10px;color:var(--cream-faint);white-space:nowrap;">Parts on hand:</label>
+                <input class="fi" type="number" id="comp-head-qty" min="0" value="0" style="width:64px;padding:4px 8px;font-size:13px;"/>
+              </div>
+            </div>
+            <div id="head-filaments" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;"></div>
+          </div>
+        </div>
+        <input type="hidden" id="f-filament-color"/>
       </div>
       <div><label class="fl">Retail Price ($)<span class="help-tip">?<span class="tip-text">What you charge for direct sales — website, in-person, events. Set before any platform fees.</span></span></label><input class="fi" type="number" id="f-price-retail" placeholder="18.00" step="0.01"/></div>
       <div><label class="fl">Etsy Price ($)<span class="help-tip">?<span class="tip-text">Listing price on Etsy. Set ~8–10% higher than retail to cover Etsy's 6.5% transaction fee plus listing fees.</span></span></label><input class="fi" type="number" id="f-price-etsy" placeholder="18.00" step="0.01"/></div>
@@ -242,6 +264,7 @@
 <script>
   let creatures = [];
   let inv = [];
+  let comps = [];
 
   function colorFromName(name){
     const n=(name||'').toLowerCase();
@@ -262,35 +285,38 @@
     return'#7a6f62';
   }
 
-  function addRecipeRow(data = {}) {
-    const cont = document.getElementById('recipe-list');
-    if(!cont) return;
-    const div = document.createElement('div');
-    div.className = 'recipe-row';
-    div.style = 'display:grid;grid-template-columns:110px 1fr 32px;gap:8px;align-items:center;';
-    div.innerHTML = `
-      <input class="fi" placeholder="e.g. Body" value="${esc(data.label || '')}" style="padding:6px 8px;"/>
-      <select class="fi" style="padding:6px 8px;">
-        <option value="">-- Select Spool --</option>
-        ${inv.map(s => `<option value="${esc(s.id)}" ${s.id === data.filId ? 'selected' : ''}>${esc(s.spool_name)} (${esc(s.brand || 'No Brand')})</option>`).join('')}
-      </select>
-      <button type="button" class="btn sm" onclick="this.parentElement.remove()" style="padding:0;color:var(--red);border-color:transparent;background:transparent;font-size:16px;">×</button>
-    `;
-    cont.appendChild(div);
+  function renderPartFilaments(bodyIds, headIds) {
+    ['body', 'head'].forEach(part => {
+      const cont = document.getElementById(`${part}-filaments`);
+      if (!cont) return;
+      const selected = part === 'body' ? (bodyIds || []) : (headIds || []);
+      if (!inv.length) { cont.innerHTML = '<span style="font-size:11px;color:var(--cream-faint);font-style:italic;">No filaments in inventory yet</span>'; return; }
+      cont.innerHTML = inv.map(s => {
+        const on = selected.includes(s.id);
+        const col = colorFromName(s.color || s.spool_name);
+        return `<button type="button" class="filament-pill${on ? ' on' : ''}" data-id="${esc(s.id)}" data-part="${part}" onclick="this.classList.toggle('on')"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${col};flex-shrink:0;"></span>${esc(s.spool_name)}</button>`;
+      }).join('');
+    });
+  }
+
+  function getSelectedFilaments(part) {
+    return [...document.querySelectorAll(`.filament-pill.on[data-part="${part}"]`)].map(b => b.dataset.id);
   }
 
   function showApp() { document.getElementById('app').style.display = 'flex'; init(); }
 
   async function init() {
     sync(true);
-    const [cRes, iRes, sRes] = await Promise.all([
+    const [cRes, iRes, sRes, compRes] = await Promise.all([
       db.from('creatures').select('*').order('log_number'),
       db.from('inventory').select('id, spool_name, color, purchase_url, brand'),
-      db.from('site_settings').select('cami_portal_enabled').eq('id', 1).single()
+      db.from('site_settings').select('cami_portal_enabled').eq('id', 1).single(),
+      db.from('creature_components').select('*')
     ]);
     if (cRes.error || iRes.error) { serr(); return; }
     creatures = cRes.data || [];
     inv = iRes.data || [];
+    comps = compRes.data || [];
     if (sRes.data) {
       document.getElementById('cami-portal-enabled').checked = !!sRes.data.cami_portal_enabled;
     }
@@ -456,20 +482,13 @@
     document.getElementById('f-log').value = c?.log_number || '';
     document.getElementById('f-env').value = c?.environment || 'forest';
     
-    // Populate Recipe Editor
-    const recList = document.getElementById('recipe-list');
-    recList.innerHTML = '';
-    try {
-      if(c?.print_recipe) {
-        const data = typeof c.print_recipe === 'string' ? JSON.parse(c.print_recipe) : c.print_recipe;
-        const recipe = Array.isArray(data) ? data : (data.recipe || []);
-        recipe.forEach(r => addRecipeRow(r));
-      } else if (c?.filament_color) {
-        // Migration: convert old string to first recipe row
-        addRecipeRow({ label: 'Body', filId: inv.find(s=>s.spool_name===c.filament_color)?.id });
-      }
-    } catch(e) { console.error('Recipe parse error:', e); }
-    if(recList.children.length === 0) addRecipeRow({ label: 'Body' }); // Start with one row
+    // Populate Part Filaments from creature_components
+    const cComps = id ? comps.filter(x => x.creature_id === id) : [];
+    const bodyComp = cComps.find(x => x.part_name === 'Body');
+    const headComp = cComps.find(x => x.part_name === 'Head');
+    renderPartFilaments(bodyComp?.filament_ids || [], headComp?.filament_ids || []);
+    document.getElementById('comp-body-qty').value = bodyComp?.stock_count ?? 0;
+    document.getElementById('comp-head-qty').value = headComp?.stock_count ?? 0;
     
     document.getElementById('f-price-retail').value = c?.price_retail || '';
     document.getElementById('f-price-etsy').value = c?.price_etsy || '';
@@ -563,31 +582,30 @@
         .split('\n').map(function(s){ return s.trim(); }).filter(Boolean),
     };
 
-    // Gather Recipe
-    const rows = document.querySelectorAll('.recipe-row');
-    const recipe = [];
-    rows.forEach(r => {
-      const label = r.querySelector('input').value.trim();
-      const filId = r.querySelector('select').value;
-      if(label || filId) recipe.push({ label, filId });
-    });
-    
-    // Preserve batch and pkg if they already exist in the creature's recipe
+    // Gather Recipe from pill selections
+    const bodyFilIds = getSelectedFilaments('body');
+    const headFilIds = getSelectedFilaments('head');
+    const recipe = [
+      ...bodyFilIds.map(filId => ({ label: 'Body', filId })),
+      ...headFilIds.map(filId => ({ label: 'Head', filId }))
+    ];
+
+    // Preserve batch/pkg from existing recipe
     const oldRecipe = creatures.find(c => c.id === id)?.print_recipe;
     let batch = 1, pkg = 0.75;
-    if(oldRecipe) {
+    if (oldRecipe) {
       try {
         const data = typeof oldRecipe === 'string' ? JSON.parse(oldRecipe) : oldRecipe;
-        if(data.batch) batch = data.batch;
-        if(data.pkg) pkg = data.pkg;
+        if (data.batch) batch = data.batch;
+        if (data.pkg) pkg = data.pkg;
       } catch(e) {}
     }
     payload.print_recipe = JSON.stringify({ batch, pkg, recipe });
-    
-    // Legacy support: set filament_color to the first spool name
-    if(recipe.length > 0) {
+
+    // Legacy filament_color
+    if (recipe.length > 0) {
       const spool = inv.find(s => s.id === recipe[0].filId);
-      if(spool) payload.filament_color = spool.spool_name;
+      if (spool) payload.filament_color = spool.spool_name;
     }
 
     if (!payload.name) { toast('Name is required', 'err'); return; }
@@ -604,30 +622,22 @@
       : await db.from('creatures').insert([payload]).select().single();
     if (error) { serr(); toast('Save failed', 'err'); return; }
     
-    // --- AUTO-SYNC COMPONENTS ---
-    const finalId = id || (await db.from('creatures').select('id').eq('sku', payload.sku).single()).data.id;
+    // --- AUTO-SYNC COMPONENTS (one row per part) ---
+    const finalId = id || (await db.from('creatures').select('id').eq('sku', payload.sku).single()).data?.id;
     if (finalId) {
-      // Get existing comps to avoid duplicates
-      const { data: existingComps } = await db.from('creature_components').select('*').eq('creature_id', finalId);
-      
-      for (const r of recipe) {
-        const spool = inv.find(s => s.id === r.filId);
-        const compName = `${r.label || 'Part'} (${spool ? spool.spool_name : 'No Spool'})`;
-        
-        // Check if this part/filament combo already exists
-        const match = existingComps?.find(ec => ec.filament_id === r.filId && ec.component_name.startsWith(r.label));
-        
-        if (!match) {
-          await db.from('creature_components').insert({
-            creature_id: finalId,
-            component_name: compName,
-            filament_id: r.filId,
-            stock_count: 0,
-            units_per_assembly: 1
-          });
-        } else if (match.component_name !== compName) {
-          // Update name if spool name changed
-          await db.from('creature_components').update({ component_name: compName }).eq('id', match.id);
+      const bodyQty = parseInt(document.getElementById('comp-body-qty').value) || 0;
+      const headQty = parseInt(document.getElementById('comp-head-qty').value) || 0;
+      const partsData = [
+        { part_name: 'Body', filament_ids: bodyFilIds, stock_count: bodyQty },
+        { part_name: 'Head', filament_ids: headFilIds, stock_count: headQty }
+      ];
+      const existing = comps.filter(x => x.creature_id === finalId);
+      for (const part of partsData) {
+        const match = existing.find(x => x.part_name === part.part_name);
+        if (match) {
+          await db.from('creature_components').update({ filament_ids: part.filament_ids, stock_count: part.stock_count }).eq('id', match.id);
+        } else if (part.filament_ids.length > 0 || part.stock_count > 0) {
+          await db.from('creature_components').insert({ creature_id: finalId, part_name: part.part_name, filament_ids: part.filament_ids, stock_count: part.stock_count });
         }
       }
     }

@@ -168,25 +168,35 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 // CENTRALIZED NAVIGATION MASTER
-const NAV_LINKS = [
+const NAV_GROUPS = [
   { label: 'Hub', href: 'index.html' },
-  { label: 'Queue', href: 'cadence-queue.html' },
-  { label: 'Fulfillment', href: 'cadence-fulfillment.html' },
-  { label: 'Customers', href: 'cadence-customers.html' },
-  { label: 'Messages', href: 'cadence-messages.html', badge: 'msg-badge' },
-  { label: 'Creatures', href: 'cadence-creature-editor.html', adminOnly: true },
-  { label: 'Email Blast', href: 'cadence-email-blast.html', adminOnly: true },
-  { label: '🚀 Launch', href: 'cadence-drop-launch.html', adminOnly: true, hideIfLaunched: true },
-  { label: 'P&L', href: 'cadence-creatures-pl-tracker.html', adminOnly: true },
-  { label: 'Analytics', href: 'cadence-analytics.html', adminOnly: true },
-  { label: 'Sales Intel', href: 'cadence-sales.html', adminOnly: true },
-  { label: 'Live', href: 'cadence-live.html', adminOnly: true },
-  { label: 'Links', href: 'cadence-links.html' },
-  { label: 'Activity', href: 'cadence-activity.html', adminOnly: true },
-  { label: 'Admin', href: 'cadence-admin.html', adminOnly: true },
-  { label: 'Site', href: 'cadence-site.html' },
+  { label: 'Production', children: [
+    { label: 'Queue & Orders', href: 'cadence-queue.html' },
+    { label: 'Fulfillment', href: 'cadence-fulfillment.html' },
+  ]},
+  { label: 'Commerce', adminOnly: true, children: [
+    { label: 'P&L', href: 'cadence-creatures-pl-tracker.html' },
+    { label: 'Sales Intel', href: 'cadence-sales.html' },
+    { label: '🚀 Launch', href: 'cadence-drop-launch.html', hideIfLaunched: true },
+    { label: 'Analytics', href: 'cadence-analytics.html' },
+  ]},
+  { label: 'Catalog', adminOnly: true, children: [
+    { label: 'Creatures', href: 'cadence-creature-editor.html' },
+  ]},
+  { label: 'Customers', children: [
+    { label: 'Customers', href: 'cadence-customers.html' },
+    { label: 'Messages', href: 'cadence-messages.html', badge: 'msg-badge' },
+    { label: 'Email Blast', href: 'cadence-email-blast.html', adminOnly: true },
+  ]},
+  { label: 'Ops', adminOnly: true, children: [
+    { label: 'Live', href: 'cadence-live.html' },
+    { label: 'Site', href: 'cadence-site.html' },
+    { label: 'Links', href: 'cadence-links.html' },
+    { label: 'Activity', href: 'cadence-activity.html' },
+    { label: 'Admin', href: 'cadence-admin.html' },
+  ]},
   { label: 'Live Site ↗', href: 'https://cadencecreatures.com', external: true },
-  { label: 'Etsy Shop ↗', href: 'https://etsy.com/shop/CadenceCreatures', external: true }
+  { label: 'Etsy ↗', href: 'https://etsy.com/shop/CadenceCreatures', external: true },
 ];
 
 async function applyRolePermissions() {
@@ -200,22 +210,60 @@ async function applyRolePermissions() {
   const nav = document.querySelector('.dash-nav');
   if(nav) {
     try {
-      nav.innerHTML = NAV_LINKS.map(link => {
-        // Role Visibility
+      // Inject dropdown nav styles once
+      if (!document.getElementById('nav-group-styles')) {
+        const s = document.createElement('style');
+        s.id = 'nav-group-styles';
+        s.textContent = `.nav-group{position:relative;display:inline-block}.nav-group-btn{font-family:'Lora',serif;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-faint);background:none;border:none;padding:12px 16px;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap}.nav-group-btn:hover{color:var(--gold-light)}.nav-group-btn.active{color:var(--gold-light);border-bottom-color:var(--gold)}.nav-group-btn::after{content:' ▾';font-size:7px;opacity:.6}.nav-dropdown{display:none;position:absolute;top:100%;left:0;background:#0f0d14;border:1px solid rgba(201,168,76,.15);min-width:160px;z-index:500;padding:4px 0;box-shadow:0 8px 24px rgba(0,0,0,.5)}.nav-group.open .nav-dropdown{display:block}.nav-dropdown a{display:block;padding:9px 18px;font-family:'Lora',serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--cream-faint);text-decoration:none;border-bottom:none;white-space:nowrap;transition:color .15s,background .15s}.nav-dropdown a:hover,.nav-dropdown a.active{color:var(--gold-light);background:rgba(201,168,76,.05)}`;
+        document.head.appendChild(s);
+      }
+
+      function isLinkVisible(link) {
         if (!isOwner) {
-          if (link.adminOnly && role !== 'admin') return '';
-          if (link.hideIfLaunched && localStorage.getItem('cc_drop1_launched')) return '';
-          if (role === 'finance' && (link.href.includes('fulfillment') || link.href.includes('queue'))) return '';
-          if (role === 'fulfillment' && link.adminOnly) return '';
+          if (link.adminOnly && role !== 'admin') return false;
+          if (link.hideIfLaunched && localStorage.getItem('cc_drop1_launched')) return false;
+          if (role === 'finance' && link.href && (link.href.includes('fulfillment') || link.href.includes('queue'))) return false;
+          if (role === 'fulfillment' && link.adminOnly) return false;
         }
-        
-        const target = link.external ? ' target="_blank"' : '';
-        const badge = link.badge ? ` <span id="${link.badge}" class="nav-badge" style="display:none">0</span>` : '';
-        const linkFile = link.href.split('/').pop().replace('.html', '');
-        const activeClass = (linkFile === currentFile) ? ' class="active"' : '';
-        
-        return `<a href="${link.href}"${target}${activeClass}>${link.label}${badge}</a>`;
+        return true;
+      }
+
+      nav.innerHTML = NAV_GROUPS.map(group => {
+        if (!group.children) {
+          // Standalone link
+          if (!isLinkVisible(group)) return '';
+          const target = group.external ? ' target="_blank"' : '';
+          const linkFile = (group.href || '').split('/').pop().replace('.html', '');
+          const active = linkFile === currentFile ? ' class="active"' : '';
+          return `<a href="${group.href}"${target}${active}>${group.label}</a>`;
+        }
+        // Group with dropdown
+        if (group.adminOnly && !isOwner && role !== 'admin') return '';
+        const visibleChildren = group.children.filter(isLinkVisible);
+        if (!visibleChildren.length) return '';
+        const groupActive = visibleChildren.some(c => (c.href || '').split('/').pop().replace('.html','') === currentFile);
+        const childLinks = visibleChildren.map(link => {
+          const target = link.external ? ' target="_blank"' : '';
+          const badge = link.badge ? ` <span id="${link.badge}" class="nav-badge" style="display:none">0</span>` : '';
+          const linkFile = (link.href || '').split('/').pop().replace('.html', '');
+          const active = linkFile === currentFile ? ' class="active"' : '';
+          return `<a href="${link.href}"${target}${active}>${link.label}${badge}</a>`;
+        }).join('');
+        return `<div class="nav-group"><button class="nav-group-btn${groupActive ? ' active' : ''}" onclick="(function(btn){var g=btn.closest('.nav-group');document.querySelectorAll('.nav-group').forEach(function(x){if(x!==g)x.classList.remove('open')});g.classList.toggle('open')})(this)">${group.label}</button><div class="nav-dropdown">${childLinks}</div></div>`;
       }).join('');
+
+      // Close dropdowns on outside click
+      if (!document.getElementById('nav-outside-handler')) {
+        const marker = document.createElement('span');
+        marker.id = 'nav-outside-handler';
+        marker.style.display = 'none';
+        document.body.appendChild(marker);
+        document.addEventListener('click', function(e) {
+          if (!e.target.closest('.nav-group')) {
+            document.querySelectorAll('.nav-group.open').forEach(function(g) { g.classList.remove('open'); });
+          }
+        });
+      }
     } catch(e) { console.error('Nav injection failed:', e); }
   }
 
@@ -1052,16 +1100,18 @@ async function logActivity(action, orderId = null, details = null) {
 // NAV HIGHLIGHTER
 function highlightNav() {
   let path = window.location.pathname.split('/').pop() || 'index.html';
-  // Handle extension-less URLs (like localhost:4321/cadence-queue)
   if (path && !path.includes('.')) path += '.html';
 
   document.querySelectorAll('.dash-nav a').forEach(a => {
     const href = a.getAttribute('href');
-    if (href === path) {
-      a.classList.add('active');
-    } else {
-      a.classList.remove('active');
-    }
+    if (href === path) a.classList.add('active');
+    else a.classList.remove('active');
+  });
+  // Mark parent group button active if a child matches
+  document.querySelectorAll('.dash-nav .nav-group').forEach(group => {
+    const hasActive = group.querySelector(`.nav-dropdown a[href="${path}"]`);
+    const btn = group.querySelector('.nav-group-btn');
+    if (btn) btn.classList.toggle('active', !!hasActive);
   });
 }
 
@@ -1090,21 +1140,6 @@ async function sendLowStockAlert(item) {
   ]);
 }
 
-async function sendManifestationAlert(creature) {
-  const name = creature.name || 'Unknown';
-  const species = creature.species || 'Creature';
-  const title = '⬡ ̷C̷H̷R̷O̷N̷O̷S̷ ̷K̷I̷N̷ ̷M̷A̷N̷I̷F̷E̷S̷T̷E̷D̷: ' + name;
-  const description = [
-    '```',
-    'CLASSIFICATION : RESTRICTED',
-    'DESIGNATION    : ' + name + ' (Flexi ' + species + ')',
-    'STATUS         : Manifested — Outside Log Sequence',
-    '```',
-    'A Chronos Kin creature has been sealed into the hidden archive.',
-    '⚠️ Verify lore is complete before activating public visibility.'
-  ].join('\n');
-  await sendDiscordAlert(title, description, 0x6b3fa0);
-}
 
 // ── Command Palette (Cmd+K / Ctrl+K) ─────────────────────────────────────────
 (function() {
