@@ -1083,6 +1083,21 @@ document.addEventListener('DOMContentLoaded', () => {
   if (nav) observer.observe(nav, { childList: true, subtree: true });
 });
 
+// ── Low Stock Discord Alert ───────────────────────────────────────────────────
+async function sendLowStockAlert(item) {
+  const count = item.spool_count ?? item.stock_count ?? 0;
+  const threshold = item.reorder_spool_threshold ?? 1;
+  const name = item.spool_name || item.name || 'Unknown Item';
+  const url = item.purchase_url || null;
+  const urgency = count === 0 ? '🚨 OUT OF STOCK' : '⚠️ Low Stock';
+  const color = count === 0 ? 0xe09090 : 0xE8D08A;
+
+  let description = `**${name}** is running low.\n> Stock: **${count}** remaining (threshold: ${threshold})`;
+  if (url) description += `\n\n[🛒 Reorder Now](${url})`;
+
+  await sendDiscordAlert(urgency, description, color);
+}
+
 // ── Command Palette (Cmd+K / Ctrl+K) ─────────────────────────────────────────
 (function() {
   const ACTIONS = [

@@ -838,6 +838,7 @@ async function saveInv(){
   }else{
     toast(id?'Updated':'Added','ok');
   }
+  if(count <= p.reorder_spool_threshold) sendLowStockAlert(p);
   await load_inv();
 }
 async function delInv(id){if(!confirm('Delete spool?'))return;sync(true);const{error}=await db.from('inventory').delete().eq('id',id);if(error){serr();toast('Failed','err');return;}toast('Deleted');await load_inv();}
