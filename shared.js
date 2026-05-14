@@ -1,4 +1,3 @@
-console.log('shared.js v2 loaded');
 async function signOut(){
   sessionStorage.removeItem('cc_user_name');
   try {
@@ -10,7 +9,6 @@ async function signOut(){
   }
 }
 
-const PW='Cadence4513!';
 const SK='cc_hub_auth';
 
 // Initialize Supabase Globally
@@ -20,9 +18,11 @@ const db = supabase.createClient(supabaseUrl, supabaseKey);
 
 let currentUser = null;
 
-const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1501706688644911164/stzK50NrTNgJmOs3rL1JR2FTSnlzNA4yfi_kPzbh5JhU7ZjN8s5ViWL3541B9duwbr8Z';
+// Set window.CC_DISCORD_WEBHOOK in config.js (gitignored) — never hardcode here.
+const DISCORD_WEBHOOK_URL = (typeof window !== 'undefined' && window.CC_DISCORD_WEBHOOK) || null;
 
 async function sendDiscordAlert(title, message, color=0xE8D08A) {
+  if (!DISCORD_WEBHOOK_URL) return;
   try {
     const payload = {
       embeds: [{
