@@ -210,7 +210,7 @@ async function applyRolePermissions() {
   const nav = document.querySelector('.dash-nav');
   if(nav) {
     try {
-      // Inject dropdown nav styles once — use fixed positioning to escape overflow-x:auto clipping
+      // Inject styles once
       if (!document.getElementById('nav-group-styles')) {
         const s = document.createElement('style');
         s.id = 'nav-group-styles';
@@ -227,23 +227,7 @@ async function applyRolePermissions() {
         ].join('');
         document.head.appendChild(s);
 
-        // Named global toggle — simpler and more reliable than inline IIFE
-        window['_navToggle'] = function(btn) {
-          var g = btn.closest('.nav-group');
-          var dd = g.querySelector('.nav-dropdown');
-          var isOpen = dd.classList.contains('open');
-          // Close all dropdowns
-          document.querySelectorAll('.nav-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
-          if (!isOpen) {
-            // Position dropdown using fixed coords (escapes overflow:auto clipping)
-            var rect = btn.getBoundingClientRect();
-            dd.style.top  = rect.bottom + 'px';
-            dd.style.left = rect.left + 'px';
-            dd.classList.add('open');
-          }
-        };
-
-        // Close on outside click
+        // Close dropdowns when clicking outside any nav-group
         document.addEventListener('click', function(e) {
           if (!e.target.closest('.nav-group')) {
             document.querySelectorAll('.nav-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
@@ -280,8 +264,27 @@ async function applyRolePermissions() {
           const active = linkFile === currentFile ? ' class="active"' : '';
           return `<a href="${link.href}"${target}${active}>${link.label}${badge}</a>`;
         }).join('');
-        return `<div class="nav-group"><button class="nav-group-btn${groupActive ? ' active' : ''}" onclick="_navToggle(this)">${group.label}</button><div class="nav-dropdown">${childLinks}</div></div>`;
+        // No onclick attribute — listeners bound directly below
+        return `<div class="nav-group"><button class="nav-group-btn${groupActive ? ' active' : ''}" type="button">${group.label}</button><div class="nav-dropdown">${childLinks}</div></div>`;
       }).join('');
+
+      // Bind click listeners directly to every group button after innerHTML is set
+      nav.querySelectorAll('.nav-group-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation(); // prevent document handler from immediately closing
+          var dd = btn.parentElement.querySelector('.nav-dropdown');
+          var isOpen = dd.classList.contains('open');
+          // Close all first
+          document.querySelectorAll('.nav-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
+          if (!isOpen) {
+            var rect = btn.getBoundingClientRect();
+            dd.style.top  = (rect.bottom) + 'px';
+            dd.style.left = rect.left + 'px';
+            dd.classList.add('open');
+          }
+        });
+      });
+
     } catch(e) { console.error('Nav injection failed:', e); }
   }
 
