@@ -6,6 +6,7 @@
     { "source": "/editor", "destination": "/cadence-creature-editor.html" },
     { "source": "/launch", "destination": "/cadence-drop-launch.html" },
     { "source": "/queue", "destination": "/index.html" },
-    { "source": "/analytics", "destination": "/cadence-analytics.html" }
+    { "source": "/analytics", "destination": "/cadence-analytics.html" },
+    { "source": "/sales", "destination": "/cadence-sales.html" }
   ]
 }
