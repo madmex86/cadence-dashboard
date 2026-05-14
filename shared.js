@@ -168,8 +168,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 // CENTRALIZED NAVIGATION MASTER
+// Hub is removed — the topbar brand name is made clickable as the home link in applyRolePermissions.
 const NAV_GROUPS = [
-  { label: 'Hub', href: 'index.html' },
   { label: 'Production', children: [
     { label: 'Queue & Orders', href: 'cadence-queue.html' },
     { label: 'Fulfillment', href: 'cadence-fulfillment.html' },
@@ -195,8 +195,10 @@ const NAV_GROUPS = [
     { label: 'Activity', href: 'cadence-activity.html' },
     { label: 'Admin', href: 'cadence-admin.html' },
   ]},
-  { label: 'Live Site ↗', href: 'https://cadencecreatures.com', external: true },
-  { label: 'Etsy ↗', href: 'https://etsy.com/shop/CadenceCreatures', external: true },
+  { label: 'External', children: [
+    { label: 'Live Site ↗', href: 'https://cadencecreatures.com', external: true },
+    { label: 'Etsy ↗', href: 'https://etsy.com/shop/CadenceCreatures', external: true },
+  ]},
 ];
 
 async function applyRolePermissions() {
@@ -327,6 +329,15 @@ async function applyRolePermissions() {
     if (dashNav) dashNav.parentNode.insertBefore(hud, dashNav);
   }
   updateHUD();
+
+  // 1.8 MAKE BRAND NAME A HOME LINK
+  const brand = document.querySelector('.topbar-name');
+  if (brand && !brand.dataset.homeLinked) {
+    brand.style.cursor = 'pointer';
+    brand.title = 'Dashboard Home';
+    brand.dataset.homeLinked = '1';
+    brand.addEventListener('click', () => { window.location.href = 'index.html'; });
+  }
 
   // 2. INJECT TOPBAR ELEMENTS
   const right = document.querySelector('.topbar-right');
@@ -1135,17 +1146,18 @@ async function logActivity(action, orderId = null, details = null) {
 function highlightNav() {
   let path = window.location.pathname.split('/').pop() || 'index.html';
   if (path && !path.includes('.')) path += '.html';
+  const cur = path.replace('.html', '');
 
-  document.querySelectorAll('.dash-nav a').forEach(a => {
-    const href = a.getAttribute('href');
-    if (href === path) a.classList.add('active');
-    else a.classList.remove('active');
+  // Dropdowns are portaled to document.body — highlight links there
+  document.querySelectorAll('body > .nav-dropdown a').forEach(a => {
+    const href = (a.getAttribute('href') || '').split('/').pop().replace('.html', '');
+    a.classList.toggle('active', href === cur && !a.getAttribute('target'));
   });
-  // Mark parent group button active if a child matches
-  document.querySelectorAll('.dash-nav .nav-group').forEach(group => {
-    const hasActive = group.querySelector(`.nav-dropdown a[href="${path}"]`);
-    const btn = group.querySelector('.nav-group-btn');
-    if (btn) btn.classList.toggle('active', !!hasActive);
+
+  // Mark parent group button active if its portaled dropdown has an active child
+  document.querySelectorAll('.dash-nav .nav-group-btn').forEach(btn => {
+    const dd = document.body.querySelector('.nav-dropdown[data-nav-idx="' + btn.dataset.navIdx + '"]');
+    btn.classList.toggle('active', !!dd && !!dd.querySelector('a.active'));
   });
 }
 
