@@ -477,7 +477,6 @@
     document.getElementById('f-active').value = String(c?.active !== false);
     document.getElementById('f-tagline').value = c?.tagline || '';
     document.getElementById('f-etsy-url').value = c?.etsy_url || '';
-    document.getElementById('f-special').checked = !!c?.is_special;
     document.getElementById('f-cami').checked = !!c?.is_cami_edition;
     document.getElementById('f-image-url').value = c?.image_url || '';
     const modelUrl = c?.model_url || '';
@@ -549,7 +548,6 @@
       etsy_url: document.getElementById('f-etsy-url').value.trim(),
       image_url: document.getElementById('f-image-url').value.trim(),
       model_url: document.getElementById('f-model-url').value.trim() || null,
-      is_special: document.getElementById('f-special').checked,
       is_cami_edition: document.getElementById('f-cami').checked,
       notes: document.getElementById('f-notes').value.trim(),
       is_featured: document.getElementById('f-featured').checked,
@@ -636,8 +634,7 @@
 
     toast(id ? 'Saved' : 'Creature added');
     logActivity(id ? 'Edit creature' : 'Add creature', null, payload.name);
-    if (payload.is_special && !id) sendManifestationAlert(payload);
-    else sendDiscordAlert(id ? '✏️ Creature Updated' : '✨ New Discovery', `**${payload.name}** has been ${id ? 'updated' : 'added to the workshop log'}.`);
+    sendDiscordAlert(id ? '✏️ Creature Updated' : '✨ New Discovery', `**${payload.name}** has been ${id ? 'updated' : 'added to the workshop log'}.`);
     closeModal();
     await init();
   }
