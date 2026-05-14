@@ -1096,7 +1096,10 @@ async function sendLowStockAlert(item) {
   let description = `**${name}** is running low.\n> Stock: **${count}** remaining (threshold: ${threshold})`;
   if (url) description += `\n\n[🛒 Reorder Now](${url})`;
 
-  await sendDiscordAlert(urgency, description, color);
+  await Promise.allSettled([
+    sendDiscordAlert(urgency, description, color),
+    db.functions.invoke('send-low-stock-email', { body: item })
+  ]);
 }
 
 // ── Command Palette (Cmd+K / Ctrl+K) ─────────────────────────────────────────
