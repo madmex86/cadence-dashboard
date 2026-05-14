@@ -158,7 +158,16 @@
           <input type="checkbox" id="f-special" style="width:auto;margin:0;accent-color:#C9A84C;"/>
           <div>
             <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-light);font-weight:500;">⬡ Chronos Kin — Hidden Edition</div>
-            <div style="font-size:10px;color:var(--cream-faint);margin-top:2px;">Appears only in the Secret Archive (/secret-archive.html). Triggers a classified Discord alert on save. Not shown in public Bestiary.</div>
+            <div style="font-size:10px;color:var(--cream-faint);margin-top:2px;">Appears only in the Secret Archive. Triggers a classified Discord alert on save. Not shown in public Bestiary.</div>
+          </div>
+        </label>
+      </div>
+      <div class="form-full">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;padding:12px 14px;border:1px solid rgba(249,198,232,.15);background:rgba(249,198,232,.03);border-radius:3px;">
+          <input type="checkbox" id="f-cami" style="width:auto;margin:0;accent-color:#f9c6e8;"/>
+          <div>
+            <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#f9c6e8;font-weight:500;">✦ Cami Edition — Rainbow Special</div>
+            <div style="font-size:10px;color:var(--cream-faint);margin-top:2px;">Appears only in Cami's Secret Garden (/cami-portal.html). Hidden from public Bestiary and all standard queries.</div>
           </div>
         </label>
       </div>
@@ -437,6 +446,7 @@
     document.getElementById('f-tagline').value = c?.tagline || '';
     document.getElementById('f-etsy-url').value = c?.etsy_url || '';
     document.getElementById('f-special').checked = !!c?.is_special;
+    document.getElementById('f-cami').checked = !!c?.is_cami_edition;
     document.getElementById('f-image-url').value = c?.image_url || '';
     const modelUrl = c?.model_url || '';
     document.getElementById('f-model-url').value = modelUrl;
@@ -508,6 +518,7 @@
       image_url: document.getElementById('f-image-url').value.trim(),
       model_url: document.getElementById('f-model-url').value.trim() || null,
       is_special: document.getElementById('f-special').checked,
+      is_cami_edition: document.getElementById('f-cami').checked,
       notes: document.getElementById('f-notes').value.trim(),
       is_featured: document.getElementById('f-featured').checked,
       in_launch_queue: document.getElementById('f-launch-queue').checked,
