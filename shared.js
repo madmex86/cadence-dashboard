@@ -210,12 +210,45 @@ async function applyRolePermissions() {
   const nav = document.querySelector('.dash-nav');
   if(nav) {
     try {
-      // Inject dropdown nav styles once
+      // Inject dropdown nav styles once — use fixed positioning to escape overflow-x:auto clipping
       if (!document.getElementById('nav-group-styles')) {
         const s = document.createElement('style');
         s.id = 'nav-group-styles';
-        s.textContent = `.nav-group{position:relative;display:inline-block}.nav-group-btn{font-family:'Lora',serif;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-faint);background:none;border:none;padding:12px 16px;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap}.nav-group-btn:hover{color:var(--gold-light)}.nav-group-btn.active{color:var(--gold-light);border-bottom-color:var(--gold)}.nav-group-btn::after{content:' ▾';font-size:7px;opacity:.6}.nav-dropdown{display:none;position:absolute;top:100%;left:0;background:#0f0d14;border:1px solid rgba(201,168,76,.15);min-width:160px;z-index:500;padding:4px 0;box-shadow:0 8px 24px rgba(0,0,0,.5)}.nav-group.open .nav-dropdown{display:block}.nav-dropdown a{display:block;padding:9px 18px;font-family:'Lora',serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--cream-faint);text-decoration:none;border-bottom:none;white-space:nowrap;transition:color .15s,background .15s}.nav-dropdown a:hover,.nav-dropdown a.active{color:var(--gold-light);background:rgba(201,168,76,.05)}`;
+        s.textContent = [
+          '.nav-group{position:relative;display:inline-flex;align-items:stretch;flex-shrink:0}',
+          '.nav-group-btn{font-family:"Lora",serif!important;font-size:10px!important;padding:12px 13px!important;text-transform:uppercase!important;letter-spacing:.12em!important;color:rgba(196,188,178,.6)!important;background:none!important;border:none!important;border-bottom:3px solid transparent!important;cursor:pointer!important;white-space:nowrap!important;transition:all .2s ease!important;display:inline-flex!important;align-items:center!important;line-height:1!important;flex-shrink:0!important}',
+          '.nav-group-btn::after{content:"▾";font-size:8px;margin-left:4px;opacity:.5}',
+          '.nav-group-btn:hover{color:#E8D08A!important;background:rgba(201,168,76,.03)!important}',
+          '.nav-group-btn.active{color:#E8D08A!important;border-bottom-color:#C9A84C!important;background:rgba(201,168,76,.08)!important}',
+          '.nav-dropdown{display:none;position:fixed;background:#0f0d14;border:1px solid rgba(201,168,76,.18);min-width:170px;z-index:9999;padding:4px 0;box-shadow:0 8px 28px rgba(0,0,0,.6)}',
+          '.nav-dropdown.open{display:block}',
+          '.nav-dropdown a{display:block!important;padding:10px 20px!important;font-family:"Lora",serif!important;font-size:10px!important;letter-spacing:.12em!important;text-transform:uppercase!important;color:rgba(196,188,178,.6)!important;text-decoration:none!important;border-bottom:none!important;background:none!important;white-space:nowrap!important;transition:color .15s,background .15s!important}',
+          '.nav-dropdown a:hover,.nav-dropdown a.active{color:#E8D08A!important;background:rgba(201,168,76,.06)!important}'
+        ].join('');
         document.head.appendChild(s);
+
+        // Named global toggle — simpler and more reliable than inline IIFE
+        window['_navToggle'] = function(btn) {
+          var g = btn.closest('.nav-group');
+          var dd = g.querySelector('.nav-dropdown');
+          var isOpen = dd.classList.contains('open');
+          // Close all dropdowns
+          document.querySelectorAll('.nav-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
+          if (!isOpen) {
+            // Position dropdown using fixed coords (escapes overflow:auto clipping)
+            var rect = btn.getBoundingClientRect();
+            dd.style.top  = rect.bottom + 'px';
+            dd.style.left = rect.left + 'px';
+            dd.classList.add('open');
+          }
+        };
+
+        // Close on outside click
+        document.addEventListener('click', function(e) {
+          if (!e.target.closest('.nav-group')) {
+            document.querySelectorAll('.nav-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
+          }
+        });
       }
 
       function isLinkVisible(link) {
@@ -230,14 +263,12 @@ async function applyRolePermissions() {
 
       nav.innerHTML = NAV_GROUPS.map(group => {
         if (!group.children) {
-          // Standalone link
           if (!isLinkVisible(group)) return '';
           const target = group.external ? ' target="_blank"' : '';
           const linkFile = (group.href || '').split('/').pop().replace('.html', '');
           const active = linkFile === currentFile ? ' class="active"' : '';
           return `<a href="${group.href}"${target}${active}>${group.label}</a>`;
         }
-        // Group with dropdown
         if (group.adminOnly && !isOwner && role !== 'admin') return '';
         const visibleChildren = group.children.filter(isLinkVisible);
         if (!visibleChildren.length) return '';
@@ -249,21 +280,8 @@ async function applyRolePermissions() {
           const active = linkFile === currentFile ? ' class="active"' : '';
           return `<a href="${link.href}"${target}${active}>${link.label}${badge}</a>`;
         }).join('');
-        return `<div class="nav-group"><button class="nav-group-btn${groupActive ? ' active' : ''}" onclick="(function(btn){var g=btn.closest('.nav-group');document.querySelectorAll('.nav-group').forEach(function(x){if(x!==g)x.classList.remove('open')});g.classList.toggle('open')})(this)">${group.label}</button><div class="nav-dropdown">${childLinks}</div></div>`;
+        return `<div class="nav-group"><button class="nav-group-btn${groupActive ? ' active' : ''}" onclick="_navToggle(this)">${group.label}</button><div class="nav-dropdown">${childLinks}</div></div>`;
       }).join('');
-
-      // Close dropdowns on outside click
-      if (!document.getElementById('nav-outside-handler')) {
-        const marker = document.createElement('span');
-        marker.id = 'nav-outside-handler';
-        marker.style.display = 'none';
-        document.body.appendChild(marker);
-        document.addEventListener('click', function(e) {
-          if (!e.target.closest('.nav-group')) {
-            document.querySelectorAll('.nav-group.open').forEach(function(g) { g.classList.remove('open'); });
-          }
-        });
-      }
     } catch(e) { console.error('Nav injection failed:', e); }
   }
 
