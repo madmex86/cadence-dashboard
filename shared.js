@@ -229,6 +229,32 @@ async function applyRolePermissions() {
     } catch(e) { console.error('Nav injection failed:', e); }
   }
 
+  // 1.5 INJECT HUD BAR (between topbar and nav)
+  if (!document.getElementById('cc-hud')) {
+    const hud = document.createElement('div');
+    hud.id = 'cc-hud';
+    hud.innerHTML = `
+      <div class="hud-live-dot" title="Visitors active in the last 5 minutes"></div>
+      <div class="hud-pill">
+        <span class="hud-label">Live</span>
+        <span class="hud-val" id="hud-live-val">—</span>
+      </div>
+      <div class="hud-sep"></div>
+      <div class="hud-pill">
+        <span class="hud-label">Today</span>
+        <span class="hud-val" id="hud-profit-val">—</span>
+      </div>
+      <div class="hud-sep"></div>
+      <div class="hud-pill">
+        <span class="hud-label">Printing</span>
+        <span class="hud-val" id="hud-print-val">—</span>
+      </div>
+    `;
+    const dashNav = document.querySelector('.dash-nav');
+    if (dashNav) dashNav.parentNode.insertBefore(hud, dashNav);
+  }
+  updateHUD();
+
   // 2. INJECT TOPBAR ELEMENTS
   const right = document.querySelector('.topbar-right');
   if(right) {
@@ -277,14 +303,26 @@ async function applyRolePermissions() {
   // 3. INITIALIZE REAL-TIME WATCHERS
   try {
     db.channel('master-printers')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'printers' }, () => updateMasterPrinterStatus())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'printers' }, () => {
+        updateMasterPrinterStatus();
+        updateHudPrinterCount();
+      })
       .subscribe();
 
     db.channel('contact-messages')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contact_submissions' }, () => refreshMessageBadge())
       .subscribe();
-    
+
+    db.channel('hud-finance')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'finance' }, () => updateHudDailyProfit())
+      .subscribe();
+
+    db.channel('hud-analytics')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'site_analytics' }, () => updateHudLiveUsers())
+      .subscribe();
+
     refreshMessageBadge();
+    setInterval(updateHudLiveUsers, 60000);
   } catch(e) { console.error('Real-time init failed:', e); }
 
   // 4. HIDE REVENUE KPI FOR NON-ADMINS
@@ -334,6 +372,50 @@ async function refreshMessageBadge() {
 }
 
 function initEmail() {}
+
+// ── HUD Data Functions ────────────────────────────────────────────────────
+
+async function updateHUD() {
+  await Promise.all([updateHudLiveUsers(), updateHudDailyProfit(), updateHudPrinterCount()]);
+}
+
+async function updateHudLiveUsers() {
+  try {
+    const since = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const { count } = await db.from('site_analytics')
+      .select('session_id', { count: 'exact', head: true })
+      .gte('created_at', since);
+    const el = document.getElementById('hud-live-val');
+    if (el) el.textContent = (count ?? 0) + ' visitors';
+  } catch(e) {}
+}
+
+async function updateHudDailyProfit() {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const { data } = await db.from('finance').select('entry_type,amount').eq('entry_date', today);
+    if (!data) return;
+    const net = data.reduce((s, r) => s + (r.entry_type === 'income' ? +r.amount : -+r.amount), 0);
+    const el = document.getElementById('hud-profit-val');
+    if (el) {
+      el.textContent = (net >= 0 ? '+' : '-') + '$' + Math.abs(net).toFixed(2);
+      el.style.color = net > 0 ? '#7dc994' : net < 0 ? '#e09090' : '#E8D08A';
+    }
+  } catch(e) {}
+}
+
+async function updateHudPrinterCount() {
+  try {
+    const { data } = await db.from('printers').select('name,current_creature_id').eq('active', true);
+    if (!data) return;
+    const active = data.filter(p => p.current_creature_id);
+    const el = document.getElementById('hud-print-val');
+    if (el) {
+      el.textContent = active.length > 0 ? active.length + ' active' : 'Idle';
+      el.style.color = active.length > 0 ? '#5BBFD4' : 'rgba(196,188,178,0.4)';
+    }
+  } catch(e) {}
+}
 
 // UNIVERSAL DASHBOARD STYLES (Enforces symmetry across all pages)
 const styleShield = document.createElement('style');
@@ -507,7 +589,7 @@ styleShield.textContent = `
     border-bottom: 1px solid rgba(201, 168, 76, 0.1) !important;
     overflow-x: auto !important;
     position: sticky !important;
-    top: 64px !important;
+    top: calc(100px + env(safe-area-inset-top)) !important;
     z-index: 999 !important;
   }
   .dash-nav a {
@@ -705,8 +787,70 @@ styleShield.textContent = `
   #global-tip.tip-above::after { top:100%; border-top-color:rgba(201, 168, 76,0.28); }
   #global-tip.tip-below::after { bottom:100%; border-bottom-color:rgba(201, 168, 76,0.28); }
 
+  /* ── HUD Bar ─────────────────────────────────── */
+  #cc-hud {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 0 20px !important;
+    height: 36px !important;
+    background: rgba(10, 9, 7, 0.98) !important;
+    border-bottom: 1px solid rgba(91, 191, 212, 0.1) !important;
+    position: sticky !important;
+    top: calc(64px + env(safe-area-inset-top)) !important;
+    z-index: 1000 !important;
+    overflow-x: auto !important;
+    flex-shrink: 0 !important;
+    scrollbar-width: none !important;
+  }
+  #cc-hud::-webkit-scrollbar { display: none !important; }
+  .hud-pill {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    font-size: 9.5px !important;
+    font-family: 'Lora', serif !important;
+    letter-spacing: 0.04em !important;
+    color: rgba(196, 188, 178, 0.5) !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+  .hud-val {
+    color: #E8D08A !important;
+    font-weight: 500 !important;
+    transition: color 0.4s ease !important;
+  }
+  .hud-label {
+    font-size: 8px !important;
+    letter-spacing: 0.14em !important;
+    text-transform: uppercase !important;
+    color: rgba(196, 188, 178, 0.3) !important;
+  }
+  .hud-sep {
+    width: 1px !important;
+    height: 14px !important;
+    background: rgba(201, 168, 76, 0.12) !important;
+    flex-shrink: 0 !important;
+    margin: 0 4px !important;
+  }
+  .hud-live-dot {
+    width: 5px !important;
+    height: 5px !important;
+    border-radius: 50% !important;
+    background: #7dc994 !important;
+    flex-shrink: 0 !important;
+    animation: hud-pulse 2.5s ease-in-out infinite !important;
+  }
+  @keyframes hud-pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 5px rgba(125,201,148,0.5); }
+    50%       { opacity: 0.45; box-shadow: none; }
+  }
+
   /* --- MOBILE OPTIMIZATIONS --- */
   @media (max-width: 768px) {
+    #cc-hud { padding: 0 12px !important; gap: 4px !important; }
+    .hud-label { display: none !important; }
+  }
     .topbar { padding: 0 16px !important; }
     .main-content { padding: 24px 16px !important; }
     .dash-nav { padding: 0 8px !important; }
