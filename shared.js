@@ -102,7 +102,6 @@ function sync(on) {
   const label = document.getElementById('slabel');
   if(dot) dot.className = 'sync-dot' + (on ? ' busy' : '');
   if(label) label.textContent = on ? 'Syncing...' : 'Connected';
-  console.log(on ? '🔄 Syncing...' : '✅ Connected');
 }
 
 function serr() {
@@ -142,7 +141,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       // Update last_seen and clear pending status
       const { error: upError } = await db.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', currentUser.id);
       if (upError) console.error('Failed to update last_seen:', upError);
-      else console.log('Login verified: Pending status cleared.');
     }
 
     await applyRolePermissions();
@@ -156,7 +154,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     const loginCont = document.getElementById('login-screen');
     if(loginCont) {
       loginCont.style.setProperty('display', 'flex', 'important');
-      console.log('Login screen displayed (No Session)');
     }
 
     // Force redirect to Hub if they are on a protected page without a session
@@ -769,10 +766,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function sendFulfillmentEmail(order) {
-  if(!order.buyer_email) {
-    console.log("No email address for order:", order.etsy_order_id);
-    return;
-  }
+  if(!order.buyer_email) return;
   
   try {
     const { error } = await db.functions.invoke('send-shipping', { body: { order } });
