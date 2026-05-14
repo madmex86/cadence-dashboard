@@ -758,15 +758,27 @@ async function load_creatures(){sync(true);const[{data:cData,error:cErr},{data:c
 
 function renderCompRow(c){
   const comps=components.filter(cp=>cp.creature_id===c.id);
-  const maxAsm=comps.length?Math.min(...comps.map(cp=>Math.floor(cp.stock_count/(cp.units_per_assembly||1)))):null;
+  
+  // Only show components that are actually in the current recipe to keep the list clean
+  let activeComps = comps;
+  try {
+    const recipe = JSON.parse(c.print_recipe || '[]').recipe || [];
+    activeComps = comps.filter(cp => recipe.some(r => r.filId === cp.filament_id));
+  } catch(e) {}
+
+  const maxAsm=activeComps.length?Math.min(...activeComps.map(cp=>Math.floor(cp.stock_count/(cp.units_per_assembly||1)))):null;
   const maxBadge=maxAsm!==null?`<span class="comp-max${maxAsm===0?' zero':''}">&#9889; Max assemblies: ${maxAsm}</span>`:'';
-  const items=comps.map(cp=>{
+  const items=activeComps.map(cp=>{
+    const spool = inv.find(s => s.id === cp.filament_id);
     const sc=cp.stock_count===0?'#e09090':cp.stock_count<3?'#c97c2a':'#7dc994';
     const per=cp.units_per_assembly>1?`<span class="comp-per">&times;${cp.units_per_assembly} per</span>`:'';
-    return`<div class="comp-item"><button class="comp-adj" onclick="adjComp('${cp.id}',-1)">&minus;</button><span class="comp-stock" style="color:${sc}">${cp.stock_count}</span><button class="comp-adj" onclick="adjComp('${cp.id}',1)">+</button><span class="comp-name">${cp.component_name}</span>${per}<button class="comp-del" onclick="delComp('${cp.id}','${c.id}')" title="Remove">&times;</button></div>`;
+    const swatch = spool ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${colorFromName(spool.color)};margin-right:4px;"></span>` : '';
+    const displayName = cp.component_name.split('(')[0].trim(); // Get just the "Body" or "Head" part
+    
+    return`<div class="comp-item"><button class="comp-adj" onclick="adjComp('${cp.id}',-1)">&minus;</button><span class="comp-stock" style="color:${sc}">${cp.stock_count}</span><button class="comp-adj" onclick="adjComp('${cp.id}',1)">+</button><span class="comp-name">${swatch}${displayName} <span style="font-size:9px;color:var(--cream-faint);font-weight:400">${spool ? spool.spool_name : ''}</span></span>${per}<button class="comp-del" onclick="delComp('${cp.id}','${c.id}')" title="Remove">&times;</button></div>`;
   }).join('');
-  const empty=comps.length===0?'<span style="font-size:11px;color:var(--cream-faint);font-style:italic;">No components tracked yet</span>':'';
-  return`<tr class="comp-row"><td colspan="10"><div class="comp-panel"><div class="comp-hdr"><span>Components</span>${maxBadge}<button class="btn sm comp-add-btn" onclick="addComponent('${c.id}')">+ Add</button></div>${items}${empty}<div class="comp-add-form" id="comp-add-${c.id}"><input id="comp-name-inp-${c.id}" class="comp-inp" placeholder="Component name" type="text"/><input id="comp-units-inp-${c.id}" class="comp-inp" style="width:55px" placeholder="&times;/ea" type="number" min="1" value="1"/><button class="btn sm" onclick="saveComponent('${c.id}')">Save</button><button class="btn sm" onclick="document.getElementById('comp-add-${c.id}').style.display='none'">Cancel</button></div></div></td></tr>`;
+  const empty=activeComps.length===0?'<span style="font-size:11px;color:var(--cream-faint);font-style:italic;">No components mapped in Creature Editor</span>':'';
+  return`<tr class="comp-row"><td colspan="10"><div class="comp-panel"><div class="comp-hdr"><span>Atomic Inventory</span>${maxBadge}</div>${items}${empty}</div></td></tr>`;
 }
 async function adjComp(id,delta){
   const cp=components.find(x=>x.id===id);
@@ -822,15 +834,18 @@ function render_components() {
   
   ctb.innerHTML = list.map(cp => {
     const c = creatures.find(x => x.id === cp.creature_id);
+    const spool = inv.find(s => s.id === cp.filament_id);
     const sc = cp.stock_count === 0 ? '#e09090' : cp.stock_count < 3 ? '#c97c2a' : '#7dc994';
     const maxAsm = Math.floor(cp.stock_count / (cp.units_per_assembly || 1));
     const maxCol = maxAsm === 0 ? '#e09090' : maxAsm < 3 ? '#c97c2a' : '#7dc994';
+    const swatch = spool ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${colorFromName(spool.color)};margin-right:6px;"></span>` : '';
+    const displayName = cp.component_name.split('(')[0].trim();
     
     return `
       <tr>
-        <td style="font-weight:500; color:var(--cream)">${cp.component_name}</td>
+        <td style="font-weight:500; color:var(--cream)">${swatch}${displayName}</td>
         <td style="color:var(--gold-light)">${c ? c.name : '—'}</td>
-        <td style="color:var(--cream-faint)">${cp.units_per_assembly || 1}x</td>
+        <td style="font-size:11px; color:var(--cream-faint)">${spool ? spool.spool_name : 'No Spool Linked'}</td>
         <td style="font-size:18px; font-weight:600; color:${sc}; white-space:nowrap;">
           <button onclick="adjComp('${cp.id}', -1); setTimeout(render_components, 100)" class="btn sm" style="padding:0 6px; min-width:22px; margin-right:6px; border-color:transparent; background:rgba(255,255,255,0.03); color:var(--cream-faint);">-</button>
           ${cp.stock_count}

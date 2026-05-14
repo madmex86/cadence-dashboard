@@ -611,8 +611,37 @@
 
     const { error } = id
       ? await db.from('creatures').update(payload).eq('id', id)
-      : await db.from('creatures').insert([payload]);
+      : await db.from('creatures').insert([payload]).select().single();
     if (error) { serr(); toast('Save failed', 'err'); return; }
+    
+    // --- AUTO-SYNC COMPONENTS ---
+    const finalId = id || (await db.from('creatures').select('id').eq('sku', payload.sku).single()).data.id;
+    if (finalId) {
+      // Get existing comps to avoid duplicates
+      const { data: existingComps } = await db.from('creature_components').select('*').eq('creature_id', finalId);
+      
+      for (const r of recipe) {
+        const spool = inv.find(s => s.id === r.filId);
+        const compName = `${r.label || 'Part'} (${spool ? spool.spool_name : 'No Spool'})`;
+        
+        // Check if this part/filament combo already exists
+        const match = existingComps?.find(ec => ec.filament_id === r.filId && ec.component_name.startsWith(r.label));
+        
+        if (!match) {
+          await db.from('creature_components').insert({
+            creature_id: finalId,
+            component_name: compName,
+            filament_id: r.filId,
+            stock_count: 0,
+            units_per_assembly: 1
+          });
+        } else if (match.component_name !== compName) {
+          // Update name if spool name changed
+          await db.from('creature_components').update({ component_name: compName }).eq('id', match.id);
+        }
+      }
+    }
+
     toast(id ? 'Saved' : 'Creature added');
     logActivity(id ? 'Edit creature' : 'Add creature', null, payload.name);
     if (payload.is_special && !id) sendManifestationAlert(payload);
