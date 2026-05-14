@@ -7,6 +7,7 @@
     { "source": "/launch", "destination": "/cadence-drop-launch.html" },
     { "source": "/queue", "destination": "/index.html" },
     { "source": "/analytics", "destination": "/cadence-analytics.html" },
-    { "source": "/sales", "destination": "/cadence-sales.html" }
+    { "source": "/sales", "destination": "/cadence-sales.html" },
+    { "source": "/live", "destination": "/cadence-live.html" }
   ]
 }
