@@ -90,6 +90,7 @@
 <div class="tabs">
   <button class="tab active" onclick="go('orders')">Orders <span class="badge" id="b-orders" style="display:none"></span></button>
   <button class="tab" onclick="go('stock')">Stock &amp; Queue</button>
+  <button class="tab" onclick="go('components')">Components</button>
   <button class="tab" onclick="go('inventory')">Filament <span class="badge" id="b-inv" style="display:none"></span></button>
   <button class="tab" onclick="go('mileage')">Mileage</button>
   <button class="tab" onclick="go('printers')">Printers</button>
@@ -151,7 +152,33 @@
   </div>
 </div>
 
-
+<!-- COMPONENTS (Atomic Inventory) -->
+<div class="panel" id="panel-components">
+  <div class="sec-hdr">
+    <span class="sec-title">Master Components List</span>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="text" id="comp-search" class="fi" style="width:200px" placeholder="Search components..." oninput="render_components()">
+      <button class="btn sm" onclick="load_creatures()">↺ Refresh</button>
+    </div>
+  </div>
+  <div style="overflow-x:auto">
+    <table>
+      <thead>
+        <tr>
+          <th>Component Name</th>
+          <th>Parent Creature</th>
+          <th>Units/Assembly</th>
+          <th>Stock Level</th>
+          <th>Max Assemblies</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="ctb">
+        <tr class="empty"><td colspan="6">Loading components...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
 
 <!-- INVENTORY -->
 <div class="panel" id="panel-inventory">
@@ -237,7 +264,7 @@
     <div id="i-finance-wrap" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(74,140,92,.06);border:1px solid rgba(74,140,92,.2);border-radius:2px">
       <input type="checkbox" id="i-log-fin" style="width:auto;accent-color:var(--green)"/>
       <label for="i-log-fin" style="font-size:11px;color:#7dc994;cursor:pointer;text-transform:none;letter-spacing:0">Also log this purchase as a Finance expense</label>
-      <span class="help-tip">?<span class="tip-text">Check this to automatically create a matching expense entry in the finance log. Keeps your P&amp;L accurate without double entry.</span></span>
+      <span class="help-tip">?<span class="tip-text">Check this to automatically create a matching expense entry in the finance log. Keeps your P&L accurate without double entry.</span></span>
     </div>
   </div>
   <div class="modal-act"><button class="btn" onclick="closeModal('m-inv')">Cancel</button><button class="btn pri" onclick="saveInv()">Save</button></div>
@@ -410,7 +437,13 @@ function go(tab){
   document.getElementById('panel-'+tab).classList.add('active');
   if(tab==='orders')render_orders();
   if(tab==='stock')render_stock();
-  if(tab==='inventory')render_inv();
+  switch(tab){
+    case 'inventory': load_inv(); break;
+    case 'components': render_components(); break;
+    case 'mileage': load_mileage(); break;
+  }
+  if(tab==='orders')render_orders();
+  if(tab==='stock')render_stock();
   if(tab==='mileage'){render_mileage();update_mileage_kpis();}
   if(tab==='printers')render_printers();
   if(tab==='customers')load_customers();
@@ -766,7 +799,52 @@ async function delComp(id,creatureId){
   if(error){toast('Failed to remove component','err');return;}
   components=components.filter(x=>x.id!==id);
   render_stock();
+  render_components();
 }
+
+function render_components() {
+  const search = document.getElementById('comp-search')?.value.toLowerCase() || '';
+  const ctb = document.getElementById('ctb');
+  if(!ctb) return;
+  
+  let list = components;
+  if(search) {
+    list = list.filter(cp => {
+      const c = creatures.find(x => x.id === cp.creature_id);
+      return cp.component_name.toLowerCase().includes(search) || (c && c.name.toLowerCase().includes(search));
+    });
+  }
+  
+  if(!list.length) {
+    ctb.innerHTML = `<tr class="empty"><td colspan="6">${components.length ? 'No components match your search' : 'No components tracked yet'}</td></tr>`;
+    return;
+  }
+  
+  ctb.innerHTML = list.map(cp => {
+    const c = creatures.find(x => x.id === cp.creature_id);
+    const sc = cp.stock_count === 0 ? '#e09090' : cp.stock_count < 3 ? '#c97c2a' : '#7dc994';
+    const maxAsm = Math.floor(cp.stock_count / (cp.units_per_assembly || 1));
+    const maxCol = maxAsm === 0 ? '#e09090' : maxAsm < 3 ? '#c97c2a' : '#7dc994';
+    
+    return `
+      <tr>
+        <td style="font-weight:500; color:var(--cream)">${cp.component_name}</td>
+        <td style="color:var(--gold-light)">${c ? c.name : '—'}</td>
+        <td style="color:var(--cream-faint)">${cp.units_per_assembly || 1}x</td>
+        <td style="font-size:18px; font-weight:600; color:${sc}; white-space:nowrap;">
+          <button onclick="adjComp('${cp.id}', -1); setTimeout(render_components, 100)" class="btn sm" style="padding:0 6px; min-width:22px; margin-right:6px; border-color:transparent; background:rgba(255,255,255,0.03); color:var(--cream-faint);">-</button>
+          ${cp.stock_count}
+          <button onclick="adjComp('${cp.id}', 1); setTimeout(render_components, 100)" class="btn sm" style="padding:0 6px; min-width:22px; margin-left:6px; border-color:transparent; background:rgba(255,255,255,0.03); color:var(--cream-faint);">+</button>
+        </td>
+        <td style="font-size:16px; font-weight:600; color:${maxCol}">${maxAsm} <span style="font-size:9px; color:var(--cream-faint); font-weight:400">units possible</span></td>
+        <td style="text-align:right">
+          <button class="btn sm red" onclick="delComp('${cp.id}', '${cp.creature_id}')" title="Delete">×</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
 // Map color names to approximate CSS colors for swatches
 function colorFromName(name){
   const n=(name||'').toLowerCase();
