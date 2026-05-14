@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cadence Creatures — Analytics</title>
+<link rel="icon" href="/favicon.ico?v=2" />
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="shared.js"></script>
+<style>
+  canvas { max-height: 320px !important; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 28px; }
+  .kpi-card { background: rgba(255,255,255,.03); border: 1px solid var(--border); border-radius: 4px; padding: 20px; text-align: center; }
+  .kpi-label { font-size: 9px; letter-spacing: .15em; text-transform: uppercase; color: var(--cream-faint); margin-bottom: 8px; }
+  .kpi-val { font-size: 22px; font-weight: 600; color: var(--amber); }
+  .kpi-sub { font-size: 10px; color: var(--cream-faint); margin-top: 6px; }
+  .kpi-delta { font-size: 11px; font-weight: 500; margin-top: 4px; }
+
+  .section-title { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: rgba(201,168,76,.6); margin: 28px 0 14px; }
+
+  .chart-wrap { background: rgba(255,255,255,.02); border: 1px solid var(--border); border-radius: 4px; padding: 20px; margin-bottom: 24px; position: relative; min-height: 200px; }
+  .chart-title { font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: var(--cream-faint); margin-bottom: 16px; }
+
+  .breakdown-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 28px; }
+  .bd-card { background: rgba(255,255,255,.02); border: 1px solid var(--border); border-radius: 4px; padding: 18px; }
+  .bd-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(201,168,76,.06); font-size: 13px; }
+  .bd-row:last-child { border-bottom: none; }
+  .bd-row.total { font-weight: 600; font-size: 14px; padding-top: 12px; border-top: 1px solid rgba(201,168,76,.15); border-bottom: none; }
+
+  .cat-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .cat-table th { font-size: 9px; letter-spacing: .15em; text-transform: uppercase; color: var(--cream-faint); padding: 0 0 10px; text-align: left; font-weight: 400; }
+  .cat-table th:last-child, .cat-table td:last-child { text-align: right; }
+  .cat-table td { padding: 9px 0; border-bottom: 1px solid rgba(201,168,76,.06); color: var(--cream); }
+  .cat-table tr:last-child td { border-bottom: none; }
+  .bar-bg { background: rgba(255,255,255,.05); border-radius: 2px; height: 4px; flex: 1; margin: 0 12px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 2px; background: var(--amber); }
+
+  .margin-badge { display: inline-block; padding: 2px 8px; border-radius: 2px; font-size: 10px; font-weight: 600; letter-spacing: .05em; }
+  .margin-low { background: rgba(224,144,144,.15); color: #e09090; }
+  .margin-ok { background: rgba(201,168,76,.15); color: var(--amber); }
+  .margin-high { background: rgba(125,201,148,.15); color: #7dc994; }
+
+  @media (max-width: 768px) {
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .breakdown-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div id="login-screen" style="display:none"></div>
+
+<div id="app" style="display:none">
+<div class="topbar">
+  <div class="topbar-left">
+    <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round"/><rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C"/><circle cx="36" cy="4" r="5.5" fill="#E8D08A"/><circle cx="6" cy="18" r="4" fill="#5BBFD4"/><circle cx="66" cy="18" r="4" fill="#5BBFD4"/></svg>
+    <div><div class="topbar-name">Cadence Creatures</div><div class="topbar-sub">Back Office</div></div>
+  </div>
+  <div class="topbar-right">
+    <div id="user-greet"></div>
+    <a class="topbar-link" onclick="signOut()">Sign Out</a>
+  </div>
+</div>
+<div class="dash-nav"></div>
+
+<div class="content">
+
+  <!-- KPI ROW -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Today</div>
+      <div class="kpi-val" id="kpi-today">—</div>
+      <div class="kpi-sub" id="kpi-today-sub"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">This Week</div>
+      <div class="kpi-val" id="kpi-week">—</div>
+      <div class="kpi-sub" id="kpi-week-sub"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">This Month</div>
+      <div class="kpi-val" id="kpi-month">—</div>
+      <div class="kpi-sub" id="kpi-month-sub"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">All Time</div>
+      <div class="kpi-val" id="kpi-alltime">—</div>
+      <div class="kpi-sub" id="kpi-margin-badge"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Net Profit</div>
+      <div class="kpi-val" id="kpi-net">—</div>
+      <div class="kpi-sub">After expenses</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Margin</div>
+      <div class="kpi-val" id="kpi-margin-pct">—</div>
+      <div class="kpi-sub" id="kpi-margin-label"></div>
+    </div>
+  </div>
+
+  <!-- DAILY REVENUE CHART -->
+  <div class="section-title">Revenue (Last 30 Days)</div>
+  <div class="chart-wrap">
+    <canvas id="rev-chart"></canvas>
+  </div>
+
+  <!-- GROSS VS NET BREAKDOWN -->
+  <div class="section-title">Gross vs. Net Breakdown</div>
+  <div class="breakdown-grid">
+    <div class="bd-card">
+      <div class="bd-row"><span>Gross Revenue</span><span id="bd-gross" style="color:var(--amber)">—</span></div>
+      <div class="bd-row"><span>Total Expenses</span><span id="bd-exp" style="color:#e09090">—</span></div>
+      <div class="bd-row total"><span>Net Profit</span><span id="bd-net">—</span></div>
+    </div>
+    <div class="bd-card">
+      <div class="chart-title" style="margin-bottom:12px">Income vs Expense Split</div>
+      <canvas id="donut-chart" style="max-height:160px !important"></canvas>
+    </div>
+  </div>
+
+  <!-- CATEGORY BREAKDOWN -->
+  <div class="section-title">Revenue by Category</div>
+  <div class="chart-wrap">
+    <table class="cat-table">
+      <thead><tr><th>Category</th><th style="text-align:center">Share</th><th>Revenue</th></tr></thead>
+      <tbody id="cat-tb"><tr><td colspan="3" style="color:var(--cream-faint);padding:16px 0">Loading…</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- BURN RATE -->
+  <div class="section-title">Filament Burn Rate</div>
+  <div class="breakdown-grid" id="burn-grid">
+    <div class="bd-card" style="color:var(--cream-faint);font-size:13px">Loading inventory…</div>
+  </div>
+
+</div><!-- /content -->
+</div><!-- /app -->
+
+<script>
+let fin = [], inventory = [];
+let revChart, donutChart;
+
+function fmt$(v){ return '$'+Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function sum(arr, type){ return arr.filter(e=>e.entry_type===type).reduce((s,e)=>s+Number(e.amount),0); }
+
+function startOfDay(d){ const r=new Date(d); r.setHours(0,0,0,0); return r; }
+function startOfWeek(d){ const r=startOfDay(d); r.setDate(r.getDate()-r.getDay()); return r; }
+function startOfMonth(d){ return new Date(d.getFullYear(),d.getMonth(),1); }
+
+function incomeInRange(start, end){
+  return fin.filter(e=>{
+    if(e.entry_type!=='income') return false;
+    const d=new Date(e.entry_date);
+    return d>=start && d<=end;
+  }).reduce((s,e)=>s+Number(e.amount),0);
+}
+
+function updateKPIs(){
+  const now=new Date();
+  const todayStart=startOfDay(now);
+  const todayEnd=new Date(todayStart); todayEnd.setHours(23,59,59,999);
+  const weekStart=startOfWeek(now);
+  const monthStart=startOfMonth(now);
+
+  const today=incomeInRange(todayStart,todayEnd);
+  const week=incomeInRange(weekStart,now);
+  const month=incomeInRange(monthStart,now);
+  const allRev=sum(fin,'income');
+  const allExp=sum(fin,'expense');
+  const net=allRev-allExp;
+  const margin=allRev>0?Math.round(net/allRev*100):0;
+
+  document.getElementById('kpi-today').textContent=fmt$(today);
+  document.getElementById('kpi-today-sub').textContent=today===0?'No sales today':today>0?'Revenue':'';
+  document.getElementById('kpi-week').textContent=fmt$(week);
+  document.getElementById('kpi-month').textContent=fmt$(month);
+  document.getElementById('kpi-alltime').textContent=fmt$(allRev);
+
+  const netEl=document.getElementById('kpi-net');
+  netEl.textContent=(net>=0?'+':'')+fmt$(net);
+  netEl.style.color=net>=0?'#7dc994':'#e09090';
+
+  document.getElementById('kpi-margin-pct').textContent=margin+'%';
+  const marginEl=document.getElementById('kpi-margin-label');
+  if(margin<60){ marginEl.innerHTML='<span class="margin-badge margin-low">⚠ Low</span>'; }
+  else if(margin<=75){ marginEl.innerHTML='<span class="margin-badge margin-ok">Standard</span>'; }
+  else{ marginEl.innerHTML='<span class="margin-badge margin-high">★ High Margin</span>'; }
+
+  document.getElementById('bd-gross').textContent=fmt$(allRev);
+  const expEl=document.getElementById('bd-exp');
+  expEl.textContent='−'+fmt$(allExp);
+  const netEl2=document.getElementById('bd-net');
+  netEl2.textContent=(net>=0?'+':'')+fmt$(net);
+  netEl2.style.color=net>=0?'#7dc994':'#e09090';
+}
+
+function renderRevChart(){
+  const ctx=document.getElementById('rev-chart').getContext('2d');
+  const today=new Date(); today.setHours(0,0,0,0);
+  const dataMap={};
+  for(let i=29;i>=0;i--){
+    const d=new Date(today); d.setDate(d.getDate()-i);
+    dataMap[d.toISOString().slice(0,10)]={rev:0,exp:0};
+  }
+  fin.forEach(f=>{
+    if(!f.entry_date) return;
+    const dt=f.entry_date.slice(0,10);
+    if(dataMap[dt]){
+      const amt=parseFloat(f.amount)||0;
+      if(f.entry_type==='income') dataMap[dt].rev+=amt;
+      else dataMap[dt].exp+=amt;
+    }
+  });
+  const labels=Object.keys(dataMap).map(d=>d.slice(5).replace('-','/'));
+  const revData=Object.values(dataMap).map(d=>d.rev);
+  const expData=Object.values(dataMap).map(d=>d.exp);
+  if(revChart) revChart.destroy();
+  Chart.defaults.color='#8A7D6E';
+  Chart.defaults.font.family="'Segoe UI', sans-serif";
+  revChart=new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Revenue',data:revData,backgroundColor:'rgba(201,168,76,0.6)',borderColor:'#C9A84C',borderWidth:1,borderRadius:2},
+      {label:'Expenses',data:expData,backgroundColor:'rgba(168,68,68,0.35)',borderColor:'#a84444',borderWidth:1,borderRadius:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',align:'end'}},scales:{y:{grid:{color:'rgba(255,255,255,0.05)'},border:{display:false},ticks:{callback:v=>'$'+v}},x:{grid:{display:false},border:{display:false},ticks:{maxTicksLimit:10}}}}
+  });
+}
+
+function renderDonut(){
+  const ctx=document.getElementById('donut-chart').getContext('2d');
+  const rev=sum(fin,'income'), exp=sum(fin,'expense');
+  if(donutChart) donutChart.destroy();
+  donutChart=new Chart(ctx,{
+    type:'doughnut',
+    data:{labels:['Revenue','Expenses'],datasets:[{data:[rev,exp],backgroundColor:['rgba(201,168,76,0.7)','rgba(168,68,68,0.5)'],borderColor:['#C9A84C','#a84444'],borderWidth:1}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}}}}
+  });
+}
+
+function renderCategories(){
+  const catMap={};
+  fin.filter(e=>e.entry_type==='income').forEach(e=>{
+    const cat=e.category||'Uncategorized';
+    catMap[cat]=(catMap[cat]||0)+Number(e.amount);
+  });
+  const entries=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+  const total=entries.reduce((s,[,v])=>s+v,0);
+  const tb=document.getElementById('cat-tb');
+  if(!entries.length){tb.innerHTML='<tr><td colspan="3" style="color:var(--cream-faint);padding:16px 0">No income data yet.</td></tr>';return;}
+  tb.innerHTML=entries.map(([cat,amt])=>{
+    const pct=total>0?Math.round(amt/total*100):0;
+    return`<tr>
+      <td>${cat}</td>
+      <td><div style="display:flex;align-items:center;padding:0 8px"><div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div><span style="font-size:11px;color:var(--cream-faint);min-width:30px;text-align:right">${pct}%</span></div></td>
+      <td style="color:var(--amber);font-weight:500">${fmt$(amt)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderBurnRate(){
+  const filament=inventory.filter(i=>(i.category||'').toLowerCase().includes('filament')||( i.name||'').toLowerCase().includes('filament')||(i.unit||'').toLowerCase().includes('kg')||(i.unit||'').toLowerCase().includes('g'));
+  const grid=document.getElementById('burn-grid');
+  if(!filament.length){
+    grid.innerHTML='<div class="bd-card" style="color:var(--cream-faint);font-size:13px">No filament inventory found. Add items with unit "kg" or category "Filament" to track burn rate.</div>';
+    return;
+  }
+  grid.innerHTML=filament.map(item=>{
+    const stock=Number(item.stock_count)||0;
+    const cost=Number(item.cost_per_unit)||0;
+    const totalVal=stock*cost;
+    const low=stock<10;
+    return`<div class="bd-card">
+      <div class="bd-row"><span style="font-weight:500;color:var(--cream)">${item.name||'Unnamed'}</span><span class="margin-badge ${low?'margin-low':'margin-ok'}">${low?'⚠ Low':'In Stock'}</span></div>
+      <div class="bd-row"><span style="color:var(--cream-faint)">Stock</span><span style="color:${low?'#e09090':'#7dc994'};font-weight:500">${stock} ${item.unit||'units'}</span></div>
+      <div class="bd-row"><span style="color:var(--cream-faint)">Cost/unit</span><span>${fmt$(cost)}</span></div>
+      <div class="bd-row total"><span>Inventory Value</span><span style="color:var(--amber)">${fmt$(totalVal)}</span></div>
+    </div>`;
+  }).join('');
+}
+
+async function loadData(){
+  const[{data:finData},{data:invData}]=await Promise.all([
+    db.from('finance').select('*').order('entry_date',{ascending:false}),
+    db.from('inventory').select('*').order('name',{ascending:true})
+  ]);
+  fin=finData||[];
+  inventory=invData||[];
+  updateKPIs();
+  renderRevChart();
+  renderDonut();
+  renderCategories();
+  renderBurnRate();
+}
+
+function showApp(){
+  document.getElementById('app').style.display='block';
+  loadData();
+}
+
+db.channel('analytics-rt')
+  .on('postgres_changes',{event:'*',schema:'public',table:'finance'},()=>loadData())
+  .on('postgres_changes',{event:'*',schema:'public',table:'inventory'},()=>loadData())
+  .subscribe();
+</script>
+</div>
+</body>
+</html>

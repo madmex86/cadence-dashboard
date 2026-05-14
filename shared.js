@@ -191,6 +191,7 @@ const NAV_LINKS = [
   { label: 'Email Blast', href: 'cadence-email-blast.html', adminOnly: true },
   { label: '🚀 Launch', href: 'cadence-drop-launch.html', adminOnly: true, hideIfLaunched: true },
   { label: 'P&L', href: 'cadence-creatures-pl-tracker.html', adminOnly: true },
+  { label: 'Analytics', href: 'cadence-analytics.html', adminOnly: true },
   { label: 'Links', href: 'cadence-links.html' },
   { label: 'Activity', href: 'cadence-activity.html', adminOnly: true },
   { label: 'Admin', href: 'cadence-admin.html', adminOnly: true },
