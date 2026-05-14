@@ -883,6 +883,111 @@ styleShield.textContent = `
     .main { overflow-x: hidden !important; }
     .main-content { overflow-x: hidden !important; padding: 20px 16px !important; }
   }
+
+  /* ── Command Palette ─────────────────────────── */
+  #cc-palette-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    background: rgba(0,0,0,0.6) !important;
+    z-index: 99999 !important;
+    display: none !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    padding-top: 18vh !important;
+    backdrop-filter: blur(6px) !important;
+  }
+  #cc-palette-overlay.open { display: flex !important; }
+  #cc-palette {
+    width: 100% !important;
+    max-width: 580px !important;
+    background: #1a1610 !important;
+    border: 1px solid rgba(201,168,76,0.28) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.7) !important;
+    overflow: hidden !important;
+    font-family: 'Lora', serif !important;
+    margin: 0 16px !important;
+  }
+  #cc-palette-input-wrap {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 14px 18px !important;
+    border-bottom: 1px solid rgba(201,168,76,0.1) !important;
+  }
+  .palette-search-icon {
+    font-size: 13px !important;
+    color: rgba(201,168,76,0.45) !important;
+    flex-shrink: 0 !important;
+    user-select: none !important;
+  }
+  #cc-palette-input {
+    flex: 1 !important;
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    font-family: 'Lora', serif !important;
+    font-size: 13px !important;
+    color: #FAF6F0 !important;
+    padding: 0 !important;
+    letter-spacing: 0.02em !important;
+    width: auto !important;
+  }
+  #cc-palette-input::placeholder { color: rgba(196,188,178,0.3) !important; font-size: 13px !important; }
+  #cc-palette-results {
+    max-height: 340px !important;
+    overflow-y: auto !important;
+    padding: 6px 0 !important;
+  }
+  .palette-group-label {
+    font-size: 8px !important;
+    letter-spacing: 0.2em !important;
+    text-transform: uppercase !important;
+    color: rgba(196,188,178,0.3) !important;
+    padding: 10px 18px 4px !important;
+  }
+  .palette-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 10px 18px !important;
+    cursor: pointer !important;
+    transition: background 0.12s !important;
+  }
+  .palette-item:hover, .palette-item.active {
+    background: rgba(201,168,76,0.1) !important;
+  }
+  .palette-item.active { background: rgba(201,168,76,0.14) !important; }
+  .palette-item-icon {
+    font-size: 13px !important;
+    width: 20px !important;
+    text-align: center !important;
+    flex-shrink: 0 !important;
+    color: rgba(201,168,76,0.55) !important;
+  }
+  .palette-item-label {
+    flex: 1 !important;
+    font-size: 12px !important;
+    color: #FAF6F0 !important;
+    letter-spacing: 0.02em !important;
+  }
+  .palette-item-hint {
+    font-size: 9px !important;
+    letter-spacing: 0.1em !important;
+    text-transform: uppercase !important;
+    color: rgba(196,188,178,0.3) !important;
+    flex-shrink: 0 !important;
+  }
+  #cc-palette-footer {
+    padding: 8px 18px !important;
+    border-top: 1px solid rgba(201,168,76,0.08) !important;
+    font-size: 9px !important;
+    letter-spacing: 0.12em !important;
+    text-transform: uppercase !important;
+    color: rgba(196,188,178,0.25) !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+  }
 `;
 document.head.appendChild(styleShield);
 
@@ -977,3 +1082,166 @@ document.addEventListener('DOMContentLoaded', () => {
   const nav = document.querySelector('.dash-nav');
   if (nav) observer.observe(nav, { childList: true, subtree: true });
 });
+
+// ── Command Palette (Cmd+K / Ctrl+K) ─────────────────────────────────────────
+(function() {
+  const ACTIONS = [
+    // Navigation
+    { icon: '⬡', label: 'Hub — Dashboard Home',        hint: 'nav', action: () => { window.location.href = 'index.html'; } },
+    { icon: '🖨', label: 'Queue — Print Queue',         hint: 'nav', action: () => { window.location.href = 'cadence-queue.html'; } },
+    { icon: '📦', label: 'Fulfillment — Ship Orders',   hint: 'nav', action: () => { window.location.href = 'cadence-fulfillment.html'; } },
+    { icon: '👤', label: 'Customers',                   hint: 'nav', action: () => { window.location.href = 'cadence-customers.html'; } },
+    { icon: '✉', label: 'Messages',                    hint: 'nav', action: () => { window.location.href = 'cadence-messages.html'; } },
+    { icon: '🐉', label: 'Creatures — Creature Editor', hint: 'nav', action: () => { window.location.href = 'cadence-creature-editor.html'; } },
+    { icon: '📬', label: 'Email Blast',                 hint: 'nav', action: () => { window.location.href = 'cadence-email-blast.html'; } },
+    { icon: '💰', label: 'P&L — Profit & Loss',        hint: 'nav', action: () => { window.location.href = 'cadence-creatures-pl-tracker.html'; } },
+    { icon: '📊', label: 'Analytics — Sales Dashboard', hint: 'nav', action: () => { window.location.href = 'cadence-analytics.html'; } },
+    { icon: '🔗', label: 'Links',                       hint: 'nav', action: () => { window.location.href = 'cadence-links.html'; } },
+    { icon: '📋', label: 'Activity Log',                hint: 'nav', action: () => { window.location.href = 'cadence-activity.html'; } },
+    { icon: '⚙', label: 'Admin Settings',              hint: 'nav', action: () => { window.location.href = 'cadence-admin.html'; } },
+    { icon: '🌐', label: 'Site Manager',                hint: 'nav', action: () => { window.location.href = 'cadence-site.html'; } },
+    { icon: '↗', label: 'Open Live Site',               hint: 'external', action: () => { window.open('https://cadencecreatures.com', '_blank'); } },
+    { icon: '↗', label: 'Open Etsy Shop',               hint: 'external', action: () => { window.open('https://etsy.com/shop/CadenceCreatures', '_blank'); } },
+    // Actions
+    { icon: '🚪', label: 'Sign Out',                    hint: 'action', action: () => { if(typeof signOut === 'function') signOut(); } },
+  ];
+
+  let activeIdx = 0;
+  let filtered = [];
+
+  function buildDOM() {
+    if (document.getElementById('cc-palette-overlay')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'cc-palette-overlay';
+    overlay.innerHTML = `
+      <div id="cc-palette">
+        <div id="cc-palette-input-wrap">
+          <span class="palette-search-icon">⌕</span>
+          <input id="cc-palette-input" placeholder="Search pages, actions, orders…" autocomplete="off" spellcheck="false" />
+        </div>
+        <div id="cc-palette-results"></div>
+        <div id="cc-palette-footer">↑ ↓ navigate &nbsp;·&nbsp; ↵ select &nbsp;·&nbsp; Esc dismiss</div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    document.getElementById('cc-palette-input').addEventListener('input', render);
+    overlay.addEventListener('mousedown', e => { if (e.target === overlay) close(); });
+  }
+
+  function open() {
+    buildDOM();
+    document.getElementById('cc-palette-overlay').classList.add('open');
+    const inp = document.getElementById('cc-palette-input');
+    inp.value = '';
+    render();
+    inp.focus();
+  }
+
+  function close() {
+    const overlay = document.getElementById('cc-palette-overlay');
+    if (overlay) overlay.classList.remove('open');
+  }
+
+  function render() {
+    const q = (document.getElementById('cc-palette-input').value || '').toLowerCase().trim();
+    const results = document.getElementById('cc-palette-results');
+    activeIdx = 0;
+
+    // Build filtered list: nav/action matches + optional order-search item
+    filtered = q
+      ? ACTIONS.filter(a => a.label.toLowerCase().includes(q))
+      : ACTIONS.slice();
+
+    if (q && q.length >= 2) {
+      filtered.push({
+        icon: '🔍',
+        label: `Search orders for "${q}"`,
+        hint: 'search',
+        action: () => {
+          window.location.href = `cadence-fulfillment.html?q=${encodeURIComponent(q)}`;
+        }
+      });
+    }
+
+    if (!filtered.length) {
+      results.innerHTML = '<div style="padding:20px 18px;font-size:11px;color:rgba(196,188,178,0.35);letter-spacing:.06em">No results</div>';
+      return;
+    }
+
+    const navItems = filtered.filter(i => i.hint === 'nav');
+    const actionItems = filtered.filter(i => i.hint === 'action' || i.hint === 'external');
+    const searchItems = filtered.filter(i => i.hint === 'search');
+
+    let html = '';
+    if (navItems.length) {
+      html += `<div class="palette-group-label">Pages</div>`;
+      html += navItems.map((item, i) => itemHTML(item, i)).join('');
+    }
+    let offset = navItems.length;
+    if (actionItems.length) {
+      html += `<div class="palette-group-label">Actions</div>`;
+      html += actionItems.map((item, i) => itemHTML(item, offset + i)).join('');
+      offset += actionItems.length;
+    }
+    if (searchItems.length) {
+      html += `<div class="palette-group-label">Search</div>`;
+      html += searchItems.map((item, i) => itemHTML(item, offset + i)).join('');
+    }
+    results.innerHTML = html;
+
+    results.querySelectorAll('.palette-item').forEach((el, i) => {
+      el.addEventListener('mouseenter', () => { activeIdx = i; setActive(); });
+      el.addEventListener('click', () => execute(i));
+    });
+    setActive();
+  }
+
+  function itemHTML(item, idx) {
+    return `<div class="palette-item${idx === 0 ? ' active' : ''}" data-idx="${idx}">
+      <span class="palette-item-icon">${item.icon}</span>
+      <span class="palette-item-label">${item.label}</span>
+      <span class="palette-item-hint">${item.hint}</span>
+    </div>`;
+  }
+
+  function setActive() {
+    document.querySelectorAll('#cc-palette-results .palette-item').forEach((el, i) => {
+      el.classList.toggle('active', i === activeIdx);
+    });
+    const active = document.querySelector('#cc-palette-results .palette-item.active');
+    if (active) active.scrollIntoView({ block: 'nearest' });
+  }
+
+  function execute(idx) {
+    const item = filtered[idx];
+    if (item) { close(); item.action(); }
+  }
+
+  document.addEventListener('keydown', e => {
+    const overlay = document.getElementById('cc-palette-overlay');
+    const isOpen = overlay && overlay.classList.contains('open');
+
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      isOpen ? close() : open();
+      return;
+    }
+    if (!isOpen) return;
+
+    if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIdx = Math.min(activeIdx + 1, filtered.length - 1);
+      setActive(); return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIdx = Math.max(activeIdx - 1, 0);
+      setActive(); return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      execute(activeIdx); return;
+    }
+  });
+})();
