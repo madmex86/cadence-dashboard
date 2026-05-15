@@ -180,7 +180,7 @@ let cur='overview';
 function go(tab){
   cur=tab;
   document.querySelectorAll('.tab').forEach(t => {
-    t.classList.toggle('active', t.getAttribute('onclick').includes(`'${tab}'`));
+    t.classList.toggle('active', (t.getAttribute('onclick') || '').includes(`'${tab}'`));
   });
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+tab).classList.add('active');
