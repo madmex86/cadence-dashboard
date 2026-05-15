@@ -52,7 +52,7 @@
   .comp-row td { background: rgba(0,0,0,.18); padding: 0 !important; border-bottom: none; }
   .comp-panel { padding: 6px 14px 10px 28px; }
   .comp-hdr { font-size: 9px; letter-spacing: .15em; text-transform: uppercase; color: rgba(201,168,76,.4); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .comp-item { display: inline-flex; align-items: center; gap: 6px; margin: 0 14px 4px 0; font-size: 11px; }
+  .comp-item { display: flex; align-items: flex-start; gap: 6px; margin: 0 0 8px 0; font-size: 11px; width: 100%; }
   .comp-name { color: var(--cream-dim); }
   .comp-per { font-size: 10px; color: var(--cream-faint); }
   .comp-adj { background: none; border: 1px solid rgba(201,168,76,.18); color: var(--cream-faint); width: 20px; height: 20px; font-size: 13px; line-height: 1; cursor: pointer; padding: 0; }
@@ -790,20 +790,21 @@ function render_stock(){
       <td style="color:var(--cream-faint)">${c.log_number||'—'}</td>
       <td style="font-weight:500;color:var(--gold-light)">
         <div>${c.name}</div>
-        <div style="font-size:10px;color:var(--gold-light);opacity:0.8;margin-bottom:2px;">${c.filament_color || ''}</div>
-        <div style="font-size:9px;color:var(--cream-faint);margin-top:4px;font-family:sans-serif;letter-spacing:0.02em;text-transform:none;font-weight:400;">
+        <div style="font-size:9px;color:var(--cream-faint);margin-top:4px;font-family:sans-serif;text-transform:none;font-weight:400;line-height:1.7;">
           ${(()=>{
-            if(!c.print_recipe) return '';
-            try {
-              const data = JSON.parse(c.print_recipe);
-              const recipe = Array.isArray(data) ? data : (data.recipe || []);
-              if(!recipe.length) return '';
-              return recipe.map(r => {
-                const spool = inv.find(s => s.id === r.filId);
-                const name = spool ? spool.spool_name : (r.label || 'Unknown');
-                return `<span style="border-left:2px solid ${colorFromName(spool?spool.color:r.label)};padding-left:4px;margin-right:8px;">${name}</span>`;
-              }).join(' ');
-            } catch(e) { return ''; }
+            const cComps = components.filter(cp => cp.creature_id === c.id);
+            if (!cComps.length) return '';
+            return cComps.map(cp => {
+              const fIds = Array.isArray(cp.filament_ids) ? cp.filament_ids : (cp.filament_ids ? [cp.filament_ids] : []);
+              const spools = fIds.map(fid => inv.find(s => s.id === fid)).filter(Boolean);
+              if (!spools.length) return '';
+              const brand = (spools.find(s => s.brand) || {}).brand || '';
+              const chips = spools.map(s => {
+                const col = colorFromName(s.color);
+                return `<span style="display:inline-flex;align-items:center;gap:3px;margin-right:5px;"><span style="width:5px;height:5px;border-radius:50%;background:${col};flex-shrink:0;display:inline-block;"></span>${esc(s.color || s.spool_name)}</span>`;
+              }).join('');
+              return `<div style="display:flex;align-items:center;flex-wrap:wrap;margin-bottom:1px;"><span style="color:rgba(201,168,76,0.6);text-transform:uppercase;letter-spacing:.1em;font-size:8px;margin-right:7px;flex-shrink:0;">${esc(cp.part_name)}</span>${brand ? `<span style="opacity:0.45;margin-right:7px;">${esc(brand)}</span>` : ''}${chips}</div>`;
+            }).join('');
           })()}
         </div>
       </td>
@@ -857,13 +858,16 @@ function renderCompRow(c){
   const items=cComps.map(cp=>{
     const sc=cp.stock_count===0?'#e09090':cp.stock_count<3?'#c97c2a':'#7dc994';
     const fIds = Array.isArray(cp.filament_ids) ? cp.filament_ids : (cp.filament_ids ? [cp.filament_ids] : []);
-    const filTags = fIds.map(fid => {
-      const spool = inv.find(s => s.id === fid);
-      if (!spool) return '';
-      const col = colorFromName(spool.color);
-      return `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--cream-faint);padding:1px 6px;background:rgba(255,255,255,.04);border-radius:8px;"><span style="width:6px;height:6px;border-radius:50%;background:${col};display:inline-block;flex-shrink:0;"></span>${esc(spool.spool_name)}</span>`;
-    }).filter(Boolean).join('');
-    return`<div class="comp-item" style="flex-wrap:wrap;gap:6px;align-items:center;"><button class="comp-adj" onclick="adjComp('${cp.id}',-1)">&minus;</button><span class="comp-stock" style="color:${sc}">${cp.stock_count}</span><button class="comp-adj" onclick="adjComp('${cp.id}',1)">+</button><span class="comp-name" style="font-weight:500;letter-spacing:.06em;text-transform:uppercase;font-size:10px;">${esc(cp.part_name||'Part')}</span><div style="display:flex;flex-wrap:wrap;gap:4px;">${filTags}</div></div>`;
+    const spools = fIds.map(fid => inv.find(s => s.id === fid)).filter(Boolean);
+    const brand = (spools.find(s => s.brand) || {}).brand || '';
+    const colorChips = spools.map(s => {
+      const col = colorFromName(s.color);
+      return `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--cream-faint);padding:1px 6px;background:rgba(255,255,255,.04);border-radius:8px;"><span style="width:6px;height:6px;border-radius:50%;background:${col};display:inline-block;flex-shrink:0;"></span>${esc(s.color || s.spool_name)}</span>`;
+    }).join('');
+    const filSection = colorChips
+      ? `${brand ? `<div style="font-size:9px;color:var(--cream-faint);opacity:0.45;margin-bottom:3px;">${esc(brand)}</div>` : ''}<div style="display:flex;flex-wrap:wrap;gap:4px;">${colorChips}</div>`
+      : '';
+    return`<div class="comp-item" style="flex-wrap:nowrap;gap:6px;align-items:flex-start;"><button class="comp-adj" onclick="adjComp('${cp.id}',-1)">&minus;</button><span class="comp-stock" style="color:${sc}">${cp.stock_count}</span><button class="comp-adj" onclick="adjComp('${cp.id}',1)">+</button><div style="flex:1;min-width:0;"><div class="comp-name" style="font-weight:500;letter-spacing:.06em;text-transform:uppercase;font-size:10px;margin-bottom:4px;">${esc(cp.part_name||'Part')}</div>${filSection}</div></div>`;
   }).join('');
   return`<tr class="comp-row"><td colspan="10"><div class="comp-panel"><div class="comp-hdr"><span>Parts Inventory</span>${maxBadge}</div>${items}</div></td></tr>`;
 }
@@ -914,17 +918,20 @@ function render_components() {
     return parts.map((cp, i) => {
       const sc = cp.stock_count === 0 ? '#e09090' : cp.stock_count < 3 ? '#c97c2a' : '#7dc994';
       const fIds = Array.isArray(cp.filament_ids) ? cp.filament_ids : (cp.filament_ids ? [cp.filament_ids] : []);
-      const filTags = fIds.map(fid => {
-        const spool = inv.find(s => s.id === fid);
-        if (!spool) return '';
-        const col = colorFromName(spool.color);
-        return `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:1px 8px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid rgba(255,255,255,.06);"><span style="width:6px;height:6px;border-radius:50%;background:${col};display:inline-block;flex-shrink:0;"></span>${esc(spool.spool_name)}</span>`;
+      const spools = fIds.map(fid => inv.find(s => s.id === fid)).filter(Boolean);
+      const brand = (spools.find(s => s.brand) || {}).brand || '';
+      const colorChips = spools.map(s => {
+        const col = colorFromName(s.color);
+        return `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:1px 8px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid rgba(255,255,255,.06);"><span style="width:6px;height:6px;border-radius:50%;background:${col};display:inline-block;flex-shrink:0;"></span>${esc(s.color || s.spool_name)}</span>`;
       }).join('');
+      const filHtml = spools.length
+        ? `${brand ? `<div style="font-size:9px;color:var(--cream-faint);opacity:0.45;margin-bottom:4px;">${esc(brand)}</div>` : ''}<div style="display:flex;flex-wrap:wrap;gap:4px;">${colorChips}</div>`
+        : '<span style="color:var(--cream-faint);font-size:11px;font-style:italic;">None assigned</span>';
 
       return `<tr>
         <td style="font-weight:500;color:var(--cream);text-transform:uppercase;font-size:11px;letter-spacing:.08em;">${esc(cp.part_name || '—')}</td>
         <td>${i === 0 ? `<span style="color:var(--gold-light)">${c ? esc(c.name) : '—'}</span>` : ''}</td>
-        <td><div style="display:flex;flex-wrap:wrap;gap:4px;">${filTags || '<span style="color:var(--cream-faint);font-size:11px;font-style:italic;">None assigned</span>'}</div></td>
+        <td>${filHtml}</td>
         <td style="font-size:18px;font-weight:600;color:${sc};white-space:nowrap;">
           <button onclick="adjComp('${cp.id}',-1);setTimeout(render_components,100)" class="btn sm" style="padding:0 6px;min-width:22px;margin-right:6px;border-color:transparent;background:rgba(255,255,255,0.03);color:var(--cream-faint);">-</button>
           ${cp.stock_count}
