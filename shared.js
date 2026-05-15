@@ -388,7 +388,7 @@ async function applyRolePermissions() {
         greet.style = 'font-family:"Lora",serif; font-size:11px; color:#E8D08A; letter-spacing:0.05em; font-weight:500; margin-right:15px; border-left:1px solid rgba(201,168,76,0.15); padding-left:15px; display:flex; align-items:center; height:100%;';
         right.insertBefore(greet, right.querySelector('.topbar-link'));
       }
-      greet.textContent = `User: ${displayName.charAt(0).toUpperCase() + displayName.slice(1)}`;
+      greet.textContent = `Welcome, ${displayName.charAt(0).toUpperCase() + displayName.slice(1)}`;
 
       // Connection Hub
       let connHub = document.getElementById('conn-hub');
@@ -400,10 +400,13 @@ async function applyRolePermissions() {
       }
       connHub.innerHTML = `
         <div class="conn-item" title="Supabase Real-time Database">
-          <div class="conn-dot" style="background:#4a8c5c;"></div> Cloud Sync
+          <div class="conn-dot" style="background:#4a8c5c;"></div> Supabase
         </div>
-        <div class="conn-item" title="Email Engine">
-          <div class="conn-dot" style="background:#4a8c5c;"></div> Mail Engine
+        <div class="conn-item" title="Vercel Deployment">
+          <div class="conn-dot" style="background:#4a8c5c;"></div> Vercel
+        </div>
+        <div class="conn-item" id="ai-status-indicator" title="Anthropic AI API">
+          <div class="conn-dot" style="background:#4a8c5c;"></div> AI API
         </div>
         <div id="master-printer-pill" class="conn-pill">🖨 Vision: Loading...</div>
       `;
@@ -960,7 +963,6 @@ styleShield.textContent = `
   @media (max-width: 768px) {
     #cc-hud { padding: 0 12px !important; gap: 4px !important; }
     .hud-label { display: none !important; }
-  }
     .topbar { padding: 0 16px !important; }
     .main-content { padding: 24px 16px !important; }
     .dash-nav { padding: 0 8px !important; }
