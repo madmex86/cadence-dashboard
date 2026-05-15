@@ -474,6 +474,7 @@ async function saveGlobalRates() {
 }
 
 function fmt$(v){return'$'+Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function copyWebhookUrl(){const url='https://ufqiysdgmxrhonnfsgts.supabase.co/functions/v1/etsy-webhook';navigator.clipboard.writeText(url).then(()=>toast('Webhook URL copied','ok')).catch(()=>toast('Copy failed','err'));}
 
 
@@ -511,7 +512,7 @@ function go(tab){
   if(tab==='lore')load_lore();
 }
 
-async function load_orders(){sync(true);const{data,error}=await db.from('orders').select('id,etsy_order_id,buyer_name,buyer_email,items,status,printer,total_amount,tracking_number,carrier,ship_note,order_date,created_at,margin').order('created_at',{ascending:false});if(error){serr();return;}orders=data;sync(false);render_orders();update_order_kpis();update_badges();check_alerts();}
+async function load_orders(){sync(true);const{data,error}=await db.from('orders').select('id,etsy_order_id,buyer_name,buyer_email,items,status,printer_name,total_amount,tracking_number,carrier,shipping_note,order_date,shipped_date,created_at').order('created_at',{ascending:false});if(error){serr();return;}orders=data;sync(false);render_orders();update_order_kpis();update_badges();check_alerts();}
 function render_orders(){
   const tb=document.getElementById('otb');
   const hideCompleted = document.getElementById('hide-completed-cb') ? document.getElementById('hide-completed-cb').checked : true;
