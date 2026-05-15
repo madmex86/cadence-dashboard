@@ -171,11 +171,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 // Hub is removed — the topbar brand name is made clickable as the home link in applyRolePermissions.
 const NAV_GROUPS = [
   { label: 'Production', children: [
-    { label: 'Queue & Orders', href: 'cadence-queue.html' },
+    { label: 'Queue & Orders', href: 'cadence-queue.html', hasTabs: true },
     { label: 'Fulfillment', href: 'cadence-fulfillment.html' },
   ]},
   { label: 'Commerce', adminOnly: true, children: [
-    { label: 'P&L', href: 'cadence-creatures-pl-tracker.html' },
+    { label: 'P&L', href: 'cadence-creatures-pl-tracker.html', hasTabs: true },
     { label: 'Sales Intel', href: 'cadence-sales.html' },
     { label: '🚀 Launch', href: 'cadence-drop-launch.html', hideIfLaunched: true },
     { label: 'Analytics', href: 'cadence-analytics.html' },
@@ -265,9 +265,10 @@ async function applyRolePermissions() {
         const childLinks = visibleChildren.map(link => {
           const target = link.external ? ' target="_blank"' : '';
           const badge = link.badge ? ` <span id="${link.badge}" class="nav-badge" style="display:none">0</span>` : '';
+          const arrow = link.hasTabs ? ' <span style="font-size:8px;opacity:0.4;margin-left:4px;">▾</span>' : '';
           const linkFile = (link.href || '').split('/').pop().replace('.html', '');
           const active = linkFile === currentFile ? ' class="active"' : '';
-          return `<a href="${link.href}"${target}${active}>${link.label}${badge}</a>`;
+          return `<a href="${link.href}"${target}${active}>${link.label}${arrow}${badge}</a>`;
         }).join('');
         return `<div class="nav-group"><button class="nav-group-btn${groupActive ? ' active' : ''}" type="button">${group.label}</button><div class="nav-dropdown">${childLinks}</div></div>`;
       }).join('');
@@ -316,7 +317,8 @@ async function applyRolePermissions() {
             subnav.innerHTML = visibleKids.map(link => {
               const lf = (link.href || '').split('/').pop().replace('.html', '');
               const target = link.external ? ' target="_blank"' : '';
-              return `<a href="${link.href}"${target} class="tab${lf === currentFile ? ' active' : ''}">${link.label}</a>`;
+              const arrow = link.hasTabs ? ' <span style="font-size:8px;opacity:0.4;margin-left:4px;">▾</span>' : '';
+              return `<a href="${link.href}"${target} class="tab${lf === currentFile ? ' active' : ''}">${link.label}${arrow}</a>`;
             }).join('');
             nav.insertAdjacentElement('afterend', subnav);
           }
