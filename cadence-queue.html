@@ -303,6 +303,17 @@
       <div><label class="fl">Batch Qty <span class="help-icon tip-bottom" data-tooltip="If you sliced multiple items on one plate, enter the quantity here. We'll divide the filament total by this number.">?</span></label><input id="pc-batch" type="number" value="1" min="1" oninput="calcPrintCost()"/></div>
       <div><label class="fl">Pkg ($) <span class="help-icon tip-bottom tip-left" data-tooltip="Packaging costs (box, tissue, stickers) per single creature.">?</span></label><input id="pc-pkg" type="number" value="0.75" step="0.01" oninput="calcPrintCost()"/></div>
     </div>
+    <div class="fr" style="grid-template-columns: 1fr 1fr 1fr; margin-top:12px;">
+      <div><label class="fl">Print Time (hrs)</label><input id="pc-print-hours" type="number" value="0" step="0.25" min="0" oninput="calcPrintCost()"/></div>
+      <div><label class="fl">Printer Wattage (kW) <span style="font-size:8px;opacity:.45;">Bambu X1C ≈ 0.35</span></label><input id="pc-wattage" type="number" value="0.35" step="0.01" min="0" oninput="calcPrintCost()"/></div>
+      <div style="display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:10px;">
+        <label class="fl" style="margin-bottom:8px;">☀ Solar / Powerwall</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="pc-solar-toggle" onchange="calcPrintCost()">
+          <span style="font-size:10px;color:rgba(196,188,178,0.5);letter-spacing:.05em;">Active — show margin impact</span>
+        </label>
+      </div>
+    </div>
     
     <div style="margin-top:25px; overflow-x:visible;">
       <table class="recipe-table" style="width:100%; border-collapse:collapse; font-size:11px;">
@@ -330,7 +341,20 @@
         <div><div style="font-size:9px; letter-spacing:.15em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:8px">Net Margin</div><div style="font-size:20px; font-weight:600" id="pc-r-margin">—</div></div>
       </div>
       <div style="text-align:center; margin-top:18px; font-size:11px; color:var(--cream-faint); border-top:1px solid rgba(201,168,76,0.1); padding-top:14px;" id="pc-r-detail">Select a creature to start</div>
-      
+
+      <!-- Utility Impact -->
+      <div id="pc-utility-wrap" style="display:none; margin-top:14px; border-top:1px solid rgba(201,168,76,0.06); padding-top:14px;">
+        <div style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:rgba(196,188,178,0.35);margin-bottom:10px;text-align:center;">Utility Impact (per unit)</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center;">
+          <div><div style="font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-faint);margin-bottom:4px;">Power Cost</div><div id="pc-u-power" style="font-size:15px;font-weight:600;color:var(--cream);">—</div></div>
+          <div><div style="font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-faint);margin-bottom:4px;">Labor</div><div id="pc-u-labor" style="font-size:15px;font-weight:600;color:var(--cream);">—</div></div>
+          <div><div style="font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-faint);margin-bottom:4px;">Maintenance</div><div id="pc-u-maint" style="font-size:15px;font-weight:600;color:var(--cream);">—</div></div>
+        </div>
+        <div id="pc-solar-savings" style="display:none;margin-top:10px;text-align:center;background:rgba(125,201,148,0.08);border:1px solid rgba(125,201,148,0.2);border-radius:4px;padding:8px 14px;">
+          <span style="font-size:10px;color:#7dc994;letter-spacing:.05em;">☀ Solar saves <strong id="pc-solar-amount">$0.00</strong>/unit vs grid — customer price unchanged, margin protected</span>
+        </div>
+      </div>
+
       <!-- Smart Pricing Suggestions -->
       <div id="pc-suggestions" style="margin-top:20px; display:none; justify-content:center; gap:12px; border-top:1px solid rgba(201,168,76,0.1); padding-top:18px;">
         <div style="background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.3); padding:8px 16px; border-radius:4px; text-align:center; min-width:140px;">
@@ -343,6 +367,16 @@
         </div>
       </div>
     </div>
+  </div>
+  <!-- Admin-only global rate settings -->
+  <div id="pc-admin-rates" style="display:none;margin-top:16px;border-top:1px solid rgba(201,168,76,0.1);padding-top:14px;">
+    <div style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:rgba(201,168,76,0.55);margin-bottom:12px;">⚙ Global Rate Settings — Admin Only</div>
+    <div class="fr" style="grid-template-columns:repeat(3,1fr);">
+      <div><label class="fl">$/kWh Rate</label><input id="pc-kwh-rate" type="number" step="0.01" min="0" oninput="calcPrintCost()"/></div>
+      <div><label class="fl">Labor ($/hr)</label><input id="pc-labor-rate" type="number" step="0.50" min="0" oninput="calcPrintCost()"/></div>
+      <div><label class="fl">Maintenance ($/hr)</label><input id="pc-maint-rate" type="number" step="0.10" min="0" oninput="calcPrintCost()"/></div>
+    </div>
+    <button class="btn sm" style="margin-top:10px;" onclick="saveGlobalRates()">💾 Save Global Rates</button>
   </div>
   <div class="modal-act"><button class="btn" onclick="closeModal('m-printcost')">Cancel</button><button class="btn pri" onclick="saveRecipeToCreature()">Save Recipe &amp; COGS</button></div>
 </div></div>
@@ -411,7 +445,33 @@ document.addEventListener('keydown', (e) => {
   if(e.key.toLowerCase() === 'o') { e.preventDefault(); oModal(); }
 });
 const FAILURE_RATE_BUFFER = 0.05;
+let GLOBAL_RATES = { kwh_rate: 0.34, labor_rate: 0, maintenance_fee: 0.50 };
 let orders=[],creatures=[],inv=[],fin=[],printers=[],components=[];
+
+async function loadGlobalRates() {
+  try {
+    const { data } = await db.from('settings').select('key,value')
+      .in('key', ['kwh_rate','labor_rate','maintenance_fee']);
+    if (data) data.forEach(r => {
+      if (r.key in GLOBAL_RATES) GLOBAL_RATES[r.key] = parseFloat(r.value) || 0;
+    });
+  } catch(e) { /* use compiled defaults */ }
+}
+
+async function saveGlobalRates() {
+  const kwh   = parseFloat(document.getElementById('pc-kwh-rate')?.value)   || 0.34;
+  const labor = parseFloat(document.getElementById('pc-labor-rate')?.value) || 0;
+  const maint = parseFloat(document.getElementById('pc-maint-rate')?.value) || 0.50;
+  const { error } = await db.from('settings').upsert([
+    { key: 'kwh_rate',        value: String(kwh)   },
+    { key: 'labor_rate',      value: String(labor) },
+    { key: 'maintenance_fee', value: String(maint) }
+  ], { onConflict: 'key' });
+  if (error) { toast('Failed to save rates', 'err'); return; }
+  GLOBAL_RATES = { kwh_rate: kwh, labor_rate: labor, maintenance_fee: maint };
+  toast('Global rates saved', 'ok');
+  calcPrintCost();
+}
 
 function fmt$(v){return'$'+Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function copyWebhookUrl(){const url='https://ufqiysdgmxrhonnfsgts.supabase.co/functions/v1/etsy-webhook';navigator.clipboard.writeText(url).then(()=>toast('Webhook URL copied','ok')).catch(()=>toast('Copy failed','err'));}
@@ -425,8 +485,8 @@ function g(id){return document.getElementById(id).value.trim();}
 let cur='orders';
 function go(tab){
   cur=tab;
-  document.querySelectorAll('.tab').forEach(t => {
-    t.classList.toggle('active', t.getAttribute('onclick').includes(`'${tab}'`));
+  document.querySelectorAll('.tabs .tab').forEach(t => {
+    t.classList.toggle('active', (t.getAttribute('onclick') || '').includes(`'${tab}'`));
   });
   if(tab === 'printcost') {
     openPrintCost();
@@ -1084,6 +1144,19 @@ function openPrintCost(){
   const sel=document.getElementById('pc-creature');
   sel.innerHTML='<option value="">Select creature…</option>'+creatures.map(c=>`<option value="${c.id}" data-price="${c.price_etsy||0}">${c.name}</option>`).join('');
   document.getElementById('pc-recipe-body').innerHTML = '';
+
+  // Show admin rate panel and pre-populate with current global values
+  const isAdmin = currentUser?.email === 'stevenportugal86@gmail.com' || currentUser?.user_metadata?.role === 'admin';
+  const adminRates = document.getElementById('pc-admin-rates');
+  if (adminRates) {
+    adminRates.style.display = isAdmin ? 'block' : 'none';
+    if (isAdmin) {
+      document.getElementById('pc-kwh-rate').value   = GLOBAL_RATES.kwh_rate;
+      document.getElementById('pc-labor-rate').value = GLOBAL_RATES.labor_rate;
+      document.getElementById('pc-maint-rate').value = GLOBAL_RATES.maintenance_fee;
+    }
+  }
+
   calcPrintCost();
   openModal('m-printcost');
 }
@@ -1143,67 +1216,95 @@ function loadRecipe() {
 }
 
 function calcPrintCost(){
-  const batch = parseFloat(document.getElementById('pc-batch').value) || 1;
-  const pkg = parseFloat(document.getElementById('pc-pkg').value) || 0.75;
-  const sel = document.getElementById('pc-creature');
-  const opt = sel.options[sel.selectedIndex];
+  const batch      = parseFloat(document.getElementById('pc-batch').value) || 1;
+  const pkg        = parseFloat(document.getElementById('pc-pkg').value)   || 0.75;
+  const sel        = document.getElementById('pc-creature');
+  const opt        = sel.options[sel.selectedIndex];
   const etsysPrice = parseFloat(opt?.dataset?.price) || 0;
-  
+
   let totalFilCost = 0;
-  let totalGrams = 0;
-  
+  let totalGrams   = 0;
+
   document.querySelectorAll('#pc-recipe-body tr').forEach(row => {
-    const m = parseFloat(row.querySelector('.pc-row-model').value) || 0;
+    const m = parseFloat(row.querySelector('.pc-row-model').value)  || 0;
     const p = parseFloat(row.querySelector('.pc-row-purged').value) || 0;
-    const t = parseFloat(row.querySelector('.pc-row-tower').value) || 0;
+    const t = parseFloat(row.querySelector('.pc-row-tower').value)  || 0;
     const filSelect = row.querySelector('.pc-row-fil');
     const spoolCost = parseFloat(filSelect.options[filSelect.selectedIndex].dataset.cost) || 0;
-    
-    const rowGrams = m + p + t;
-    const rowCost = (rowGrams * (spoolCost / 1000));
-    
+    const rowGrams  = m + p + t;
     row.querySelector('.pc-row-total').textContent = rowGrams.toFixed(2) + 'g';
-    totalFilCost += rowCost;
-    totalGrams += rowGrams;
+    totalFilCost += rowGrams * (spoolCost / 1000);
+    totalGrams   += rowGrams;
   });
 
   const filPerUnit = (totalFilCost * (1 + FAILURE_RATE_BUFFER)) / batch;
-  const totalCogs = filPerUnit + pkg;
-  const etsyFee = etsysPrice * 0.065;
-  const net = etsysPrice - totalCogs - etsyFee;
-  const margin = etsysPrice > 0 ? Math.round((net / etsysPrice) * 100) : null;
 
-  // Suggested Pricing Logic
+  // ── Utility costs ──────────────────────────────────────────────────────────
+  // Logic: (Printer_Wattage_kW × Print_Time_Hours) × kWh_RATE
+  const printHours = parseFloat(document.getElementById('pc-print-hours').value) || 0;
+  const printerKw  = parseFloat(document.getElementById('pc-wattage').value)     || 0.35;
+  const solarOn    = document.getElementById('pc-solar-toggle')?.checked;
+
+  // Live admin inputs override loaded rates (so edits preview instantly)
+  const kwhRate   = parseFloat(document.getElementById('pc-kwh-rate')?.value)   || GLOBAL_RATES.kwh_rate;
+  const laborRate = parseFloat(document.getElementById('pc-labor-rate')?.value) || GLOBAL_RATES.labor_rate;
+  const maintRate = parseFloat(document.getElementById('pc-maint-rate')?.value) || GLOBAL_RATES.maintenance_fee;
+
+  const powerPerUnit = (printerKw * printHours * kwhRate)  / batch;
+  const laborPerUnit = (printHours * laborRate)            / batch;
+  const maintPerUnit = (printHours * maintRate)            / batch;
+  const utilityTotal =  powerPerUnit + laborPerUnit + maintPerUnit;
+
+  // ── COGS & margin ──────────────────────────────────────────────────────────
+  const totalCogs = filPerUnit + pkg + utilityTotal;
+  const etsyFee   = etsysPrice * 0.065;
+  const net       = etsysPrice - totalCogs - etsyFee;
+  const margin    = etsysPrice > 0 ? Math.round((net / etsysPrice) * 100) : null;
+
   const suggestedRetail = totalCogs * 3;
-  const suggestedEtsy = suggestedRetail * 1.10;
+  const suggestedEtsy   = suggestedRetail * 1.10;
 
   document.getElementById('pc-r-fil-total').textContent = fmt$(filPerUnit);
-  document.getElementById('pc-r-cogs').textContent = fmt$(totalCogs);
-  document.getElementById('pc-r-net').textContent = fmt$(net);
-  
+  document.getElementById('pc-r-cogs').textContent      = fmt$(totalCogs);
+  document.getElementById('pc-r-net').textContent       = fmt$(net);
+
   const mg = document.getElementById('pc-r-margin');
   if (margin !== null) {
-    mg.innerHTML = margin + '%' + (margin > 75 ? ' <span style="font-size:9px; vertical-align:middle; background:var(--gold); color:black; padding:1px 4px; border-radius:2px; margin-left:4px;">HIGH MARGIN</span>' : '');
-    // Margin coloring: <60% red, 60-75% gold, >75% teal/gold (high margin)
+    mg.innerHTML = margin + '%' + (margin > 75 ? ' <span style="font-size:9px;vertical-align:middle;background:var(--gold);color:black;padding:1px 4px;border-radius:2px;margin-left:4px;">HIGH MARGIN</span>' : '');
     mg.style.color = margin >= 75 ? '#7dc994' : margin >= 60 ? '#E8D08A' : '#e09090';
   } else {
     mg.textContent = '—';
     mg.style.color = 'var(--cream-faint)';
   }
-  
-  // Show suggestions if COGS is valid
+
   const sugWrap = document.getElementById('pc-suggestions');
   if (totalCogs > pkg) {
     sugWrap.style.display = 'flex';
     document.getElementById('suggested-retail').textContent = fmt$(suggestedRetail);
-    document.getElementById('suggested-etsy').textContent = fmt$(suggestedEtsy);
+    document.getElementById('suggested-etsy').textContent   = fmt$(suggestedEtsy);
   } else {
     sugWrap.style.display = 'none';
   }
-  
-  document.getElementById('pc-r-detail').textContent = etsysPrice > 0 
-    ? `Plate Weight: ${totalGrams.toFixed(1)}g · Per Unit: ${(totalGrams/batch).toFixed(1)}g (incl. 5% failure buffer)`
-    : `Plate Weight: ${totalGrams.toFixed(1)}g · Batch: ${batch}x (incl. 5% failure buffer)`;
+
+  document.getElementById('pc-r-detail').textContent = etsysPrice > 0
+    ? `Plate: ${totalGrams.toFixed(1)}g · Per unit: ${(totalGrams/batch).toFixed(1)}g (incl. 5% failure buffer)`
+    : `Plate: ${totalGrams.toFixed(1)}g · Batch: ${batch}x (incl. 5% failure buffer)`;
+
+  // ── Utility Impact section ─────────────────────────────────────────────────
+  const uWrap = document.getElementById('pc-utility-wrap');
+  if (printHours > 0) {
+    uWrap.style.display = 'block';
+    document.getElementById('pc-u-power').textContent = fmt$(powerPerUnit);
+    document.getElementById('pc-u-labor').textContent = laborRate > 0 ? fmt$(laborPerUnit) : '—';
+    document.getElementById('pc-u-maint').textContent = maintRate > 0 ? fmt$(maintPerUnit) : '—';
+
+    const solarSavDiv = document.getElementById('pc-solar-savings');
+    // Solar Offset: show how much business saves vs grid while keeping customer price standard
+    solarSavDiv.style.display = solarOn ? 'block' : 'none';
+    if (solarOn) document.getElementById('pc-solar-amount').textContent = fmt$(powerPerUnit);
+  } else {
+    uWrap.style.display = 'none';
+  }
 }
 
 async function saveRecipeToCreature(){
@@ -1459,7 +1560,7 @@ async function saveCustomer(){
 function showApp() {
   document.getElementById('app').style.display = 'block';
   Promise.all([
-    load_printers(),load_orders(),load_creatures(),load_inv(),load_mileage(),load_customers()
+    loadGlobalRates(),load_printers(),load_orders(),load_creatures(),load_inv(),load_mileage(),load_customers()
   ]).then(() => {
     const params = new URLSearchParams(window.location.search);
     if(params.get('cost') === 'true') openPrintCost();
