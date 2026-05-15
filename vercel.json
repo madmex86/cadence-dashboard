@@ -9,6 +9,7 @@
     { "source": "/analytics", "destination": "/cadence-analytics.html" },
     { "source": "/sales", "destination": "/cadence-sales.html" },
     { "source": "/live", "destination": "/cadence-live.html" },
-    { "source": "/cami", "destination": "/cadence-cami.html" }
+    { "source": "/cami", "destination": "/cadence-cami.html" },
+    { "source": "/reviews", "destination": "/cadence-reviews.html" }
   ]
 }

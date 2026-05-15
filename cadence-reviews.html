@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cadence Creatures — Review Forge</title>
+<link rel="icon" href="/favicon.ico?v=2" />
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared.js"></script>
+<style>
+  .filter-bar { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:22px; align-items:center; }
+  .filter-bar select, .filter-bar input {
+    background:rgba(255,255,255,.04); border:1px solid var(--border);
+    color:var(--cream); font-family:'Lora',serif; font-size:11px;
+    padding:7px 11px; outline:none; min-width:140px;
+  }
+  .filter-bar select option { background:#0f0d14; }
+  .kpi-strip { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:28px; }
+  .kpi { background:rgba(201,168,76,.03); border:1px solid rgba(201,168,76,.1); padding:14px 20px; flex:1; min-width:100px; }
+  .kpi-val { font-size:28px; font-weight:600; color:var(--cream); }
+  .kpi-lbl { font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:var(--cream-faint); margin-top:3px; }
+  .review-table { width:100%; border-collapse:collapse; }
+  .review-table th {
+    text-align:left; font-size:9px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--cream-faint); padding:8px 12px; border-bottom:1px solid var(--border);
+    font-weight:400; cursor:pointer; white-space:nowrap; user-select:none;
+  }
+  .review-table th:hover { color:var(--cream); }
+  .review-table th.sorted { color:#C9A84C; }
+  .review-table td { padding:12px 12px; border-bottom:1px solid rgba(255,255,255,.04); vertical-align:top; font-size:12px; }
+  .review-table tr:hover td { background:rgba(255,255,255,.02); }
+  .stars { color:#C9A84C; letter-spacing:1px; font-size:11px; }
+  .stars-empty { color:rgba(201,168,76,.2); }
+  .badge { display:inline-flex; align-items:center; gap:4px; font-size:8px; letter-spacing:.1em; text-transform:uppercase; padding:2px 7px; border-radius:2px; }
+  .badge.verified { background:rgba(91,191,212,.12); border:1px solid rgba(91,191,212,.3); color:#5BBFD4; }
+  .badge.pending { background:rgba(201,168,76,.1); border:1px solid rgba(201,168,76,.25); color:#C9A84C; }
+  .badge.legacy { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); color:var(--cream-faint); }
+  .tog-row { display:inline-flex; align-items:center; gap:5px; font-size:9px; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; color:var(--cream-faint); transition:color .2s; }
+  .tog-row:hover { color:var(--cream); }
+  .tog-row.on { color:#7dc994; }
+  .tog-dot { width:7px; height:7px; border-radius:50%; background:currentColor; flex-shrink:0; }
+  .action-btn { background:none; border:1px solid var(--border); color:var(--cream-faint); font-size:9px; letter-spacing:.08em; text-transform:uppercase; padding:3px 9px; cursor:pointer; transition:border-color .2s,color .2s; font-family:'Lora',serif; }
+  .action-btn:hover { border-color:rgba(201,168,76,.4); color:var(--cream); }
+  .action-btn.danger:hover { border-color:rgba(224,144,144,.4); color:#e09090; }
+  .review-body-cell { max-width:320px; color:var(--cream-faint); line-height:1.5; }
+  .review-body-cell.expanded { max-width:none; white-space:normal; }
+
+  /* Modal */
+  .modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:200; align-items:center; justify-content:center; }
+  .modal-backdrop.open { display:flex; }
+  .modal { background:#0f0d14; border:1px solid rgba(201,168,76,.2); width:100%; max-width:560px; padding:28px 28px 24px; position:relative; }
+  .modal-title { font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:#C9A84C; margin-bottom:20px; }
+  .modal label { display:block; font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:5px; }
+  .modal input, .modal select, .modal textarea {
+    width:100%; background:rgba(255,255,255,.04); border:1px solid var(--border);
+    color:var(--cream); font-family:'Lora',serif; font-size:12px; padding:8px 10px;
+    outline:none; margin-bottom:14px; resize:vertical;
+  }
+  .modal input:focus, .modal select:focus, .modal textarea:focus { border-color:rgba(201,168,76,.35); }
+  .modal select option { background:#0f0d14; }
+  .modal-foot { display:flex; gap:10px; justify-content:flex-end; margin-top:6px; }
+  .star-picker { display:flex; gap:4px; margin-bottom:14px; }
+  .star-picker span { font-size:22px; color:rgba(201,168,76,.25); cursor:pointer; transition:color .15s; }
+  .star-picker span.lit { color:#C9A84C; }
+</style>
+</head>
+<body>
+
+<div id="login-screen" style="display:none"></div>
+
+<div id="app" style="display:none">
+<div class="topbar">
+  <div class="topbar-left">
+    <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round"/><rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C"/><circle cx="36" cy="4" r="5.5" fill="#E8D08A"/><circle cx="6" cy="18" r="4" fill="#5BBFD4"/><circle cx="66" cy="18" r="4" fill="#5BBFD4"/></svg>
+    <div><div class="topbar-name">Cadence Creatures</div><div class="topbar-sub">Back Office</div></div>
+  </div>
+  <div class="topbar-right">
+    <div id="user-greet"></div>
+    <a class="topbar-link" onclick="signOut()">Sign Out</a>
+  </div>
+</div>
+
+<div class="dash-nav"></div>
+
+<div class="main">
+  <div style="display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; margin-bottom:6px;">
+    <div class="title">Review Forge</div>
+    <button class="btn sm" onclick="openAddModal()" style="margin-bottom:4px;">+ Add Review</button>
+  </div>
+  <div class="subtitle">Moderate, edit, and import creature reviews.</div>
+
+  <!-- KPI Strip -->
+  <div class="kpi-strip" id="rv-kpis">
+    <div class="kpi"><div class="kpi-val">—</div><div class="kpi-lbl">Loading</div></div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <select id="filter-creature" onchange="applyFilters()">
+      <option value="">All Creatures</option>
+    </select>
+    <select id="filter-rating" onchange="applyFilters()">
+      <option value="">All Ratings</option>
+      <option value="5">★★★★★ 5</option>
+      <option value="4">★★★★☆ 4</option>
+      <option value="3">★★★☆☆ 3</option>
+      <option value="2">★★☆☆☆ 2</option>
+      <option value="1">★☆☆☆☆ 1</option>
+    </select>
+    <select id="filter-status" onchange="applyFilters()">
+      <option value="">All Statuses</option>
+      <option value="active">Published</option>
+      <option value="pending">Pending</option>
+    </select>
+    <input type="text" id="filter-search" placeholder="Search author or text…" oninput="applyFilters()" style="flex:1;min-width:160px;"/>
+    <span id="rv-count" style="font-size:10px; color:var(--cream-faint); white-space:nowrap; align-self:center;"></span>
+  </div>
+
+  <!-- Table -->
+  <div style="overflow-x:auto;">
+    <table class="review-table" id="rv-table">
+      <thead>
+        <tr>
+          <th onclick="sortBy('creature_name')">Creature <span id="sort-creature_name"></span></th>
+          <th onclick="sortBy('rating')">Rating <span id="sort-rating"></span></th>
+          <th onclick="sortBy('author')">Author <span id="sort-author"></span></th>
+          <th>Location</th>
+          <th>Review</th>
+          <th onclick="sortBy('created_at')">Date <span id="sort-created_at"></span></th>
+          <th>Status</th>
+          <th>Flags</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="rv-tbody"></tbody>
+    </table>
+  </div>
+  <div id="rv-empty" style="display:none; text-align:center; padding:40px; color:var(--cream-faint); font-style:italic; font-size:13px;">No reviews match your filters.</div>
+</div><!-- .main -->
+</div><!-- #app -->
+
+<div class="toast" id="tst"></div>
+
+<!-- Edit / Add Modal -->
+<div class="modal-backdrop" id="edit-modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Edit Review</div>
+    <input type="hidden" id="modal-id"/>
+
+    <label>Creature</label>
+    <select id="modal-creature"></select>
+
+    <label>Author Name</label>
+    <input type="text" id="modal-author" placeholder="e.g. Sarah M."/>
+
+    <label>Location</label>
+    <input type="text" id="modal-location" placeholder="e.g. Austin, TX"/>
+
+    <label>Rating</label>
+    <div class="star-picker" id="modal-stars">
+      <span onclick="setModalRating(1)">★</span>
+      <span onclick="setModalRating(2)">★</span>
+      <span onclick="setModalRating(3)">★</span>
+      <span onclick="setModalRating(4)">★</span>
+      <span onclick="setModalRating(5)">★</span>
+    </div>
+
+    <label>Review Text</label>
+    <textarea id="modal-body" rows="5" placeholder="Customer's review…"></textarea>
+
+    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:14px;">
+      <input type="checkbox" id="modal-verified" style="width:auto; margin:0;"/>
+      <span>Verified (site-native submission)</span>
+    </label>
+
+    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:14px;">
+      <input type="checkbox" id="modal-active" style="width:auto; margin:0;"/>
+      <span>Published (visible on site)</span>
+    </label>
+
+    <div class="modal-foot">
+      <button class="btn sm" style="background:none;border-color:var(--border);color:var(--cream-faint);" onclick="closeModal()">Cancel</button>
+      <button class="btn sm" onclick="saveModal()">Save Review</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let reviews = [], creatures = [];
+let sortField = 'created_at', sortDir = -1;
+let modalRating = 5;
+
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function starsHtml(n) {
+  let h = '';
+  for (let i = 1; i <= 5; i++) h += `<span class="${i <= n ? '' : 'stars-empty'}">★</span>`;
+  return `<span class="stars">${h}</span>`;
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+
+function showApp() {
+  document.getElementById('app').style.display = 'flex';
+  init();
+}
+
+async function init() {
+  sync(true);
+  const [rvRes, crRes] = await Promise.all([
+    db.from('reviews').select('*').order('created_at', { ascending: false }),
+    db.from('creatures').select('id,name').order('name')
+  ]);
+  sync(false);
+  if (rvRes.error) { serr(); return; }
+  reviews = rvRes.data || [];
+  creatures = crRes.data || [];
+
+  // Build creature lookup map
+  const cMap = {};
+  creatures.forEach(c => { cMap[c.id] = c.name; });
+  reviews.forEach(r => { r.creature_name = cMap[r.creature_id] || '—'; });
+
+  populateCreatureFilter();
+  renderKpis();
+  applyFilters();
+}
+
+function populateCreatureFilter() {
+  const sel = document.getElementById('filter-creature');
+  // Get unique creature IDs referenced in reviews
+  const seen = {};
+  reviews.forEach(r => { if (r.creature_id) seen[r.creature_id] = r.creature_name; });
+  Object.entries(seen).sort((a,b) => a[1].localeCompare(b[1])).forEach(([id, name]) => {
+    const opt = document.createElement('option');
+    opt.value = id; opt.textContent = name;
+    sel.appendChild(opt);
+  });
+
+  // Also populate modal creature select
+  const mSel = document.getElementById('modal-creature');
+  mSel.innerHTML = '<option value="">— Choose creature —</option>';
+  creatures.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id; opt.textContent = c.name;
+    mSel.appendChild(opt);
+  });
+}
+
+function renderKpis() {
+  const total = reviews.length;
+  const published = reviews.filter(r => r.is_active).length;
+  const pending = reviews.filter(r => !r.is_active).length;
+  const verified = reviews.filter(r => r.is_verified).length;
+  const avg = reviews.filter(r => r.rating).reduce((s,r,_,a) => s + r.rating / a.length, 0);
+
+  document.getElementById('rv-kpis').innerHTML = `
+    <div class="kpi"><div class="kpi-val">${total}</div><div class="kpi-lbl">Total</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:#7dc994;">${published}</div><div class="kpi-lbl">Published</div></div>
+    <div class="kpi"><div class="kpi-val" style="${pending > 0 ? 'color:#C9A84C;' : ''}">${pending}</div><div class="kpi-lbl">Pending</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:#5BBFD4;">${verified}</div><div class="kpi-lbl">Verified</div></div>
+    <div class="kpi"><div class="kpi-val">${reviews.length ? avg.toFixed(1) : '—'}</div><div class="kpi-lbl">Avg Rating</div></div>
+  `;
+}
+
+function applyFilters() {
+  const cFilter = document.getElementById('filter-creature').value;
+  const rFilter = document.getElementById('filter-rating').value;
+  const sFilter = document.getElementById('filter-status').value;
+  const qFilter = document.getElementById('filter-search').value.trim().toLowerCase();
+
+  let filtered = reviews.filter(r => {
+    if (cFilter && r.creature_id !== cFilter) return false;
+    if (rFilter && String(r.rating) !== rFilter) return false;
+    if (sFilter === 'active' && !r.is_active) return false;
+    if (sFilter === 'pending' && r.is_active) return false;
+    if (qFilter) {
+      const hay = ((r.author||'') + ' ' + (r.body||'')).toLowerCase();
+      if (!hay.includes(qFilter)) return false;
+    }
+    return true;
+  });
+
+  // Sort
+  filtered.sort((a,b) => {
+    let av = a[sortField], bv = b[sortField];
+    if (typeof av === 'string') av = av.toLowerCase();
+    if (typeof bv === 'string') bv = bv.toLowerCase();
+    if (av < bv) return -sortDir;
+    if (av > bv) return sortDir;
+    return 0;
+  });
+
+  renderTable(filtered);
+  document.getElementById('rv-count').textContent = `${filtered.length} review${filtered.length !== 1 ? 's' : ''}`;
+  document.getElementById('rv-empty').style.display = filtered.length ? 'none' : 'block';
+}
+
+function sortBy(field) {
+  if (sortField === field) sortDir *= -1;
+  else { sortField = field; sortDir = -1; }
+
+  // Update sort indicators
+  document.querySelectorAll('[id^="sort-"]').forEach(el => el.textContent = '');
+  const ind = document.getElementById('sort-' + field);
+  if (ind) ind.textContent = sortDir > 0 ? ' ↑' : ' ↓';
+
+  applyFilters();
+}
+
+function renderTable(rows) {
+  const tbody = document.getElementById('rv-tbody');
+  if (!rows.length) { tbody.innerHTML = ''; return; }
+
+  tbody.innerHTML = rows.map(r => {
+    const verifiedBadge = r.is_verified
+      ? `<span class="badge verified">✓ Verified</span>`
+      : `<span class="badge legacy">Legacy</span>`;
+    const statusToggle = `<button class="tog-row${r.is_active ? ' on' : ''}" onclick="togglePublish('${r.id}',${!r.is_active})">
+      <span class="tog-dot"></span>${r.is_active ? 'Published' : 'Pending'}
+    </button>`;
+
+    const bodySnippet = (r.body||'').length > 100
+      ? `<span class="rv-snippet">${esc((r.body||'').slice(0,100))}… <button class="action-btn" onclick="expandBody(this,${JSON.stringify(esc(r.body))})">more</button></span>`
+      : esc(r.body||'');
+
+    return `<tr data-id="${r.id}">
+      <td style="color:var(--cream);font-size:11px;white-space:nowrap;">${esc(r.creature_name)}</td>
+      <td style="white-space:nowrap;">${starsHtml(r.rating||0)}</td>
+      <td style="white-space:nowrap;color:var(--cream);">${esc(r.author)}</td>
+      <td style="color:var(--cream-faint);font-size:11px;">${esc(r.location||'—')}</td>
+      <td class="review-body-cell">${bodySnippet}</td>
+      <td style="color:var(--cream-faint);font-size:11px;white-space:nowrap;">${fmtDate(r.created_at)}</td>
+      <td>${statusToggle}</td>
+      <td>${verifiedBadge}</td>
+      <td style="white-space:nowrap;">
+        <button class="action-btn" onclick="openEditModal('${r.id}')">Edit</button>
+        <button class="action-btn danger" onclick="deleteReview('${r.id}')" style="margin-top:4px;">Delete</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function expandBody(btn, fullText) {
+  const cell = btn.closest('td');
+  cell.innerHTML = fullText;
+}
+
+async function togglePublish(id, val) {
+  const idx = reviews.findIndex(r => r.id === id);
+  if (idx === -1) return;
+  reviews[idx].is_active = val;
+  renderKpis();
+  applyFilters();
+  const { error } = await db.from('reviews').update({ is_active: val }).eq('id', id);
+  if (error) {
+    reviews[idx].is_active = !val;
+    renderKpis();
+    applyFilters();
+    serr();
+  } else {
+    toast(val ? 'Review published.' : 'Review hidden.', 'ok');
+  }
+}
+
+async function deleteReview(id) {
+  if (!confirm('Delete this review permanently?')) return;
+  const { error } = await db.from('reviews').delete().eq('id', id);
+  if (error) { serr(); return; }
+  reviews = reviews.filter(r => r.id !== id);
+  renderKpis();
+  applyFilters();
+  toast('Review deleted.', 'ok');
+}
+
+// ── Modal ────────────────────────────────────────────────────────────────────
+
+function openAddModal() {
+  document.getElementById('modal-title').textContent = 'Add Review';
+  document.getElementById('modal-id').value = '';
+  document.getElementById('modal-creature').value = '';
+  document.getElementById('modal-author').value = '';
+  document.getElementById('modal-location').value = '';
+  document.getElementById('modal-body').value = '';
+  document.getElementById('modal-verified').checked = false;
+  document.getElementById('modal-active').checked = true;
+  setModalRating(5);
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function openEditModal(id) {
+  const r = reviews.find(rv => rv.id === id);
+  if (!r) return;
+  document.getElementById('modal-title').textContent = 'Edit Review';
+  document.getElementById('modal-id').value = r.id;
+  document.getElementById('modal-creature').value = r.creature_id || '';
+  document.getElementById('modal-author').value = r.author || '';
+  document.getElementById('modal-location').value = r.location || '';
+  document.getElementById('modal-body').value = r.body || '';
+  document.getElementById('modal-verified').checked = !!r.is_verified;
+  document.getElementById('modal-active').checked = !!r.is_active;
+  setModalRating(r.rating || 5);
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('edit-modal').classList.remove('open');
+}
+
+function setModalRating(n) {
+  modalRating = n;
+  document.querySelectorAll('#modal-stars span').forEach((s, i) => {
+    s.classList.toggle('lit', i < n);
+  });
+}
+
+async function saveModal() {
+  const id = document.getElementById('modal-id').value;
+  const payload = {
+    creature_id: document.getElementById('modal-creature').value || null,
+    author: document.getElementById('modal-author').value.trim(),
+    location: document.getElementById('modal-location').value.trim() || null,
+    body: document.getElementById('modal-body').value.trim(),
+    rating: modalRating,
+    is_verified: document.getElementById('modal-verified').checked,
+    is_active: document.getElementById('modal-active').checked,
+  };
+
+  if (!payload.author || !payload.body) {
+    toast('Author and review text are required.', 'err');
+    return;
+  }
+
+  let error, data;
+  if (id) {
+    ({ error, data } = await db.from('reviews').update(payload).eq('id', id).select().single());
+  } else {
+    ({ error, data } = await db.from('reviews').insert(payload).select().single());
+  }
+
+  if (error) { serr(); return; }
+
+  // Update local array
+  if (id) {
+    const idx = reviews.findIndex(r => r.id === id);
+    if (idx !== -1) {
+      reviews[idx] = { ...reviews[idx], ...payload };
+      // Re-resolve creature name
+      const cMap = {};
+      creatures.forEach(c => { cMap[c.id] = c.name; });
+      reviews[idx].creature_name = cMap[payload.creature_id] || '—';
+    }
+  } else {
+    const cMap = {};
+    creatures.forEach(c => { cMap[c.id] = c.name; });
+    const newR = { ...payload, id: data.id, created_at: data.created_at, creature_name: cMap[payload.creature_id] || '—' };
+    reviews.unshift(newR);
+  }
+
+  renderKpis();
+  applyFilters();
+  closeModal();
+  toast(id ? 'Review updated.' : 'Review added.', 'ok');
+}
+
+// Close modal on backdrop click
+document.getElementById('edit-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</div>
+</body>
+</html>
