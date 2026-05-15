@@ -10,6 +10,7 @@
     { "source": "/sales", "destination": "/cadence-sales.html" },
     { "source": "/live", "destination": "/cadence-live.html" },
     { "source": "/cami", "destination": "/cadence-cami.html" },
-    { "source": "/reviews", "destination": "/cadence-reviews.html" }
+    { "source": "/reviews", "destination": "/cadence-reviews.html" },
+    { "source": "/lure-forge", "destination": "/cadence-lure-forge.html" }
   ]
 }

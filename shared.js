@@ -184,6 +184,7 @@ const NAV_GROUPS = [
     { label: 'Creatures', href: 'cadence-creature-editor.html' },
     { label: '✦ Cami Edition', href: 'cadence-cami.html' },
     { label: 'Review Forge', href: 'cadence-reviews.html' },
+    { label: 'Lure Forge', href: 'cadence-lure-forge.html' },
   ]},
   { label: 'Customers', children: [
     { label: 'Customers', href: 'cadence-customers.html' },

@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cadence Creatures — Lure Forge</title>
+<link rel="icon" href="/favicon.ico?v=2"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared.js"></script>
+<style>
+  .forge-wrap { display:grid; grid-template-columns:1fr 1fr; gap:28px; align-items:start; }
+  @media(max-width:860px){ .forge-wrap { grid-template-columns:1fr; } }
+
+  .panel { border:1px solid var(--border); padding:22px; }
+  .panel-title {
+    font-size:9px; letter-spacing:.2em; text-transform:uppercase;
+    color:var(--cream-faint); margin-bottom:18px; padding-bottom:10px;
+    border-bottom:1px solid var(--border);
+  }
+  .panel-title span { color:#C9A84C; }
+
+  .field { margin-bottom:14px; }
+  .field label {
+    display:block; font-size:9px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--cream-faint); margin-bottom:5px;
+  }
+  .field label em { font-style:italic; opacity:.55; text-transform:none; letter-spacing:0; font-size:8px; }
+  .field input, .field select, .field textarea {
+    width:100%; background:rgba(255,255,255,.04); border:1px solid var(--border);
+    color:var(--cream); font-family:'Lora',serif; font-size:13px;
+    padding:9px 11px; outline:none; resize:vertical; transition:border-color .2s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color:rgba(201,168,76,.4); }
+  .field select option { background:#0f0d14; }
+
+  .generate-row {
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    margin:28px 0; padding:20px; border:1px solid rgba(201,168,76,.15);
+    background:rgba(201,168,76,.02);
+  }
+  .generate-row .hint { font-size:11px; color:var(--cream-faint); font-style:italic; flex:1; min-width:140px; }
+
+  .btn-gen {
+    font-family:'Lora',serif; font-size:10px; letter-spacing:.16em; text-transform:uppercase;
+    background:#C9A84C; color:#0f0d14; border:none; padding:11px 24px;
+    cursor:pointer; transition:background .2s; white-space:nowrap;
+  }
+  .btn-gen:hover { background:#E8D08A; }
+  .btn-gen:disabled { background:rgba(201,168,76,.3); color:rgba(15,13,20,.5); cursor:not-allowed; }
+
+  .spinner { display:none; width:14px; height:14px; border:2px solid rgba(201,168,76,.2); border-top-color:#C9A84C; border-radius:50%; animation:spin .6s linear infinite; flex-shrink:0; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .spinner.on { display:block; }
+
+  .ai-status { font-size:10px; letter-spacing:.06em; color:var(--cream-faint); min-width:120px; }
+  .ai-status.ok { color:#7dc994; }
+  .ai-status.err { color:#e09090; }
+
+  .output-section { position:relative; }
+  .output-overlay {
+    position:absolute; inset:0; background:rgba(15,13,20,.7);
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--cream-faint);
+    pointer-events:none; transition:opacity .3s;
+    font-style:italic;
+  }
+  .output-overlay.hidden { opacity:0; }
+
+  .obs-hint { font-size:10px; color:var(--cream-faint); margin-bottom:6px; font-style:italic; }
+
+  .save-row {
+    display:flex; gap:10px; flex-wrap:wrap; margin-top:22px; padding-top:18px;
+    border-top:1px solid var(--border); align-items:center;
+  }
+  .save-status { font-size:11px; font-style:italic; color:var(--cream-faint); flex:1; }
+  .save-status.ok { color:#7dc994; }
+  .save-status.err { color:#e09090; }
+
+  .slug-preview {
+    font-size:10px; color:var(--cream-faint); letter-spacing:.04em;
+    margin-top:4px; font-family:monospace;
+  }
+  .slug-preview span { color:#C9A84C; }
+</style>
+</head>
+<body>
+
+<div id="login-screen" style="display:none"></div>
+
+<div id="app" style="display:none">
+<div class="topbar">
+  <div class="topbar-left">
+    <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))">
+      <path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round"/>
+      <rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C"/>
+      <circle cx="36" cy="4" r="5.5" fill="#E8D08A"/>
+      <circle cx="6" cy="18" r="4" fill="#5BBFD4"/>
+      <circle cx="66" cy="18" r="4" fill="#5BBFD4"/>
+    </svg>
+    <div><div class="topbar-name">Cadence Creatures</div><div class="topbar-sub">Back Office</div></div>
+  </div>
+  <div class="topbar-right">
+    <span class="topbar-btn key-set" style="cursor:default;pointer-events:none;">AI Ready</span>
+    <div id="user-greet"></div>
+    <a class="topbar-link" onclick="signOut()">Sign Out</a>
+  </div>
+</div>
+
+<div class="dash-nav"></div>
+
+<div class="main">
+  <div class="title">Lure Forge</div>
+  <div class="subtitle">Feed it a skeleton — AI writes in Cadence's voice. Every blank becomes part of the story.</div>
+
+  <!-- Seed + Output -->
+  <div class="forge-wrap">
+
+    <!-- LEFT: Seed Panel -->
+    <div class="panel">
+      <div class="panel-title"><span>✦</span> Creature Seed</div>
+
+      <div class="field">
+        <label>Creature <em>— pick existing or type a new name</em></label>
+        <select id="seed-creature" onchange="onCreaturePick()">
+          <option value="">— New creature —</option>
+        </select>
+      </div>
+
+      <div class="field" id="new-name-field" style="display:none;">
+        <label>Creature Name</label>
+        <input type="text" id="seed-name" placeholder="e.g. Ember"/>
+        <div class="slug-preview" id="slug-preview" style="display:none;">slug: <span id="slug-val"></span></div>
+      </div>
+
+      <div class="field">
+        <label>Species <em>— optional</em></label>
+        <input type="text" id="seed-species" placeholder="e.g. Forest Tortoise"/>
+      </div>
+
+      <div class="field">
+        <label>Location Hint <em>— leave blank to hallucinate</em></label>
+        <input type="text" id="seed-location" placeholder="e.g. near the creek at dusk"/>
+      </div>
+
+      <div class="field">
+        <label>Appearance / Colors <em>— optional</em></label>
+        <input type="text" id="seed-colors" placeholder="e.g. mossy green, amber eyes, rough shell"/>
+      </div>
+
+      <div class="field">
+        <label>Sensory Details <em>— leave blank to hallucinate</em></label>
+        <textarea id="seed-sensory" rows="3" placeholder="e.g. cold to the touch, left shiny tracks, sounded like ice cracking when it moved"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Key Encounter <em>— what happened? leave blank to hallucinate</em></label>
+        <textarea id="seed-encounter" rows="3" placeholder="e.g. it climbed into my hand and wouldn't let go for an hour"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Extra Notes <em>— anything else</em></label>
+        <textarea id="seed-notes" rows="2" placeholder="tone hints, details to include, things to avoid…"></textarea>
+      </div>
+    </div>
+
+    <!-- RIGHT: Output Panel -->
+    <div class="output-section">
+      <div class="output-overlay" id="output-overlay">Generate to fill ↓</div>
+      <div class="panel">
+        <div class="panel-title">Field Notes / <span>Lore Page</span></div>
+
+        <div class="forge-wrap" style="gap:14px; margin-bottom:14px;">
+          <div class="field" style="margin-bottom:0;">
+            <label>Discovery Location</label>
+            <input type="text" id="out-location" placeholder="Sun Rock, Visalia, CA"/>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Entry Date</label>
+            <input type="text" id="out-date" placeholder="Early Spring, 2026"/>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Story — Paragraph 1</label>
+          <textarea id="out-p1" rows="5" placeholder="The discovery moment…"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Paragraph 2</label>
+          <textarea id="out-p2" rows="5" placeholder="The encounter…"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Paragraph 3</label>
+          <textarea id="out-p3" rows="4" placeholder="The farewell / why it chose its new owner…"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Field Observations <em>— one per line</em></label>
+          <div class="obs-hint">Each line becomes a bullet on the creature's page.</div>
+          <textarea id="out-obs" rows="6" placeholder="thrives in warm spots of afternoon light&#10;will sit perfectly still for hours — it's watching, not sleeping&#10;the pattern on its back is different depending on how you hold it"></textarea>
+        </div>
+
+        <div class="save-row">
+          <button class="btn sm" onclick="saveLore()" id="save-btn" disabled>Save to Supabase</button>
+          <button class="btn sm" onclick="copyJson()" style="background:none;border-color:var(--border);color:var(--cream-faint);">Copy JSON</button>
+          <span class="save-status" id="save-status"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generate Row -->
+  <div class="generate-row">
+    <div class="hint">Fill in what you know — leave the rest blank and the AI will hallucinate the rest in Cadence's voice.</div>
+    <div class="spinner" id="gen-spinner"></div>
+    <div class="ai-status" id="ai-status"></div>
+    <button class="btn-gen" id="gen-btn" onclick="runAiFill()">✦ Generate Lore</button>
+  </div>
+
+</div><!-- .main -->
+</div><!-- #app -->
+
+<div class="toast" id="tst"></div>
+
+<script>
+let creatures = [];
+let selectedCreatureId = null;
+
+function showApp() {
+  document.getElementById('app').style.display = 'flex';
+  init();
+}
+
+async function init() {
+  sync(true);
+  const { data, error } = await db.from('creatures')
+    .select('id,name,species,lore_location,lore_entry_date,lore_story,lore_observations')
+    .order('name');
+  sync(false);
+  if (error) { serr(); return; }
+  creatures = data || [];
+
+  const sel = document.getElementById('seed-creature');
+  creatures.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name + (c.lore_story?.length ? ' ✓' : '');
+    sel.appendChild(opt);
+  });
+}
+
+function onCreaturePick() {
+  const id = document.getElementById('seed-creature').value;
+  const nameField = document.getElementById('new-name-field');
+
+  if (!id) {
+    selectedCreatureId = null;
+    nameField.style.display = 'block';
+    document.getElementById('seed-name').value = '';
+    document.getElementById('seed-species').value = '';
+    clearOutput();
+    return;
+  }
+
+  selectedCreatureId = id;
+  nameField.style.display = 'none';
+
+  const c = creatures.find(x => x.id === id);
+  if (!c) return;
+
+  document.getElementById('seed-species').value = c.species || '';
+
+  // Pre-fill output if creature already has lore
+  if (c.lore_location || c.lore_story?.length) {
+    fillOutput({
+      lore_location: c.lore_location || '',
+      lore_entry_date: c.lore_entry_date || '',
+      lore_story: c.lore_story || [],
+      lore_observations: c.lore_observations || []
+    });
+    document.getElementById('output-overlay').classList.add('hidden');
+    document.getElementById('save-btn').disabled = false;
+  }
+}
+
+document.getElementById('seed-name').addEventListener('input', function() {
+  const slug = slugify(this.value);
+  const preview = document.getElementById('slug-preview');
+  const slugVal = document.getElementById('slug-val');
+  if (slug) {
+    preview.style.display = 'block';
+    slugVal.textContent = slug;
+  } else {
+    preview.style.display = 'none';
+  }
+});
+
+function slugify(name) {
+  return (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+function clearOutput() {
+  ['out-location','out-date','out-p1','out-p2','out-p3','out-obs'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('output-overlay').classList.remove('hidden');
+  document.getElementById('save-btn').disabled = true;
+  document.getElementById('save-status').textContent = '';
+  document.getElementById('save-status').className = 'save-status';
+}
+
+function fillOutput(lore) {
+  document.getElementById('out-location').value = lore.lore_location || '';
+  document.getElementById('out-date').value = lore.lore_entry_date || '';
+  const story = Array.isArray(lore.lore_story) ? lore.lore_story : [];
+  document.getElementById('out-p1').value = story[0] || '';
+  document.getElementById('out-p2').value = story[1] || '';
+  document.getElementById('out-p3').value = story[2] || '';
+  const obs = Array.isArray(lore.lore_observations) ? lore.lore_observations : [];
+  document.getElementById('out-obs').value = obs.join('\n');
+}
+
+function getOutputLore() {
+  const obs = document.getElementById('out-obs').value
+    .split('\n').map(s => s.trim()).filter(Boolean);
+  const story = [
+    document.getElementById('out-p1').value.trim(),
+    document.getElementById('out-p2').value.trim(),
+    document.getElementById('out-p3').value.trim(),
+  ].filter(Boolean);
+  return {
+    lore_location: document.getElementById('out-location').value.trim(),
+    lore_entry_date: document.getElementById('out-date').value.trim(),
+    lore_story: story,
+    lore_observations: obs,
+  };
+}
+
+function buildPrompt() {
+  const id = document.getElementById('seed-creature').value;
+  const name = id
+    ? (creatures.find(c => c.id === id)?.name || '')
+    : document.getElementById('seed-name').value.trim();
+  const species   = document.getElementById('seed-species').value.trim();
+  const location  = document.getElementById('seed-location').value.trim();
+  const colors    = document.getElementById('seed-colors').value.trim();
+  const sensory   = document.getElementById('seed-sensory').value.trim();
+  const encounter = document.getElementById('seed-encounter').value.trim();
+  const notes     = document.getElementById('seed-notes').value.trim();
+
+  if (!name) return null;
+
+  return `You are a ghost-writer for Cadence — a young, wonder-filled child explorer who discovers magical creatures in the wild and writes about them in her personal field journal. You must perfectly channel her voice.
+
+CADENCE'S VOICE RULES:
+- First-person field journal ("I found it on a warm flat rock…", "When I crouched down…")
+- Tone: adventurous, full of childhood wonder, deeply curious, tender, imaginative
+- Sensory-first: describe how creatures feel, sound, smell, move — through a child's eyes
+- Treat every creature as real and wild, discovered in nature — never a product or toy
+- Do not mention 3D printing, manufacturing, or crafting of any kind
+- Write naturally, not formally — her sentences can be short and punchy or long and flowing
+- Em-dashes (—) are her signature punctuation
+
+CREATURE SEED:
+- Name: ${name}
+${species  ? `- Species: ${species}` : '- Species: (you choose something whimsical and fitting)'}
+${location ? `- Discovery location: ${location}` : '- Discovery location: (you hallucinate somewhere magical and specific)'}
+${colors   ? `- Appearance/colors: ${colors}` : ''}
+${sensory  ? `- Sensory details: ${sensory}` : '- Sensory details: (hallucinate based on the name and species)'}
+${encounter? `- Key encounter: ${encounter}` : '- Key encounter: (hallucinate a magical, tender moment of connection)'}
+${notes    ? `- Additional notes: ${notes}` : ''}
+
+Any detail left blank must be hallucinated to fit perfectly with the details that were provided.
+
+OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences, no explanation:
+{
+  "lore_location": "short poetic location name, like 'Sun Rock, Visalia, CA' or 'The Hollow at Millcreek'",
+  "lore_entry_date": "seasonal poetic date, like 'Late Summer, 2025' or 'Early Spring, 2026'",
+  "lore_story": [
+    "Paragraph 1: the discovery moment — 100 to 140 words, written as Cadence",
+    "Paragraph 2: the interaction or encounter — 100 to 140 words, written as Cadence",
+    "Paragraph 3: the farewell, reflection, or why it chose its new person — 60 to 90 words, written as Cadence"
+  ],
+  "lore_observations": [
+    "short factual-sounding but whimsical observation — one sentence",
+    "another observation",
+    "another observation",
+    "another observation"
+  ]
+}`;
+}
+
+async function runAiFill() {
+  const prompt = buildPrompt();
+  if (!prompt) {
+    toast('Enter a creature name first.', 'err');
+    document.getElementById('seed-name').focus();
+    return;
+  }
+
+  const btn = document.getElementById('gen-btn');
+  const spinner = document.getElementById('gen-spinner');
+  const status = document.getElementById('ai-status');
+
+  btn.disabled = true;
+  spinner.classList.add('on');
+  status.textContent = 'Channeling Cadence…';
+  status.className = 'ai-status';
+
+  try {
+    const res = await fetch('/api/lure-generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.status);
+
+    const raw = data.content?.[0]?.text || '';
+    let lore;
+    try {
+      lore = JSON.parse(raw);
+    } catch {
+      // Claude sometimes wraps JSON in a code fence even when told not to — strip it
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('Could not parse AI response as JSON');
+      lore = JSON.parse(match[0]);
+    }
+
+    fillOutput(lore);
+    document.getElementById('output-overlay').classList.add('hidden');
+    document.getElementById('save-btn').disabled = false;
+    status.textContent = '✓ Lore generated';
+    status.className = 'ai-status ok';
+  } catch (err) {
+    status.textContent = '✗ ' + err.message;
+    status.className = 'ai-status err';
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    spinner.classList.remove('on');
+  }
+}
+
+async function saveLore() {
+  const lore = getOutputLore();
+  const btn = document.getElementById('save-btn');
+  const statusEl = document.getElementById('save-status');
+
+  if (!selectedCreatureId) {
+    toast('Pick an existing creature to save — new creatures must be created in the editor first.', 'err');
+    return;
+  }
+
+  btn.disabled = true;
+  statusEl.textContent = 'Saving…';
+  statusEl.className = 'save-status';
+
+  const { error } = await db.from('creatures').update({
+    lore_location:    lore.lore_location    || null,
+    lore_entry_date:  lore.lore_entry_date  || null,
+    lore_story:       lore.lore_story.length    ? lore.lore_story    : null,
+    lore_observations:lore.lore_observations.length ? lore.lore_observations : null,
+  }).eq('id', selectedCreatureId);
+
+  btn.disabled = false;
+
+  if (error) {
+    statusEl.textContent = '✗ ' + error.message;
+    statusEl.className = 'save-status err';
+    serr();
+  } else {
+    statusEl.textContent = '✓ Saved to Supabase';
+    statusEl.className = 'save-status ok';
+    toast('Lore saved.', 'ok');
+    // Update local cache
+    const idx = creatures.findIndex(c => c.id === selectedCreatureId);
+    if (idx !== -1) Object.assign(creatures[idx], lore);
+  }
+}
+
+function copyJson() {
+  const lore = getOutputLore();
+  navigator.clipboard.writeText(JSON.stringify(lore, null, 2))
+    .then(() => toast('JSON copied to clipboard.', 'ok'))
+    .catch(() => toast('Clipboard copy failed.', 'err'));
+}
+</script>
+</div>
+</body>
+</html>
