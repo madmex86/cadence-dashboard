@@ -394,25 +394,22 @@
           <div class="card-body">
             <div class="card-name">${esc(c.name)}</div>
             <div class="card-meta">${logStr} · ${c.species || 'Creature'} · ${c.environment || '—'}</div>
-            <div style="font-size:9px;color:var(--cream-faint);margin-bottom:12px;font-family:sans-serif;letter-spacing:0.02em;text-transform:none;">
+            <div style="font-size:9px;color:var(--cream-faint);margin-bottom:12px;font-family:sans-serif;text-transform:none;line-height:1.6;">
               ${(()=>{
-                if(!c.print_recipe) return '<div style="color:var(--gold-light);opacity:0.6;font-style:italic">No recipe set</div>';
-                try {
-                  const data = typeof c.print_recipe === 'string' ? JSON.parse(c.print_recipe) : c.print_recipe;
-                  const recipe = Array.isArray(data) ? data : (data.recipe || []);
-                  if(!recipe.length) return '<div style="color:var(--gold-light);opacity:0.6;font-style:italic">No recipe set</div>';
-                  return recipe.map(r => {
-                    const spool = inv.find(s => s.id === r.filId);
-                    const name = spool ? spool.spool_name : (r.label || 'Unknown');
-                    const color = spool ? colorFromName(spool.color) : colorFromName(r.label);
-                    const buyLink = (spool && spool.purchase_url) ? `<a href="${spool.purchase_url}" target="_blank" style="text-decoration:none;margin-left:auto;font-size:12px;" title="Reorder">🛒</a>` : '';
-                    return `<div style="display:flex;align-items:center;gap:6px;border-left:2px solid ${color};padding-left:8px;margin-top:4px;">
-                      <span style="color:rgba(196,188,178,0.5);width:45px;flex-shrink:0;">${esc(r.label || 'Part')}:</span>
-                      <span style="color:var(--gold-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</span>
-                      ${buyLink}
-                    </div>`;
+                const cComps = comps.filter(cp => cp.creature_id === c.id);
+                if (!cComps.length) return '<div style="color:var(--gold-light);opacity:0.6;font-style:italic">No recipe set</div>';
+                return cComps.map(cp => {
+                  const fIds = Array.isArray(cp.filament_ids) ? cp.filament_ids : (cp.filament_ids ? [cp.filament_ids] : []);
+                  const spools = fIds.map(fid => inv.find(s => s.id === fid)).filter(Boolean);
+                  if (!spools.length) return '';
+                  const brand = (spools.find(s => s.brand) || {}).brand || '';
+                  const chips = spools.map(s => {
+                    const col = colorFromName(s.color);
+                    const buyIcon = s.purchase_url ? `<a href="${s.purchase_url}" target="_blank" style="text-decoration:none;font-size:10px;margin-left:2px;" title="Reorder">🛒</a>` : '';
+                    return `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:1px 6px;background:rgba(255,255,255,.04);border-radius:8px;border-left:2px solid ${col};margin-right:3px;margin-bottom:2px;"><span style="width:6px;height:6px;border-radius:50%;background:${col};display:inline-block;flex-shrink:0;"></span>${esc(s.color || s.spool_name)}${buyIcon}</span>`;
                   }).join('');
-                } catch(e) { return ''; }
+                  return `<div style="margin-bottom:5px;"><div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="color:rgba(201,168,76,0.6);text-transform:uppercase;letter-spacing:.1em;font-size:8px;">${esc(cp.part_name)}</span>${brand ? `<span style="opacity:0.45;">${esc(brand)}</span>` : ''}</div><div style="display:flex;flex-wrap:wrap;">${chips}</div></div>`;
+                }).join('');
               })()}
             </div>
             </div>
