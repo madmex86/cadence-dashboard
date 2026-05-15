@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cadence Creatures — Cami Edition</title>
+<link rel="icon" href="/favicon.ico?v=2" />
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared.js"></script>
+<style>
+  /* Cami Edition Specifics */
+  .kpi-strip { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:28px; }
+  .kpi { background:rgba(249,198,232,.04); border:1px solid rgba(249,198,232,.12); padding:14px 20px; flex:1; min-width:120px; }
+  .kpi-val { font-size:28px; font-weight:600; color:var(--cream); }
+  .kpi-lbl { font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:var(--cream-faint); margin-top:3px; }
+  .cc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:18px; }
+  .cc-card { background:rgba(249,198,232,.02); border:1px solid rgba(249,198,232,.1); overflow:hidden; transition:border-color .3s; }
+  .cc-card:hover { border-color:rgba(249,198,232,.28); }
+  .cc-card img { width:100%; aspect-ratio:4/3; object-fit:cover; display:block; }
+  .cc-body { padding:16px; }
+  .cc-name { font-size:15px; font-weight:600; color:var(--cream); margin-bottom:3px; }
+  .cc-meta { font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:12px; }
+  .tog { font-size:9px; letter-spacing:.1em; text-transform:uppercase; padding:4px 10px; border:1px solid var(--border); cursor:pointer; display:inline-flex; align-items:center; gap:5px; color:var(--cream-faint); transition:border-color .2s,color .2s; margin-right:6px; }
+  .tog.on { color:var(--cream); border-color:rgba(201,168,76,.4); }
+  .tog.on.green { color:#7dc994; border-color:rgba(125,201,148,.4); }
+  .tog-dot { width:6px; height:6px; border-radius:50%; background:currentColor; display:inline-block; flex-shrink:0; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN (Hidden by default, handled by shared.js) -->
+<div id="login-screen" style="display:none"></div>
+
+<div id="app" style="display:none">
+<div class="topbar">
+  <div class="topbar-left">
+    <svg width="22" height="17" viewBox="0 -2 76 52" fill="none" style="filter:drop-shadow(0 0 5px rgba(201,168,76,.35))"><path d="M6 44 L6 18 L22 32 L36 4 L50 32 L66 18 L66 44 Z" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-linejoin="round"/><rect x="4" y="42" width="64" height="3" rx="1.5" fill="#C9A84C"/><circle cx="36" cy="4" r="5.5" fill="#E8D08A"/><circle cx="6" cy="18" r="4" fill="#5BBFD4"/><circle cx="66" cy="18" r="4" fill="#5BBFD4"/></svg>
+    <div><div class="topbar-name">Cadence Creatures</div><div class="topbar-sub">Back Office</div></div>
+  </div>
+  <div class="topbar-right">
+    <div id="user-greet"></div>
+    <a class="topbar-link" onclick="signOut()">Sign Out</a>
+  </div>
+</div>
+
+<div class="dash-nav"></div>
+
+<div class="main">
+  <div class="title" style="color:#f9c6e8;">✦ Cami Edition</div>
+  <div class="subtitle">Manage rainbow-special creatures and the secret portal.</div>
+
+  <!-- Portal Card -->
+  <div style="border:1px solid rgba(249,198,232,.18); background:rgba(249,198,232,.03); padding:18px 22px; display:flex; align-items:center; gap:20px; flex-wrap:wrap; margin-bottom:28px;">
+    <div style="flex:1; min-width:140px;">
+      <div style="font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:#f9c6e8; margin-bottom:5px;">✦ Cami Portal</div>
+      <div id="cami-stock-label" style="font-size:13px; color:var(--cream-faint);">Loading…</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:11px; color:var(--cream-faint); letter-spacing:.06em;">
+        <input type="checkbox" id="cami-portal-enabled" onchange="savePortalEnabled()" style="width:auto; margin:0;"/>
+        Enable Portal Link
+      </label>
+      <span id="cami-portal-status" style="font-size:11px; letter-spacing:.06em;"></span>
+    </div>
+    <a href="https://cadencecreatures.com/cami-portal.html" target="_blank" class="btn sm" style="flex-shrink:0;">View Portal ↗</a>
+  </div>
+
+  <!-- KPI Strip -->
+  <div class="kpi-strip" id="cami-kpis">
+    <div class="kpi"><div class="kpi-val">—</div><div class="kpi-lbl">Loading</div></div>
+  </div>
+
+  <!-- Creature Grid -->
+  <div class="cc-grid" id="cami-creature-grid">
+    <div style="color:var(--cream-faint); font-size:12px; font-style:italic; padding:12px 0;">Loading creatures…</div>
+  </div>
+</div>
+
+<div class="toast" id="tst"></div>
+
+<script>
+let creatures = [], comps = [], inv = [];
+
+function showApp() {
+  document.getElementById('app').style.display = 'flex';
+  init();
+}
+
+async function init() {
+  sync(true);
+  const [cRes, compRes, invRes, sRes] = await Promise.all([
+    db.from('creatures')
+      .select('id,name,species,log_number,image_url,tagline,etsy_url,qty_on_hand,active,is_featured,price_etsy,price_retail')
+      .eq('is_cami_edition', true)
+      .order('log_number'),
+    db.from('creature_components').select('*'),
+    db.from('inventory').select('id,spool_name,brand,color'),
+    db.from('site_settings').select('cami_portal_enabled').eq('id', 1).single()
+  ]);
+
+  if (cRes.error) { serr(cRes.error); sync(false); return; }
+
+  creatures = cRes.data || [];
+  comps = compRes.data || [];
+  inv = invRes.data || [];
+
+  const portalEnabled = sRes.data?.cami_portal_enabled || false;
+  document.getElementById('cami-portal-enabled').checked = portalEnabled;
+
+  sync(false);
+  updateStatus();
+  renderKpis();
+  renderGrid();
+}
+
+function updateStatus() {
+  const total = creatures.length;
+  const inStock = creatures.filter(c => (c.qty_on_hand || 0) > 0).length;
+  document.getElementById('cami-stock-label').textContent =
+    total + ' Cami creature' + (total !== 1 ? 's' : '') + ' · ' + inStock + ' in stock';
+
+  const enabled = document.getElementById('cami-portal-enabled').checked;
+  const statusEl = document.getElementById('cami-portal-status');
+  if (enabled) {
+    statusEl.innerHTML = '<span style="color:#7dc994;">●</span> <span style="color:#7dc994;">Live</span>';
+  } else {
+    statusEl.innerHTML = '<span style="color:var(--cream-faint);">○</span> <span style="color:var(--cream-faint);">Hidden</span>';
+  }
+}
+
+async function savePortalEnabled() {
+  const enabled = document.getElementById('cami-portal-enabled').checked;
+  const { error } = await db.from('site_settings').upsert({ id: 1, cami_portal_enabled: enabled });
+  if (error) { serr(error); return; }
+  updateStatus();
+  toast(enabled ? 'Portal link enabled.' : 'Portal link hidden.', 'ok');
+}
+
+function renderKpis() {
+  const total = creatures.length;
+  const inStock = creatures.filter(c => (c.qty_on_hand || 0) > 0).length;
+  const available = inStock;
+  const soldOut = creatures.filter(c => (c.qty_on_hand || 0) === 0).length;
+
+  document.getElementById('cami-kpis').innerHTML = `
+    <div class="kpi">
+      <div class="kpi-val">${total}</div>
+      <div class="kpi-lbl">Total Creatures</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val">${creatures.reduce((s, c) => s + (c.qty_on_hand || 0), 0)}</div>
+      <div class="kpi-lbl">Total In Stock</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val">${available}</div>
+      <div class="kpi-lbl">Available</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="${soldOut > 0 ? 'color:#e09090;' : ''}">${soldOut}</div>
+      <div class="kpi-lbl">Sold Out</div>
+    </div>
+  `;
+}
+
+function colorFromName(name){
+  const n=(name||'').toLowerCase();
+  if(n.includes('black'))return'#222';
+  if(n.includes('white'))return'#f0f0f0';
+  if(n.includes('red')||n.includes('scarlet'))return'#c44';
+  if(n.includes('blue'))return'#4477cc';
+  if(n.includes('green')||n.includes('forest')||n.includes('olive'))return'#4a8c5c';
+  if(n.includes('yellow')||n.includes('gold'))return'#C9A84C';
+  if(n.includes('orange')||n.includes('amber'))return'#c97c2a';
+  if(n.includes('purple')||n.includes('violet'))return'#7766cc';
+  if(n.includes('pink')||n.includes('rose'))return'#cc6688';
+  if(n.includes('teal')||n.includes('cyan'))return'#5BBFD4';
+  if(n.includes('brown')||n.includes('tan'))return'#8B6347';
+  if(n.includes('grey')||n.includes('gray'))return'#888';
+  if(n.includes('crystal'))return'#aee0f0';
+  if(n.includes('glow')||n.includes('lumin'))return'#aaee66';
+  return'#7a6f62';
+}
+
+function esc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function filamentDisplay(creatureId) {
+  const cComps = comps.filter(c => c.creature_id === creatureId);
+  if (!cComps.length) return '<div style="font-style:italic; color:var(--cream-faint); font-size:11px;">No recipe set</div>';
+
+  return cComps.map(comp => {
+    const filamentIds = Array.isArray(comp.filament_ids)
+      ? comp.filament_ids
+      : (comp.filament_ids ? [comp.filament_ids] : []);
+
+    const spools = filamentIds.map(fid => inv.find(s => s.id === fid)).filter(Boolean);
+    const brandSpool = spools.find(s => s.brand);
+    const brand = brandSpool ? brandSpool.brand : '';
+
+    const chips = spools.map(s => {
+      const col = colorFromName(s.color);
+      return `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(249,198,232,.05);border-left:2px solid ${col};border-radius:8px;padding:1px 6px;font-size:10px;color:var(--cream-faint);margin:1px 3px 1px 0;">
+        <span style="width:6px;height:6px;border-radius:50%;background:${col};flex-shrink:0;display:inline-block;"></span>${esc(s.color)}
+      </span>`;
+    }).join('');
+
+    return `<div style="margin-bottom:6px;">
+      <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(249,198,232,0.6);margin-bottom:3px;">
+        ${esc(comp.part_name || comp.name || 'Part')}${brand ? ` <span style="opacity:0.45;">${esc(brand)}</span>` : ''}
+      </div>
+      <div>${chips || '<span style="font-size:10px;color:var(--cream-faint);font-style:italic;">No spools</span>'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderGrid() {
+  const grid = document.getElementById('cami-creature-grid');
+  if (!creatures.length) {
+    grid.innerHTML = '<div style="color:var(--cream-faint); font-size:12px; font-style:italic; padding:12px 0;">No Cami Edition creatures found.</div>';
+    return;
+  }
+
+  grid.innerHTML = creatures.map(c => {
+    const qty = c.qty_on_hand || 0;
+    const stockColor = qty === 0 ? '#e09090' : qty <= 3 ? '#c97c2a' : '#7dc994';
+    const logMeta = [c.log_number ? 'Log #' + c.log_number : '', c.species].filter(Boolean).join(' · ');
+
+    const imgHtml = c.image_url
+      ? `<img src="${esc(c.image_url)}" alt="${esc(c.name)}" loading="lazy"/>`
+      : `<div style="width:100%;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;background:rgba(249,198,232,.04);color:rgba(249,198,232,.25);font-size:22px;">✦ No Image</div>`;
+
+    const activeOn = c.active;
+    const featOn = c.is_featured;
+
+    const etsyHtml = c.etsy_url
+      ? `<a href="${esc(c.etsy_url)}" target="_blank" class="btn sm" style="font-size:9px;padding:3px 9px;text-decoration:none;">Etsy ↗</a>`
+      : '';
+
+    return `<div class="cc-card">
+      ${imgHtml}
+      <div class="cc-body">
+        <div class="cc-name">${esc(c.name)}</div>
+        <div class="cc-meta">${esc(logMeta)}</div>
+        <div style="margin-bottom:12px;">${filamentDisplay(c.id)}</div>
+        <div style="margin-bottom:12px;">
+          <button class="tog${activeOn ? ' on green' : ''}" onclick="toggle('${c.id}','active',${!activeOn})">
+            <span class="tog-dot"></span>${activeOn ? 'Active' : 'Inactive'}
+          </button>
+          <button class="tog${featOn ? ' on' : ''}" onclick="toggle('${c.id}','is_featured',${!featOn})">
+            <span class="tog-dot"></span>${featOn ? 'Featured' : 'Not Featured'}
+          </button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button onclick="adjustStock('${c.id}',-1)" style="background:none;border:1px solid rgba(249,198,232,.15);color:var(--cream-faint);width:24px;height:24px;font-size:16px;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;transition:border-color .15s;" onmouseover="this.style.borderColor='rgba(249,198,232,.4)'" onmouseout="this.style.borderColor='rgba(249,198,232,.15)'">−</button>
+            <span style="font-size:18px;font-weight:600;color:${stockColor};min-width:24px;text-align:center;">${qty}</span>
+            <button onclick="adjustStock('${c.id}',1)" style="background:none;border:1px solid rgba(249,198,232,.15);color:var(--cream-faint);width:24px;height:24px;font-size:16px;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;transition:border-color .15s;" onmouseover="this.style.borderColor='rgba(249,198,232,.4)'" onmouseout="this.style.borderColor='rgba(249,198,232,.15)'">+</button>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            ${etsyHtml}
+            <a href="cadence-creature-editor.html?id=${c.id}" class="btn sm" style="font-size:9px;padding:3px 9px;text-decoration:none;">Edit ↗</a>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function toggle(id, field, val) {
+  const idx = creatures.findIndex(c => c.id === id);
+  if (idx === -1) return;
+  creatures[idx][field] = val;
+  renderGrid();
+  const { error } = await db.from('creatures').update({ [field]: val }).eq('id', id);
+  if (error) {
+    creatures[idx][field] = !val;
+    renderGrid();
+    serr(error);
+  } else {
+    toast('Updated.', 'ok');
+  }
+}
+
+async function adjustStock(id, delta) {
+  const idx = creatures.findIndex(c => c.id === id);
+  if (idx === -1) return;
+  const prev = creatures[idx].qty_on_hand || 0;
+  const next = Math.max(0, prev + delta);
+  creatures[idx].qty_on_hand = next;
+  renderGrid();
+  renderKpis();
+  updateStatus();
+  const { error } = await db.from('creatures').update({ qty_on_hand: next }).eq('id', id);
+  if (error) {
+    creatures[idx].qty_on_hand = prev;
+    renderGrid();
+    renderKpis();
+    updateStatus();
+    serr(error);
+  }
+}
+</script>
+</div>
+</body>
+</html>

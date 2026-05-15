@@ -182,6 +182,7 @@ const NAV_GROUPS = [
   ]},
   { label: 'Catalog', adminOnly: true, children: [
     { label: 'Creatures', href: 'cadence-creature-editor.html' },
+    { label: '✦ Cami Edition', href: 'cadence-cami.html' },
   ]},
   { label: 'Customers', children: [
     { label: 'Customers', href: 'cadence-customers.html' },
