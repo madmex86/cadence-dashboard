@@ -13,13 +13,13 @@
   .forge-wrap { display:grid; grid-template-columns:1fr 1fr; gap:28px; align-items:start; }
   @media(max-width:860px){ .forge-wrap { grid-template-columns:1fr; } }
 
-  .panel { border:1px solid var(--border); padding:22px; }
-  .panel-title {
+  .forge-panel { border:1px solid var(--border); padding:22px; }
+  .forge-panel-title {
     font-size:9px; letter-spacing:.2em; text-transform:uppercase;
     color:var(--cream-faint); margin-bottom:18px; padding-bottom:10px;
     border-bottom:1px solid var(--border);
   }
-  .panel-title span { color:#C9A84C; }
+  .forge-panel-title span { color:#C9A84C; }
 
   .field { margin-bottom:14px; }
   .field label {
@@ -118,8 +118,8 @@
   <div class="forge-wrap">
 
     <!-- LEFT: Seed Panel -->
-    <div class="panel">
-      <div class="panel-title"><span>✦</span> Creature Seed</div>
+    <div class="forge-panel">
+      <div class="forge-panel-title"><span>✦</span> Creature Seed</div>
 
       <div class="field">
         <label>Creature <em>— pick existing or type a new name</em></label>
@@ -168,8 +168,8 @@
     <!-- RIGHT: Output Panel -->
     <div class="output-section">
       <div class="output-overlay" id="output-overlay">Generate to fill ↓</div>
-      <div class="panel">
-        <div class="panel-title">Field Notes / <span>Lore Page</span></div>
+      <div class="forge-panel">
+        <div class="forge-panel-title">Field Notes / <span>Lore Page</span></div>
 
         <div class="forge-wrap" style="gap:14px; margin-bottom:14px;">
           <div class="field" style="margin-bottom:0;">
