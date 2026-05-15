@@ -782,11 +782,14 @@ function renderCompRow(c){
   const maxBadge=`<span class="comp-max${maxAsm===0?' zero':''}">&#9889; Max builds: ${maxAsm}</span>`;
   const items=cComps.map(cp=>{
     const sc=cp.stock_count===0?'#e09090':cp.stock_count<3?'#c97c2a':'#7dc994';
-    const spool = inv.find(s => s.id === cp.filament_id);
-    const col = spool ? colorFromName(spool.color) : '#7a6f62';
-    const filTag = spool ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--cream-faint);padding:1px 6px;background:rgba(255,255,255,.04);border-radius:8px;"><span style="width:6px;height:6px;border-radius:50%;background:${col};display:inline-block;flex-shrink:0;"></span>${esc(spool.spool_name)}</span>` : '';
-    
-    return`<div class="comp-item" style="flex-wrap:wrap;gap:6px;align-items:center;"><button class="comp-adj" onclick="adjComp('${cp.id}',-1)">&minus;</button><span class="comp-stock" style="color:${sc}">${cp.stock_count}</span><button class="comp-adj" onclick="adjComp('${cp.id}',1)">+</button><span class="comp-name" style="font-weight:500;letter-spacing:.06em;text-transform:uppercase;font-size:10px;">${esc(cp.component_name||'Part')}</span><div style="display:flex;flex-wrap:wrap;gap:4px;">${filTag}</div></div>`;
+    const fIds=Array.isArray(cp.filament_ids)?cp.filament_ids:(cp.filament_ids?[cp.filament_ids]:[]);
+    const filTags=fIds.map(fid=>{
+      const spool=inv.find(s=>s.id===fid);
+      if(!spool)return'';
+      const col=colorFromName(spool.color);
+      return`<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--cream-faint);padding:1px 6px;background:rgba(255,255,255,.04);border-radius:8px;"><span style="width:6px;height:6px;border-radius:50%;background:${col};display:inline-block;flex-shrink:0;"></span>${esc(spool.spool_name)}</span>`;
+    }).join('');
+    return`<div class="comp-item" style="flex-wrap:wrap;gap:6px;align-items:center;"><button class="comp-adj" onclick="adjComp('${cp.id}',-1)">&minus;</button><span class="comp-stock" style="color:${sc}">${cp.stock_count}</span><button class="comp-adj" onclick="adjComp('${cp.id}',1)">+</button><span class="comp-name" style="font-weight:500;letter-spacing:.06em;text-transform:uppercase;font-size:10px;">${esc(cp.part_name||'Part')}</span><div style="display:flex;flex-wrap:wrap;gap:4px;">${filTags}</div></div>`;
   }).join('');
   return`<tr class="comp-row"><td colspan="10"><div class="comp-panel"><div class="comp-hdr"><span>Parts Inventory</span>${maxBadge}</div>${items}</div></td></tr>`;
 }
@@ -816,7 +819,7 @@ function render_components() {
   if (search) {
     list = list.filter(cp => {
       const c = creatures.find(x => x.id === cp.creature_id);
-      return (cp.component_name || '').toLowerCase().includes(search) || (c && c.name.toLowerCase().includes(search));
+      return (cp.part_name || '').toLowerCase().includes(search) || (c && c.name.toLowerCase().includes(search));
     });
   }
 
@@ -836,14 +839,18 @@ function render_components() {
     const c = creatures.find(x => x.id === creatureId);
     return parts.map((cp, i) => {
       const sc = cp.stock_count === 0 ? '#e09090' : cp.stock_count < 3 ? '#c97c2a' : '#7dc994';
-      const spool = inv.find(s => s.id === cp.filament_id);
-      const col = spool ? colorFromName(spool.color) : '#7a6f62';
-      const filTag = spool ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:1px 8px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid rgba(255,255,255,.06);"><span style="width:6px;height:6px;border-radius:50%;background:${col};display:inline-block;flex-shrink:0;"></span>${esc(spool.spool_name)}</span>` : '';
+      const fIds = Array.isArray(cp.filament_ids) ? cp.filament_ids : (cp.filament_ids ? [cp.filament_ids] : []);
+      const filTags = fIds.map(fid => {
+        const spool = inv.find(s => s.id === fid);
+        if (!spool) return '';
+        const col = colorFromName(spool.color);
+        return `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:1px 8px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid rgba(255,255,255,.06);"><span style="width:6px;height:6px;border-radius:50%;background:${col};display:inline-block;flex-shrink:0;"></span>${esc(spool.spool_name)}</span>`;
+      }).join('');
 
       return `<tr>
-        <td style="font-weight:500;color:var(--cream);text-transform:uppercase;font-size:11px;letter-spacing:.08em;">${esc(cp.component_name || '—')}</td>
+        <td style="font-weight:500;color:var(--cream);text-transform:uppercase;font-size:11px;letter-spacing:.08em;">${esc(cp.part_name || '—')}</td>
         <td>${i === 0 ? `<span style="color:var(--gold-light)">${c ? esc(c.name) : '—'}</span>` : ''}</td>
-        <td><div style="display:flex;flex-wrap:wrap;gap:4px;">${filTag || '<span style="color:var(--cream-faint);font-size:11px;font-style:italic;">None assigned</span>'}</div></td>
+        <td><div style="display:flex;flex-wrap:wrap;gap:4px;">${filTags || '<span style="color:var(--cream-faint);font-size:11px;font-style:italic;">None assigned</span>'}</div></td>
         <td style="font-size:18px;font-weight:600;color:${sc};white-space:nowrap;">
           <button onclick="adjComp('${cp.id}',-1);setTimeout(render_components,100)" class="btn sm" style="padding:0 6px;min-width:22px;margin-right:6px;border-color:transparent;background:rgba(255,255,255,0.03);color:var(--cream-faint);">-</button>
           ${cp.stock_count}

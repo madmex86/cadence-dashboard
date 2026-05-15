@@ -301,6 +301,28 @@ async function applyRolePermissions() {
         });
       });
 
+      // Inject group section sub-nav — persistent sibling-page links for the current group
+      // so all pages have consistent secondary navigation regardless of page complexity.
+      if (!document.getElementById('cc-group-subnav')) {
+        const activeGroup = NAV_GROUPS.find(g =>
+          g.children && !(g.adminOnly && !isOwner && role !== 'admin') &&
+          g.children.some(c => (c.href || '').split('/').pop().replace('.html', '') === currentFile)
+        );
+        if (activeGroup) {
+          const visibleKids = activeGroup.children.filter(isLinkVisible);
+          if (visibleKids.length > 1) {
+            const subnav = document.createElement('div');
+            subnav.id = 'cc-group-subnav';
+            subnav.innerHTML = visibleKids.map(link => {
+              const lf = (link.href || '').split('/').pop().replace('.html', '');
+              const target = link.external ? ' target="_blank"' : '';
+              return `<a href="${link.href}"${target} class="tab${lf === currentFile ? ' active' : ''}">${link.label}</a>`;
+            }).join('');
+            nav.insertAdjacentElement('afterend', subnav);
+          }
+        }
+      }
+
     } catch(e) { console.error('Nav injection failed:', e); }
   }
 
@@ -965,6 +987,33 @@ styleShield.textContent = `
     .main { overflow-x: hidden !important; }
     .main-content { overflow-x: hidden !important; padding: 20px 16px !important; }
   }
+
+  /* ── Group Section Sub-Nav ──────────────────── */
+  #cc-group-subnav {
+    display: flex !important;
+    padding: 0 16px !important;
+    background: rgba(12, 11, 8, 0.97) !important;
+    border-bottom: 1px solid rgba(201, 168, 76, 0.07) !important;
+    overflow-x: auto !important;
+    flex-shrink: 0 !important;
+    position: sticky !important;
+    top: calc(136px + env(safe-area-inset-top)) !important;
+    z-index: 998 !important;
+    scrollbar-width: none !important;
+  }
+  #cc-group-subnav::-webkit-scrollbar { display: none !important; }
+  #cc-group-subnav .tab {
+    text-decoration: none !important;
+    color: rgba(196,188,178,0.4) !important;
+    font-size: 10px !important;
+    padding: 10px 16px !important;
+  }
+  #cc-group-subnav .tab.active {
+    color: #E8D08A !important;
+    border-bottom-color: #C9A84C !important;
+    background: rgba(201,168,76,0.05) !important;
+  }
+  #cc-group-subnav .tab:hover { color: #E8D08A !important; }
 
   /* ── Command Palette ─────────────────────────── */
   #cc-palette-overlay {
