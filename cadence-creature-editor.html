@@ -108,18 +108,28 @@
         <div class="active-tog" id="active-tog" onclick="toggleActiveFilter()"><span class="at-dot"></span>Active only</div>
         <div class="filter-count" id="filter-count"></div>
       </div>
-      <!-- Cami Portal Control -->
-      <div id="cami-portal-card" style="margin-bottom:18px;padding:16px 20px;border:1px solid rgba(249,198,232,.2);background:rgba(249,198,232,.03);border-radius:4px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:160px;">
+      <!-- Site Secret Controls -->
+      <div id="cami-portal-card" style="margin-bottom:18px;padding:16px 20px;border:1px solid rgba(249,198,232,.2);background:rgba(249,198,232,.03);border-radius:4px;display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center;">
+        <div style="min-width:160px;">
           <div style="font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:#f9c6e8;margin-bottom:5px;">✦ Cami Portal</div>
           <div id="cami-stock-label" style="font-size:11px;color:var(--cream-faint);">Loading…</div>
+          <div style="font-size:10px;color:var(--cream-faint);margin-top:6px;line-height:1.4;">Link appears in a moving spot on the Bestiary page. Hidden from public Bestiary and standard queries.</div>
         </div>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;">
-          <input type="checkbox" id="cami-portal-enabled" onchange="saveCamiPortalEnabled()" style="width:auto;margin:0;accent-color:#f9c6e8;"/>
-          <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cream-dim);">Enable Portal Link</span>
-        </label>
-        <span id="cami-portal-status" style="font-size:10px;min-width:54px;"></span>
-        <div style="font-size:10px;color:var(--cream-faint);flex-basis:100%;margin-top:2px;">Portal button appears on the site 5 seconds after the Konami code is entered. Auto-disables when all Cami stock hits zero.</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;">
+            <input type="checkbox" id="cami-portal-enabled" onchange="saveSiteSecrets()" style="width:auto;margin:0;accent-color:#f9c6e8;"/>
+            <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cream-dim);">Enable Cami Portal</span>
+            <span id="cami-portal-status" style="font-size:10px;margin-left:auto;"></span>
+          </label>
+          <div style="border-top:1px solid rgba(249,198,232,0.1);padding-top:12px;">
+            <div style="font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-bottom:5px;">⌨ Konami Discount</div>
+            <div style="display:flex;gap:8px;">
+              <input class="fi" id="konami-discount" placeholder="e.g. CHRONOS15" style="font-size:11px;padding:5px 10px;text-transform:uppercase;letter-spacing:.1em;"/>
+              <button class="btn sm" onclick="saveSiteSecrets()">Update Code</button>
+            </div>
+            <div style="font-size:9px;color:var(--dim);margin-top:5px;">Code revealed on homepage after entering the Konami code.</div>
+          </div>
+        </div>
       </div>
 
       <div class="editor-grid" id="creature-grid">
@@ -310,7 +320,7 @@
     const [cRes, iRes, sRes, compRes] = await Promise.all([
       db.from('creatures').select('*').order('log_number'),
       db.from('inventory').select('id, spool_name, color, purchase_url, brand'),
-      db.from('site_settings').select('cami_portal_enabled').eq('id', 1).single(),
+      db.from('site_settings').select('cami_portal_enabled, konami_discount').eq('id', 1).single(),
       db.from('creature_components').select('*')
     ]);
     if (cRes.error || iRes.error) { serr(); return; }
@@ -319,18 +329,24 @@
     comps = compRes.data || [];
     if (sRes.data) {
       document.getElementById('cami-portal-enabled').checked = !!sRes.data.cami_portal_enabled;
+      document.getElementById('konami-discount').value = sRes.data.konami_discount || '';
     }
     sync(false);
     filterRender();
     updateCamiPortalStatus();
   }
 
-  async function saveCamiPortalEnabled() {
+  async function saveSiteSecrets() {
     const enabled = document.getElementById('cami-portal-enabled').checked;
-    const { error } = await db.from('site_settings').update({ cami_portal_enabled: enabled, updated_at: new Date().toISOString() }).eq('id', 1);
-    if (error) { toast('Failed to save setting', 'err'); return; }
+    const discount = document.getElementById('konami-discount').value.trim().toUpperCase();
+    const { error } = await db.from('site_settings').update({ 
+      cami_portal_enabled: enabled, 
+      konami_discount: discount,
+      updated_at: new Date().toISOString() 
+    }).eq('id', 1);
+    if (error) { toast('Failed to save settings', 'err'); return; }
     updateCamiPortalStatus();
-    toast(enabled ? 'Cami portal enabled' : 'Cami portal hidden');
+    toast('Site secrets updated');
   }
 
   function updateCamiPortalStatus() {
