@@ -405,8 +405,17 @@ async function applyRolePermissions() {
         <div class="conn-item" title="Vercel Deployment">
           <div class="conn-dot" style="background:#4a8c5c;"></div> Vercel
         </div>
-        <div class="conn-item" id="ai-status-indicator" title="Anthropic AI API">
+        <div class="conn-item" title="Anthropic AI API">
           <div class="conn-dot" style="background:#4a8c5c;"></div> AI API
+        </div>
+        <div class="conn-item" title="Discord Alerts">
+          <div class="conn-dot" style="background:#4a8c5c;"></div> Discord
+        </div>
+        <div class="conn-item" title="Email Engine (Resend)">
+          <div class="conn-dot" style="background:#4a8c5c;"></div> Mail
+        </div>
+        <div class="conn-item" title="Etsy Webhook">
+          <div class="conn-dot" style="background:#4a8c5c;"></div> Etsy
         </div>
         <div id="master-printer-pill" class="conn-pill">🖨 Vision: Loading...</div>
       `;
