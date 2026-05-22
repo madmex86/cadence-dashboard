@@ -139,16 +139,21 @@ export default function LaunchPage() {
                   </div>
 
                   {isSelected && (
-                    <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+                    <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
                       <input
                         type="datetime-local"
                         className="fi"
                         value={revealDate}
                         onChange={e => setRevealDate(e.target.value)}
-                        style={{ flex: 1, fontSize: 12 }}
+                        style={{ fontSize: 12 }}
                       />
-                      <button className="btn gold" onClick={() => scheduleReveal(c.id)} disabled={!revealDate || saving}>
-                        Set
+                      <button
+                        className="btn gold"
+                        onClick={() => scheduleReveal(c.id)}
+                        disabled={!revealDate || saving}
+                        style={{ width: "100%", justifyContent: "center" }}
+                      >
+                        {saving ? "Saving…" : "💾 Save Schedule"}
                       </button>
                     </div>
                   )}
