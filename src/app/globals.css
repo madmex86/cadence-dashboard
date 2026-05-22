@@ -150,6 +150,14 @@ select.fi {
   padding-right: 32px;
 }
 
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(68%) sepia(44%) saturate(600%) hue-rotate(4deg) brightness(95%) contrast(88%);
+  opacity: 0.8;
+  cursor: pointer;
+}
+
 /* --- KPI tiles --- */
 .kpi-grid {
   display: grid;
