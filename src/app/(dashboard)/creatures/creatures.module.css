@@ -223,7 +223,10 @@
   gap: 2px;
   margin-bottom: 20px;
   border-bottom: 1px solid var(--gold-border);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.tabs::-webkit-scrollbar { display: none; }
 
 .tab {
   font-size: 11px;

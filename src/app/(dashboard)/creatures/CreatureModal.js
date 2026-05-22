@@ -39,6 +39,8 @@ export default function CreatureModal({ creature, onClose, onSave }) {
         lore_story: Array.isArray(creature.lore_story)
           ? [...creature.lore_story, "", "", ""].slice(0, 3)
           : ["", "", ""],
+        // datetime-local needs "YYYY-MM-DDTHH:MM" — trim timezone/seconds from Supabase timestamp
+        reveal_date: sanitized.reveal_date ? sanitized.reveal_date.slice(0, 16) : "",
       });
     } else {
       setForm(BLANK);
