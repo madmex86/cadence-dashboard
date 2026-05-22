@@ -108,13 +108,13 @@ tr:hover td {
   padding: 5px 10px;
   font-size: 11px;
 }
-.btn.gold {
+.btn.gold, .btn.pri {
   background: var(--gold);
   color: var(--ink);
   border-color: var(--gold);
   font-weight: 600;
 }
-.btn.gold:hover { opacity: 0.88; }
+.btn.gold:hover, .btn.pri:hover { opacity: 0.88; }
 
 /* --- Shared form styles --- */
 .fl {
@@ -405,7 +405,9 @@ select.fi {
   display: flex;
   align-items: stretch;
   border-bottom: 1px solid rgba(201, 168, 76, 0.12);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 .dash-nav::-webkit-scrollbar { display: none; }
 
@@ -515,6 +517,9 @@ select.fi {
 @media (max-width: 600px) {
   .dash-main { padding: 16px; }
   .topbar-link { display: none; }
+  .topbar-sub { display: none; }
+  .topbar-row1 { padding: 10px 14px; }
+  .nav-group-btn { padding: 0 11px; font-size: 11px; }
 }
 
 .conn-hub {

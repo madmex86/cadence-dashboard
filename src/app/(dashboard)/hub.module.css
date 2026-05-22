@@ -57,7 +57,7 @@
 }
 .kpiWrap :global(.kpi-grid > .kpi) {
   flex: 1;
-  min-width: 220px;
+  min-width: 160px;
   max-width: 280px;
 }
 
