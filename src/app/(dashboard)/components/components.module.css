@@ -1,0 +1,218 @@
+.title {
+  font-family: var(--font-caveat), cursive;
+  font-size: 2rem;
+  color: var(--gold);
+  margin: 0;
+}
+
+.tableContainer {
+  overflow-x: auto;
+  margin-top: 1rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: sans-serif;
+  font-size: 13px;
+  color: var(--cream);
+}
+
+.table th {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid rgba(201,168,76,0.2);
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 10px;
+}
+
+.table td {
+  padding: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.adj {
+  width: 24px;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(201, 168, 76, 0.18);
+  color: var(--goldl);
+  border-radius: 3px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 6px;
+}
+.adj:hover {
+  background: rgba(201, 168, 76, 0.1);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  padding: 3px 8px;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--cream-dim);
+  border-radius: 10px;
+  margin-right: 4px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 20px;
+  margin-top: 1.5rem;
+}
+
+.card {
+  background: rgba(28, 22, 18, 0.4);
+  border: 1px solid rgba(201, 168, 76, 0.12);
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(201, 168, 76, 0.35);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), inset 0 0 15px rgba(201, 168, 76, 0.03);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid rgba(201, 168, 76, 0.18);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+}
+
+.creatureName {
+  font-family: var(--font-lora), serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--gold-light);
+}
+
+.species {
+  font-family: "IM Fell English", Georgia, serif;
+  font-style: italic;
+  font-size: 0.95rem;
+  color: var(--dim);
+}
+
+.partsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.partRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.partRow:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.partInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.partLabel {
+  font-weight: 600;
+  font-family: var(--font-lora), serif;
+  color: var(--cream);
+  font-size: 13px;
+}
+
+.partFilament {
+  font-size: 10px;
+  color: var(--dim);
+  margin-top: 2px;
+}
+
+.chevron {
+  display: inline-block;
+  color: var(--gold);
+  font-size: 8px;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-right: 4px;
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
+}
+
+.partCountBadge {
+  font-family: var(--font-lora), serif;
+  font-style: italic;
+  font-size: 11px;
+  color: var(--gold-light);
+  border: 1px solid rgba(201, 168, 76, 0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(201, 168, 76, 0.05);
+  letter-spacing: 0.02em;
+}
+
+.partCreature {
+  font-family: "IM Fell English", Georgia, serif;
+  font-style: italic;
+  color: var(--dim);
+  font-size: 11px;
+  font-weight: normal;
+  margin-left: 5px;
+}
+
+.collapsedCard {
+  padding-bottom: 12px;
+  background: rgba(28, 22, 18, 0.25);
+  border-color: rgba(201, 168, 76, 0.08);
+}
+
+.collapsedCard .cardHeader {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.partFilamentsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.partFilamentPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  padding: 2px 7px;
+  background: rgba(201, 168, 76, 0.04);
+  border: 1px solid rgba(201, 168, 76, 0.15);
+  color: var(--cream-dim);
+  border-radius: 4px;
+  letter-spacing: 0.01em;
+}
+
+
+

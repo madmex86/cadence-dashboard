@@ -1,0 +1,191 @@
+.title {
+  font-family: var(--font-caveat), cursive;
+  font-size: 2rem;
+  color: var(--gold);
+  margin: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 1.5rem;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(201, 168, 76, 0.12);
+  border-radius: 6px;
+  padding: 16px;
+  position: relative;
+  transition: border-color 0.2s;
+}
+
+.card:hover {
+  border-color: rgba(201, 168, 76, 0.28);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.name {
+  font-family: var(--font-lora), serif;
+  font-size: 18px;
+  color: var(--cream);
+  font-weight: 500;
+}
+
+.statusIndicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 8px currentColor;
+}
+.status-idle { color: var(--gold); background: var(--gold); }
+.status-printing { color: #7dc994; background: #7dc994; }
+.status-offline { color: #ff6b6b; background: #ff6b6b; }
+
+.detailRow {
+  font-size: 13px;
+  color: var(--dim);
+  margin-bottom: 8px;
+  font-family: sans-serif;
+}
+
+.detailRow strong {
+  color: var(--cream-dim);
+  font-weight: normal;
+}
+
+.actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding-top: 12px;
+}
+
+/* Flash highlight when a printer is found via QR scan */
+.cardHighlight {
+  animation: pulse 1.2s ease-out;
+  border-color: rgba(201, 168, 76, 0.6) !important;
+}
+
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(201, 168, 76, 0.5); }
+  50%  { box-shadow: 0 0 0 8px rgba(201, 168, 76, 0.12); }
+  100% { box-shadow: 0 0 0 0 rgba(201, 168, 76, 0); }
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  border: 1px solid var(--gold);
+  color: var(--goldl);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  padding: 10px 22px;
+  z-index: 2000;
+  white-space: nowrap;
+  border-radius: 3px;
+  font-family: sans-serif;
+}
+.toastErr {
+  border-color: rgba(232, 112, 112, 0.5);
+  color: rgba(240, 180, 180, 0.9);
+}
+
+/* ── QR hint strip ── */
+.qrHint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 24px;
+  padding: 12px 16px;
+  background: rgba(201, 168, 76, 0.04);
+  border: 1px dashed rgba(201, 168, 76, 0.15);
+  border-radius: 5px;
+  font-size: 12px;
+  color: var(--dim);
+  font-family: sans-serif;
+  line-height: 1.5;
+}
+
+/* ── Maintenance Modal ── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 13, 20, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  backdrop-filter: blur(3px);
+  padding: 16px;
+}
+
+.modal {
+  background: #14120e;
+  border: 1px solid rgba(201, 168, 76, 0.3);
+  border-radius: 8px;
+  padding: 24px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.modalTitle {
+  font-family: var(--font-caveat), cursive;
+  font-size: 1.4rem;
+  color: var(--goldl);
+  margin: 0;
+}
+
+.closeBtn {
+  background: none;
+  border: 1px solid rgba(201, 168, 76, 0.15);
+  color: var(--dim);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 9px;
+  border-radius: 3px;
+}
+.closeBtn:hover { color: var(--cream); border-color: rgba(201,168,76,0.4); }
+
+.fg { display: flex; flex-direction: column; gap: 14px; }
+
+.fl {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--cream-faint);
+  margin-bottom: 6px;
+  font-family: sans-serif;
+}
+
+.modalAct {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(201, 168, 76, 0.1);
+}

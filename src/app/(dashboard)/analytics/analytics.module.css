@@ -1,0 +1,8 @@
+.title { font-family: var(--font-caveat), cursive; font-size: 2rem; color: var(--gold); margin: 0; }
+.panels { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 8px; }
+@media (max-width: 768px) { .panels { grid-template-columns: 1fr; } }
+.topList { display: flex; flex-direction: column; gap: 6px; }
+.topRow { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--gold-border); border-radius: 4px; }
+.rank { font-size: 10px; color: var(--dim); width: 20px; font-family: sans-serif; }
+.item { flex: 1; font-size: 13px; color: var(--cream); }
+.count { font-size: 14px; color: var(--goldl); font-family: var(--font-caveat), cursive; }

@@ -1,0 +1,169 @@
+.title {
+  font-family: var(--font-caveat), cursive;
+  font-size: 2rem;
+  color: var(--gold);
+  margin: 0;
+}
+
+.board {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  padding-bottom: 20px;
+  min-height: calc(100vh - 200px);
+}
+
+.col {
+  flex: 1;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(201, 168, 76, 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.colHeader {
+  padding: 14px 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(201, 168, 76, 0.1);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--gold-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.colCount {
+  background: rgba(201, 168, 76, 0.15);
+  color: var(--gold-light);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.colBody {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 200px;
+}
+.colBody.dragOver {
+  background: rgba(201, 168, 76, 0.05);
+}
+
+.card {
+  background: rgba(20, 18, 15, 0.9);
+  border: 1px solid rgba(201, 168, 76, 0.2);
+  border-radius: 4px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  cursor: grab;
+  transition: transform 0.1s, border-color 0.2s;
+}
+.card:active {
+  cursor: grabbing;
+}
+.cardSelected {
+  border: 2px solid var(--goldl);
+}
+.cardBulkMode {
+  border: 2px dashed rgba(201, 168, 76, 0.3);
+  cursor: pointer;
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.cardId {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gold-light);
+}
+
+.cardBuyer {
+  font-size: 12px;
+  color: rgba(196, 188, 178, 0.7);
+  margin-top: 2px;
+}
+
+.cardDate {
+  font-size: 10px;
+  color: #8A7D6E;
+}
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chkItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  color: #FAF6F0;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.chkBox {
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(201, 168, 76, 0.3);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chkItem.done .chkBox {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+
+.chkItem.done .chkBox::after {
+  content: '✓';
+  color: #1C1612;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.chkItem.done span {
+  text-decoration: line-through;
+  opacity: 0.4;
+}
+
+.bulkBar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(201, 168, 76, 0.15);
+  border: 1px solid var(--gold);
+  padding: 14px 24px;
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .board { flex-direction: column; }
+  .col { min-width: 100%; }
+}

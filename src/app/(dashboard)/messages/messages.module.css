@@ -1,0 +1,10 @@
+.title { font-family: var(--font-caveat), cursive; font-size: 2rem; color: var(--gold); margin: 0; }
+.list { display: flex; flex-direction: column; gap: 6px; }
+.card { background: rgba(255,255,255,0.02); border: 1px solid var(--gold-border); border-radius: 5px; padding: 14px 16px; cursor: pointer; transition: background 0.15s; }
+.card:hover { background: rgba(201,168,76,0.03); }
+.unread { border-left: 3px solid var(--gold); }
+.header { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.from { font-size: 13px; color: var(--cream); }
+.time { font-size: 11px; color: var(--dim); font-family: sans-serif; }
+.subject { font-size: 12px; color: var(--cream-dim); font-family: sans-serif; }
+.body { margin-top: 12px; font-size: 13px; color: var(--cream-dim); line-height: 1.6; white-space: pre-wrap; border-top: 1px solid var(--gold-border); padding-top: 12px; }

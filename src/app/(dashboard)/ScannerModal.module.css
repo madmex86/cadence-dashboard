@@ -1,0 +1,215 @@
+/* ── Overlay ── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 13, 20, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  backdrop-filter: blur(5px);
+  padding: 16px;
+}
+
+/* ── Modal shell ── */
+.modal {
+  background: #14120e;
+  border: 1px solid rgba(201, 168, 76, 0.32);
+  border-radius: 10px;
+  width: 100%;
+  max-width: 440px;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.75);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 0;
+}
+
+.title {
+  font-family: var(--font-caveat), cursive;
+  font-size: 1.45rem;
+  color: var(--goldl);
+  margin: 0;
+  line-height: 1.1;
+}
+
+.closeBtn {
+  background: none;
+  border: 1px solid rgba(201, 168, 76, 0.15);
+  color: var(--dim);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 9px;
+  border-radius: 3px;
+  line-height: 1;
+  transition: color 0.15s, border-color 0.15s;
+}
+.closeBtn:hover {
+  color: var(--cream);
+  border-color: rgba(201, 168, 76, 0.4);
+}
+
+/* ── Hint text ── */
+.hint {
+  margin: 10px 20px 0;
+  font-size: 12px;
+  color: var(--dim);
+  font-family: sans-serif;
+  line-height: 1.55;
+}
+
+/* ── Camera viewfinder ── */
+.viewfinder {
+  position: relative;
+  margin: 14px 20px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #000;
+  min-height: 260px;
+  border: 1px solid rgba(201, 168, 76, 0.12);
+}
+
+/* Force html5-qrcode to fill the container */
+.viewfinder > div {
+  width: 100%;
+}
+.viewfinder :global(video) {
+  width: 100% !important;
+  display: block;
+}
+/* Suppress any stray text html5-qrcode injects above the video */
+.viewfinder :global(#cc-scanner-viewfinder > span),
+.viewfinder :global(#cc-scanner-viewfinder > br) {
+  display: none;
+}
+
+/* ── Animated scan line ── */
+.scanLine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(to right, transparent 0%, var(--gold) 40%, var(--goldl) 50%, var(--gold) 60%, transparent 100%);
+  box-shadow: 0 0 10px 1px rgba(201, 168, 76, 0.6);
+  animation: sweep 2.4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 10;
+}
+
+@keyframes sweep {
+  0%   { top: 8%; opacity: 0; }
+  8%   { opacity: 1; }
+  50%  { top: 88%; }
+  92%  { opacity: 1; }
+  100% { top: 8%; opacity: 0; }
+}
+
+/* ── Starting overlay (spinner) ── */
+.startingOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(20, 18, 14, 0.85);
+  color: var(--dim);
+  font-family: sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(201, 168, 76, 0.15);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Status messages ── */
+.scanningHint {
+  margin: 0 20px 12px;
+  font-size: 11px;
+  color: rgba(196, 188, 178, 0.4);
+  font-family: sans-serif;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.errorBox {
+  margin: 0 20px 14px;
+  background: rgba(232, 112, 112, 0.07);
+  border: 1px solid rgba(232, 112, 112, 0.28);
+  border-radius: 4px;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: rgba(235, 185, 185, 0.9);
+  font-family: sans-serif;
+  line-height: 1.55;
+}
+.errorBox strong {
+  color: rgba(240, 180, 180, 1);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.successBanner {
+  margin: 0 20px 14px;
+  background: rgba(77, 197, 138, 0.09);
+  border: 1px solid rgba(77, 197, 138, 0.32);
+  border-radius: 4px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.tick {
+  font-size: 17px;
+  color: #7de0a8;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.scannedText {
+  font-size: 12px;
+  color: rgba(190, 240, 215, 0.88);
+  font-family: sans-serif;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+/* ── Footer ── */
+.footer {
+  padding: 14px 20px 18px;
+  border-top: 1px solid rgba(201, 168, 76, 0.07);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .modal {
+    border-radius: 8px;
+  }
+  .viewfinder {
+    margin: 12px;
+    min-height: 220px;
+  }
+}

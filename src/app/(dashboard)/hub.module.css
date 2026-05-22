@@ -1,0 +1,217 @@
+/* ── Header ── */
+.hubHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+.hubCrown {
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 6px rgba(201, 168, 76, 0.25));
+}
+
+.title {
+  font-family: var(--font-caveat), cursive;
+  font-size: 2.2rem;
+  color: var(--gold);
+  margin: 0;
+  line-height: 1.1;
+}
+
+.date {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(196, 188, 178, 0.38);
+  font-family: sans-serif;
+  margin-top: 4px;
+}
+
+/* ── Quick Actions ── */
+.quickActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(201, 168, 76, 0.08);
+  justify-content: center;
+}
+
+.kpiWrap {
+  display: block;
+}
+
+.kpiWrap :global(.kpi) {
+  text-align: center;
+}
+
+.kpiWrap :global(.kpi-grid) {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.kpiWrap :global(.kpi-grid > .kpi) {
+  flex: 1;
+  min-width: 220px;
+  max-width: 280px;
+}
+
+/* Primary action gets a gold treatment */
+.quickActions :global(.btn):first-child {
+  background: var(--gold);
+  color: var(--ink);
+  border-color: var(--gold);
+  font-weight: 600;
+}
+.quickActions :global(.btn):first-child:hover {
+  opacity: 0.88;
+}
+
+/* ── Notification Grid ── */
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.panel {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(201, 168, 76, 0.12);
+  border-radius: 6px;
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* gold top accent line on each panel */
+.panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right, var(--gold), transparent);
+  opacity: 0.35;
+}
+
+.panelTitle {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(232, 208, 138, 0.6);
+  font-family: sans-serif;
+  font-weight: normal;
+  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* icon badge on panel title */
+.panelTitle span {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.notifItem {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--cream-dim);
+  padding: 9px 12px;
+  border: 1px solid rgba(201, 168, 76, 0.07);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.015);
+  margin-bottom: 6px;
+}
+
+.notifItem:last-child {
+  margin-bottom: 0;
+}
+
+.notifItem.critical {
+  border-color: rgba(232, 112, 112, 0.22);
+  background: rgba(232, 112, 112, 0.06);
+  color: rgba(232, 190, 190, 0.85);
+}
+
+.notifEmpty {
+  font-size: 12px;
+  color: rgba(196, 188, 178, 0.35);
+  padding: 10px 12px;
+  border: 1px dashed rgba(201, 168, 76, 0.12);
+  border-radius: 4px;
+  font-family: sans-serif;
+  letter-spacing: 0.04em;
+}
+
+/* ── Modals ── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 13, 20, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  backdrop-filter: blur(3px);
+}
+.overlay.open { opacity: 1; pointer-events: auto; }
+
+.modal {
+  background: #14120e;
+  border: 1px solid rgba(201, 168, 76, 0.3);
+  border-radius: 8px;
+  padding: 24px;
+  width: 90%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.modalTitle {
+  font-family: var(--font-lora), serif;
+  font-size: 18px;
+  color: var(--goldl);
+  margin-bottom: 20px;
+}
+
+.fg { display: flex; flex-direction: column; gap: 14px; }
+.fr { display: flex; gap: 14px; }
+.fr > div { flex: 1; }
+
+.fl {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--cream-faint);
+  margin-bottom: 6px;
+}
+
+.modalAct {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(201, 168, 76, 0.1);
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .panels { grid-template-columns: 1fr; }
+  .title { font-size: 1.75rem; }
+  .quickActions :global(.btn) { flex: 1 1 calc(50% - 5px); justify-content: center; }
+  .fr { flex-direction: column; }
+}

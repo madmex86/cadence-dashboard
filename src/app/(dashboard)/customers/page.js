@@ -1,0 +1,440 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { createClient } from "../../../lib/supabase/client";
+import styles from "./customers.module.css";
+
+// Formatter for Initials Avatar
+function getInitials(name) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+export default function CustomersPage() {
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState(null);
+
+  // Statistics
+  const [stats, setStats] = useState({
+    totalAudience: 0,
+    waitlistCount: 0,
+    payingCount: 0,
+    newThisMonth: 0,
+  });
+
+  useEffect(() => {
+    async function load() {
+      const supabase = createClient();
+
+      // Query orders, subscribers, and contact submissions concurrently
+      const [ordersRes, subsRes, contactsRes] = await Promise.all([
+        supabase
+          .from("orders")
+          .select("id, buyer_name, buyer_email, items, total_amount, status, order_date, created_at, etsy_order_id")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("subscribers")
+          .select("id, email, first_name, last_name, source, subscribed, created_at")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("contact_submissions")
+          .select("id, name, email, topic, message, order_number, is_read, created_at")
+          .order("created_at", { ascending: false })
+      ]);
+
+      const orders = ordersRes.data || [];
+      const subscribers = subsRes.data || [];
+      const submissions = contactsRes.data || [];
+
+      // Unified directory map
+      const map = {};
+
+      // 1. Process landing-page and launch subscribers
+      for (const s of subscribers) {
+        const email = (s.email || "").trim().toLowerCase();
+        const fullName = `${s.first_name || ""} ${s.last_name || ""}`.trim() || "Mystery Creature";
+        
+        if (email) {
+          map[email] = {
+            email,
+            name: fullName,
+            source: s.source || "landing_page",
+            created_at: s.created_at,
+            orders: [],
+            messages: [],
+            total: 0,
+            is_subscriber: true,
+            subscribed: s.subscribed !== false,
+            is_buyer: false,
+            id: `sub_${s.id}`
+          };
+        } else {
+          const fallbackKey = `sub_anon_${s.id}`;
+          map[fallbackKey] = {
+            email: "",
+            name: fullName || "Anonymous Subscriber",
+            source: s.source || "landing_page",
+            created_at: s.created_at,
+            orders: [],
+            messages: [],
+            total: 0,
+            is_subscriber: true,
+            subscribed: s.subscribed !== false,
+            is_buyer: false,
+            id: fallbackKey
+          };
+        }
+      }
+
+      // 2. Process Etsy and direct orders (merging duplicates by email)
+      for (const o of orders) {
+        const email = (o.buyer_email || "").trim().toLowerCase();
+        const name = (o.buyer_name || "").trim() || "Mystery Buyer";
+        const spent = parseFloat(o.total_amount) || 0;
+
+        if (email && map[email]) {
+          // Contact exists in subscribers! Merge.
+          const contact = map[email];
+          contact.is_buyer = true;
+          
+          // Use the order name if the subscriber name was generic/empty
+          if (!contact.name || contact.name === "Mystery Creature" || contact.name === "Mystery Buyer") {
+            contact.name = name;
+          }
+          
+          contact.orders.push(o);
+          contact.total += spent;
+          
+          // Set created_at to the earliest known touchpoint
+          if (o.created_at && o.created_at < contact.created_at) {
+            contact.created_at = o.created_at;
+          }
+        } else if (email) {
+          // New contact from orders
+          map[email] = {
+            email,
+            name,
+            source: "Etsy Store",
+            created_at: o.created_at || o.order_date,
+            orders: [o],
+            messages: [],
+            total: spent,
+            is_subscriber: false,
+            subscribed: null,
+            is_buyer: true,
+            id: `ord_email_${o.id}`
+          };
+        } else {
+          // Order with no email - group by name or unique ID
+          const key = name ? `ord_name_${name}` : `ord_id_${o.id}`;
+          if (map[key]) {
+            map[key].orders.push(o);
+            map[key].total += spent;
+          } else {
+            map[key] = {
+              email: "",
+              name: name || "Mystery Buyer",
+              source: "Direct Sale",
+              created_at: o.created_at || o.order_date,
+              orders: [o],
+              messages: [],
+              total: spent,
+              is_subscriber: false,
+              subscribed: null,
+              is_buyer: true,
+              id: key
+            };
+          }
+        }
+      }
+
+      // 3. Process direct contact inquiries (merging duplicates by email)
+      for (const m of submissions) {
+        const email = (m.email || "").trim().toLowerCase();
+        const name = (m.name || "").trim() || "Mystery Inquirer";
+
+        if (email && map[email]) {
+          const contact = map[email];
+          if (!contact.name || contact.name === "Mystery Creature" || contact.name === "Mystery Buyer" || contact.name === "Mystery Inquirer") {
+            contact.name = name;
+          }
+          contact.messages.push(m);
+          if (m.created_at && (!contact.created_at || m.created_at < contact.created_at)) {
+            contact.created_at = m.created_at;
+          }
+        } else if (email) {
+          map[email] = {
+            email,
+            name,
+            source: "Workshop Inquiry",
+            created_at: m.created_at,
+            orders: [],
+            messages: [m],
+            total: 0,
+            is_subscriber: false,
+            subscribed: null,
+            is_buyer: false,
+            id: `msg_email_${m.id}`
+          };
+        } else {
+          const key = name ? `msg_name_${name}` : `msg_id_${m.id}`;
+          if (map[key]) {
+            map[key].messages.push(m);
+          } else {
+            map[key] = {
+              email: "",
+              name: name || "Mystery Inquirer",
+              source: "Workshop Inquiry",
+              created_at: m.created_at,
+              orders: [],
+              messages: [m],
+              total: 0,
+              is_subscriber: false,
+              subscribed: null,
+              is_buyer: false,
+              id: key
+            };
+          }
+        }
+      }
+
+      const mergedList = Object.values(map).sort((a, b) => {
+        // Sort paying customers first, then by total spent, then by date
+        if (b.total !== a.total) return b.total - a.total;
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      });
+
+      // Calculate statistics
+      const totalAudience = mergedList.length;
+      // Active Waitlist includes landing_page and bestiary_notify, but only if they are active (subscribed !== false)
+      const waitlistCount = subscribers.filter(s => 
+        (s.source === "landing_page" || s.source === "bestiary_notify") && s.subscribed !== false
+      ).length;
+      const payingCount = mergedList.filter(c => c.is_buyer).length;
+      
+      const now = new Date();
+      const newThisMonth = mergedList.filter(c => {
+        if (!c.created_at) return false;
+        const d = new Date(c.created_at);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      }).length;
+
+      setStats({
+        totalAudience,
+        waitlistCount,
+        payingCount,
+        newThisMonth
+      });
+
+      setCustomers(mergedList);
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  // Filter list by search term
+  const visible = customers.filter(c => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    
+    const matchesName = c.name?.toLowerCase().includes(q);
+    const matchesEmail = c.email?.toLowerCase().includes(q);
+    const matchesSource = c.source?.toLowerCase().includes(q);
+    
+    // Check if the query matches items inside their orders
+    const matchesItems = c.orders?.some(o => {
+      if (Array.isArray(o.items)) {
+        return o.items.some(item => String(item).toLowerCase().includes(q));
+      }
+      return String(o.items || "").toLowerCase().includes(q);
+    });
+
+    // Check if the query matches topic or message inside workshop submissions
+    const matchesMessages = c.messages?.some(m => 
+      m.topic?.toLowerCase().includes(q) || m.message?.toLowerCase().includes(q)
+    );
+
+    return matchesName || matchesEmail || matchesSource || matchesItems || matchesMessages;
+  });
+
+  return (
+    <div>
+      <div className="sec-hdr">
+        <div>
+          <h1 className={styles.title}>Audience &amp; Customers</h1>
+          <div style={{ fontSize: "13px", color: "var(--cream-dim)", marginTop: "4px" }}>
+            Unified directory of landing page subscribers, active waitlists, and Etsy buyers.
+          </div>
+        </div>
+      </div>
+
+      {/* Stats KPI Strip */}
+      <div className={styles.statsStrip}>
+        <div className={styles.statCard}>
+          <div className={styles.statLabel}>Total Audience</div>
+          <div className={styles.statValue}>{loading ? "—" : stats.totalAudience}</div>
+        </div>
+        <div className={styles.statCard}>
+          <div className={styles.statLabel}>New This Month</div>
+          <div className={styles.statValue}>{loading ? "—" : stats.newThisMonth}</div>
+        </div>
+        <div className={styles.statCard}>
+          <div className={styles.statLabel}>Active Waitlist</div>
+          <div className={styles.statValue}>{loading ? "—" : stats.waitlistCount}</div>
+        </div>
+        <div className={styles.statCard}>
+          <div className={styles.statLabel}>Paying Customers</div>
+          <div className={styles.statValue}>{loading ? "—" : stats.payingCount}</div>
+        </div>
+      </div>
+
+      {/* Search Input */}
+      <div style={{ marginBottom: 20 }}>
+        <input
+          className="fi"
+          style={{ maxWidth: 400 }}
+          placeholder="Search by name, email, source, or creature bought…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+      </div>
+
+      {loading ? (
+        <div className="empty-state">Loading audience directory…</div>
+      ) : visible.length === 0 ? (
+        <div className="empty-state">No contacts found</div>
+      ) : (
+        <div className={styles.list}>
+          {visible.map((c, i) => {
+            const initials = getInitials(c.name);
+            const dateLabel = c.created_at
+              ? new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+              : "—";
+
+            return (
+              <div key={c.id || i} className={styles.card}>
+                <div className={styles.header} onClick={() => setExpanded(expanded === i ? null : i)}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0, flex: 1 }}>
+                    <div className={styles.avatar}>{initials}</div>
+                    <div className={styles.info} style={{ minWidth: 0 }}>
+                      <span className={styles.name}>{c.name || "Mystery Creature"}</span>
+                      {c.email && <span className={styles.email}>{c.email}</span>}
+                      
+                      {/* Dynamic Badging System */}
+                      <div className={styles.tags}>
+                        {c.is_subscriber && (
+                          c.subscribed === false ? (
+                            <span className={`${styles.badge} ${styles.badgeRed}`}>
+                              Opted Out
+                            </span>
+                          ) : (
+                            <span className={`${styles.badge} ${styles.badgeTeal}`}>
+                              Waitlist / Subscriber
+                            </span>
+                          )
+                        )}
+                        {c.is_buyer ? (
+                          <span className={`${styles.badge} ${styles.badgeGold}`}>
+                            Etsy Buyer
+                          </span>
+                        ) : (
+                          <span className={`${styles.badge} ${styles.badgeFaint}`}>
+                            Non-Buyer
+                          </span>
+                        )}
+                        {c.source && c.source !== "landing_page" && c.source !== "bestiary_notify" && c.source !== "Etsy Store" && (
+                          <span className={`${styles.badge} ${styles.badgePurple}`}>
+                            {c.source}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={styles.stats}>
+                    <span className={styles.orderCount}>
+                      {c.orders.length} order{c.orders.length !== 1 ? "s" : ""}
+                    </span>
+                    <span className={styles.spent}>
+                      ${c.total.toFixed(2)}
+                    </span>
+                    <span className={styles.chevron}>{expanded === i ? "▲" : "▾"}</span>
+                  </div>
+                </div>
+
+                {/* Expanded Details Section */}
+                {expanded === i && (
+                  <div className={styles.detailsSection}>
+                    <div style={{ fontSize: "11px", color: "var(--dim)", display: "flex", justifyContent: "space-between", paddingBottom: "4px" }}>
+                      <span>First Touchpoint: {dateLabel}</span>
+                      <span>Initial Channel: {c.source === "landing_page" ? "Waitlist Signup" : c.source === "bestiary_notify" ? "Bestiary Launch Alert" : c.source}</span>
+                    </div>
+
+                    {c.orders.length === 0 && c.messages.length === 0 ? (
+                      <div className={styles.subSection} style={{ padding: "16px", color: "var(--dim)", fontSize: "12px", fontStyle: "italic", textAlign: "center" }}>
+                        No orders placed or messages sent yet. (Waitlist Subscriber)
+                      </div>
+                    ) : (
+                      <>
+                        {/* Etsy Orders Sub-Section */}
+                        {c.orders.length > 0 && (
+                          <div className={styles.subSection}>
+                            <div className={styles.subSectionTitle}>Etsy Orders ({c.orders.length})</div>
+                            {c.orders.map(o => (
+                              <div key={o.id} className={styles.orderRow}>
+                                <span className={styles.orderId}>#{o.etsy_order_id || o.id?.slice(0, 8)}</span>
+                                <span className={styles.orderItems} title={Array.isArray(o.items) ? o.items.join(", ") : (o.items || "")}>
+                                  {Array.isArray(o.items) ? o.items.join(", ") : (o.items || "—")}
+                                </span>
+                                <span className={`badge ${o.status === "shipped" || o.status === "complete" ? "badge-green" : "badge-gold"}`}>
+                                  {o.status}
+                                </span>
+                                <span className={styles.orderAmt}>
+                                  {o.total_amount ? `$${parseFloat(o.total_amount).toFixed(2)}` : "—"}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Workshop Messages Sub-Section */}
+                        {c.messages.length > 0 && (
+                          <div className={styles.subSection}>
+                            <div className={styles.subSectionTitle}>Workshop Messages ({c.messages.length})</div>
+                            {c.messages.map(m => {
+                              const msgDate = m.created_at
+                                ? new Date(m.created_at).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                                : "—";
+                              return (
+                                <div key={m.id} className={styles.messageRow}>
+                                  <div className={styles.messageHeader}>
+                                    <span className={styles.messageTopic}>{m.topic || "Inquiry"}</span>
+                                    <span className={styles.messageDate}>{msgDate}</span>
+                                  </div>
+                                  <div className={styles.messageBody}>{m.message}</div>
+                                  {m.order_number && (
+                                    <div className={styles.messageOrder}>
+                                      Reference Order: #{m.order_number}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

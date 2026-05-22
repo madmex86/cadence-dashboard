@@ -1,0 +1,209 @@
+.title {
+  font-family: var(--font-caveat), cursive;
+  font-size: 2rem;
+  color: var(--gold);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--dim);
+  margin-bottom: 24px;
+}
+
+.forgeWrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .forgeWrap { grid-template-columns: 1fr; }
+}
+
+.forgePanel {
+  border: 1px solid var(--gold-border);
+  padding: 22px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.01);
+}
+
+.forgePanelTitle {
+  font-size: 9px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--cream-faint);
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--gold-border);
+}
+
+.forgePanelTitle span {
+  color: #C9A84C;
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.field label {
+  display: block;
+  font-size: 9px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--cream-faint);
+  margin-bottom: 5px;
+}
+
+.field label em {
+  font-style: italic;
+  opacity: .55;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 8px;
+}
+
+.field input, .field select, .field textarea {
+  width: 100%;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--gold-border);
+  color: var(--cream);
+  font-family: var(--font-lora), serif;
+  font-size: 13px;
+  padding: 9px 11px;
+  outline: none;
+  resize: vertical;
+  transition: border-color .2s;
+  border-radius: 3px;
+}
+
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: rgba(201,168,76,.4);
+}
+
+.field select option {
+  background: #0f0d14;
+}
+
+.generateRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 28px 0;
+  padding: 20px;
+  border: 1px solid rgba(201,168,76,.15);
+  background: rgba(201,168,76,.02);
+  border-radius: 4px;
+}
+
+.generateRow .hint {
+  font-size: 11px;
+  color: var(--cream-faint);
+  font-style: italic;
+  flex: 1;
+  min-width: 140px;
+}
+
+.btnGen {
+  font-family: var(--font-lora), serif;
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  background: #C9A84C;
+  color: #0f0d14;
+  border: none;
+  padding: 11px 24px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background .2s;
+  white-space: nowrap;
+  font-weight: bold;
+}
+
+.btnGen:hover { background: #E8D08A; }
+.btnGen:disabled { background: rgba(201,168,76,.3); color: rgba(15,13,20,.5); cursor: not-allowed; }
+
+.spinner {
+  display: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(201,168,76,.2);
+  border-top-color: #C9A84C;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner.on { display: block; }
+
+.aiStatus {
+  font-size: 10px;
+  letter-spacing: .06em;
+  color: var(--cream-faint);
+  min-width: 120px;
+}
+.aiStatus.ok { color: #7dc994; }
+.aiStatus.err { color: #e09090; }
+
+.outputSection {
+  position: relative;
+}
+
+.outputOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15,13,20,.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--cream-faint);
+  pointer-events: none;
+  transition: opacity .3s;
+  font-style: italic;
+  z-index: 10;
+  border-radius: 4px;
+}
+
+.outputOverlay.hidden {
+  opacity: 0;
+}
+
+.obsHint {
+  font-size: 10px;
+  color: var(--cream-faint);
+  margin-bottom: 6px;
+  font-style: italic;
+}
+
+.saveRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--gold-border);
+  align-items: center;
+}
+
+.saveStatus {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--cream-faint);
+  flex: 1;
+}
+.saveStatus.ok { color: #7dc994; }
+.saveStatus.err { color: #e09090; }
+
+.slugPreview {
+  font-size: 10px;
+  color: var(--cream-faint);
+  letter-spacing: .04em;
+  margin-top: 4px;
+  font-family: monospace;
+}
+.slugPreview span { color: #C9A84C; }

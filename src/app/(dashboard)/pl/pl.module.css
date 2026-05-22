@@ -1,0 +1,226 @@
+.title {
+  font-family: var(--font-caveat), cursive;
+  font-size: 2rem;
+  color: var(--gold);
+  margin: 0;
+}
+
+/* ── Tabs ── */
+.tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid rgba(201, 168, 76, 0.12);
+  flex-wrap: wrap;
+}
+
+.tab {
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 9px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: rgba(196, 188, 178, 0.45);
+  cursor: pointer;
+  transition: color 0.2s;
+  font-family: var(--font-lora), serif;
+  margin-bottom: -1px;
+  white-space: nowrap;
+}
+.tab:hover { color: var(--goldl); }
+.tabActive { color: var(--goldl) !important; border-bottom-color: var(--gold) !important; }
+
+/* ── 30-day chart ── */
+.chartBox {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(201, 168, 76, 0.1);
+  border-radius: 4px;
+  padding: 16px;
+  height: 200px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}
+.chartBox > svg { flex: 1; }
+
+/* ── Quarterly cards ── */
+.qGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.qCard {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(201, 168, 76, 0.1);
+  border-radius: 4px;
+  padding: 18px;
+  text-align: center;
+}
+
+.qLabel {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(196, 188, 178, 0.45);
+  margin-bottom: 8px;
+  font-family: sans-serif;
+}
+
+.qVal {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.qDue {
+  font-size: 10px;
+  color: rgba(138, 125, 110, 0.7);
+  margin-top: 6px;
+  font-family: sans-serif;
+}
+
+/* ── Schedule C card ── */
+.taxCard {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(201, 168, 76, 0.12);
+  border-radius: 4px;
+  padding: 20px 24px;
+  margin-bottom: 12px;
+}
+
+.taxCard h3 {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(201, 168, 76, 0.5);
+  margin-bottom: 16px;
+  font-family: sans-serif;
+}
+
+.taxRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(201, 168, 76, 0.06);
+  font-size: 13px;
+  font-family: sans-serif;
+}
+.taxRow:last-child { border-bottom: none; }
+
+.taxTotal {
+  font-weight: 600;
+  font-size: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(201, 168, 76, 0.18) !important;
+  margin-top: 4px;
+}
+
+/* ── Modal ── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 13, 20, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  backdrop-filter: blur(3px);
+  padding: 16px;
+}
+
+.modal {
+  background: #14120e;
+  border: 1px solid rgba(201, 168, 76, 0.3);
+  border-radius: 8px;
+  padding: 24px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.modalTitle {
+  font-family: var(--font-caveat), cursive;
+  font-size: 1.4rem;
+  color: var(--goldl);
+  margin: 0;
+  text-transform: capitalize;
+}
+
+.closeBtn {
+  background: none;
+  border: 1px solid rgba(201, 168, 76, 0.15);
+  color: var(--dim);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 9px;
+  border-radius: 3px;
+}
+.closeBtn:hover { color: var(--cream); border-color: rgba(201, 168, 76, 0.4); }
+
+.fg { display: flex; flex-direction: column; gap: 14px; }
+.fr { display: flex; gap: 12px; }
+.fr > div { flex: 1; min-width: 0; }
+
+.fl {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--cream-faint);
+  margin-bottom: 6px;
+  font-family: sans-serif;
+}
+
+.modalAct {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(201, 168, 76, 0.1);
+}
+
+@media (max-width: 480px) {
+  .fr { flex-direction: column; }
+  .qGrid { grid-template-columns: 1fr 1fr; }
+}
+
+.yearSelect {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--gold-border);
+  color: var(--cream);
+  padding: 6px 32px 6px 12px;
+  font-size: 12px;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  font-family: var(--font-lora), Georgia, serif;
+  transition: border-color 0.2s, background-color 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(201,168,76,0.5)'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  min-width: 120px;
+}
+.yearSelect:hover {
+  border-color: rgba(201, 168, 76, 0.4);
+  background-color: var(--gold-hover);
+}
+.yearSelect:focus {
+  border-color: var(--gold);
+}
+

@@ -1,0 +1,11 @@
+.title { font-family: var(--font-caveat), cursive; font-size: 2rem; color: var(--gold); margin: 0; }
+.sub { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--dim); font-family: sans-serif; }
+.grid { display: grid; grid-template-columns: 360px 1fr; gap: 28px; margin-top: 8px; }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+.controls { }
+.output { background: rgba(255,255,255,0.02); border: 1px solid var(--gold-border); border-radius: 6px; padding: 20px; min-height: 280px; display: flex; flex-direction: column; }
+.outputLabel { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(232,208,138,0.6); margin-bottom: 14px; font-family: sans-serif; }
+.outputText { font-size: 14px; color: var(--cream); line-height: 1.7; white-space: pre-wrap; flex: 1; }
+.placeholder { font-size: 13px; color: var(--dim); font-family: sans-serif; line-height: 1.6; flex: 1; }
+.outputActions { display: flex; gap: 8px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--gold-border); }
+.error { font-size: 12px; color: #e87070; margin-bottom: 10px; font-family: sans-serif; }
