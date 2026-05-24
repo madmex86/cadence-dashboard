@@ -90,8 +90,10 @@ export default function DashboardHub() {
     loadData();
   }
 
-  // Render Helpers
-  const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const [dateStr, setDateStr] = useState("");
+  useEffect(() => {
+    setDateStr(new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }));
+  }, []);
 
   return (
     <div>
