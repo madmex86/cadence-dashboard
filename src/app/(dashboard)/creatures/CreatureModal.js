@@ -26,6 +26,8 @@ export default function CreatureModal({ creature, onClose, onSave }) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [tab, setTab] = useState("info");
+  const [hasKch, setHasKch] = useState(false);
+  const [kchSuffix, setKchSuffix] = useState("KCH");
 
   useEffect(() => {
     if (creature) {
@@ -33,20 +35,41 @@ export default function CreatureModal({ creature, onClose, onSave }) {
       for (const key in BLANK) {
         sanitized[key] = creature[key] ?? BLANK[key];
       }
-      
       setForm({
         ...sanitized,
         lore_story: Array.isArray(creature.lore_story)
           ? [...creature.lore_story, "", "", ""].slice(0, 3)
           : ["", "", ""],
-        // datetime-local needs "YYYY-MM-DDTHH:MM" — trim timezone/seconds from Supabase timestamp
         reveal_date: sanitized.reveal_date ? sanitized.reveal_date.slice(0, 16) : "",
       });
+      // Detect keychain suffix from existing SKU (3-segment = has keychain)
+      const parts = (creature.sku || "").split("-");
+      if (parts.length === 3) {
+        setHasKch(true);
+        setKchSuffix(parts[2] || "KCH");
+      } else {
+        setHasKch(false);
+        setKchSuffix("KCH");
+      }
     } else {
       setForm(BLANK);
+      setHasKch(false);
+      setKchSuffix("KCH");
     }
     setTab("info");
   }, [creature]);
+
+  function generateSKU() {
+    function seg(str) {
+      return (str || "").toUpperCase().replace(/[^A-Z]/g, "").substring(0, 3).padEnd(3, "X");
+    }
+    const sp = seg(form.species);
+    const nm = seg(form.name);
+    if (sp === "XXX" && nm === "XXX") return;
+    let sku = `${sp}-${nm}`;
+    if (hasKch) sku += `-${seg(kchSuffix || "KCH")}`;
+    set("sku", sku);
+  }
 
   function set(field, value) {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -131,7 +154,19 @@ export default function CreatureModal({ creature, onClose, onSave }) {
               </div>
               <div>
                 <label className="fl">SKU</label>
-                <input className="fi" maxLength={11} value={form.sku} onChange={e => set("sku", e.target.value)} />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input className="fi" maxLength={11} value={form.sku} onChange={e => set("sku", e.target.value.toUpperCase())} style={{ fontFamily: "monospace", letterSpacing: "0.08em", textTransform: "uppercase" }} placeholder="GEC-SMO" />
+                  <button type="button" className="btn" style={{ whiteSpace: "nowrap", flexShrink: 0, padding: "7px 12px", fontSize: 11 }} onClick={generateSKU}>↺ Gen</button>
+                </div>
+                <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--cream-dim)", cursor: "pointer" }}>
+                    <input type="checkbox" checked={hasKch} onChange={e => setHasKch(e.target.checked)} />
+                    Has keychain variant
+                  </label>
+                  {hasKch && (
+                    <input className="fi" maxLength={3} value={kchSuffix} onChange={e => setKchSuffix(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))} style={{ width: 60, fontFamily: "monospace", letterSpacing: "0.08em", padding: "5px 8px" }} placeholder="KCH" />
+                  )}
+                </div>
               </div>
               <div>
                 <label className="fl">Log #</label>
