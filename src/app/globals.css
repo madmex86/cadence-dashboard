@@ -472,6 +472,34 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 .nav-dropdown a:hover,
 .nav-dropdown a.active { color: var(--goldl); background: rgba(201, 168, 76, 0.06); }
 
+/* Sub-nav strip — shows active group's links inline, no overlay */
+.subnav {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background: rgba(201, 168, 76, 0.03);
+  border-bottom: 1px solid rgba(201, 168, 76, 0.1);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.subnav::-webkit-scrollbar { display: none; }
+
+.subnav-link {
+  font-family: var(--font-lora), serif;
+  font-size: 11px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: rgba(196, 188, 178, 0.6);
+  text-decoration: none;
+  padding: 8px 14px;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.subnav-link:hover { color: var(--goldl); }
+.subnav-link.active { color: var(--goldl); border-bottom-color: var(--gold); }
+
 .topbar-right {
   display: flex;
   align-items: center;

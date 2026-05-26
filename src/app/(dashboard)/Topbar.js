@@ -274,7 +274,7 @@ export default function Topbar() {
                 >
                   {group.label}
                 </button>
-                {(isOpen || active) && (
+                {isOpen && (
                   <div className="nav-dropdown">
                     {allowedChildren.map(link => (
                       <Link
@@ -293,6 +293,28 @@ export default function Topbar() {
           })
         )}
       </nav>
+
+      {/* Sub-nav: inline link strip for the active group — no overlay, no blocking */}
+      {!loadingRole && (() => {
+        const activeGroup = NAV_GROUPS.find(g =>
+          g.children.filter(c => isLinkAllowed(c.href)).some(c => pathname.startsWith(c.href))
+        );
+        if (!activeGroup) return null;
+        const links = activeGroup.children.filter(c => isLinkAllowed(c.href));
+        return (
+          <div className="subnav">
+            {links.map(link => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`subnav-link${pathname.startsWith(link.href) ? " active" : ""}`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        );
+      })()}
     </header>
   );
 }
