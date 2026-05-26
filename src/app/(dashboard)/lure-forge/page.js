@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "../../../lib/supabase/client";
 import styles from "./lure.module.css";
 
 export default function LureForgePage() {
+  const searchParams = useSearchParams();
+  const didAutoSelect = useRef(false);
+
   const [creatures, setCreatures] = useState([]);
   const [selectedCreatureId, setSelectedCreatureId] = useState("");
   
@@ -47,6 +51,17 @@ export default function LureForgePage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Auto-select creature from ?id= URL param when creatures finish loading
+  useEffect(() => {
+    if (creatures.length === 0 || didAutoSelect.current) return;
+    const id = searchParams.get("id");
+    if (id) {
+      didAutoSelect.current = true;
+      handleCreaturePick(id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [creatures]);
 
   function handleCreaturePick(id) {
     setSelectedCreatureId(id);

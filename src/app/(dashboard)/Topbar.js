@@ -18,7 +18,6 @@ const NAV_GROUPS = [
     { label: "Sales Intel", href: "/sales" },
     { label: "P&L", href: "/pl" },
     { label: "Cost Engine", href: "/queue?tab=cost-engine" },
-    { label: "Mileage", href: "/mileage" },
     { label: "Launch", href: "/launch" },
     { label: "Analytics", href: "/analytics" },
   ]},
@@ -30,7 +29,6 @@ const NAV_GROUPS = [
   ]},
   { label: "CUSTOMERS", children: [
     { label: "Customers", href: "/customers" },
-    { label: "Messages", href: "/messages" },
     { label: "Email Blast", href: "/email-blast" },
   ]},
   { label: "OPS", children: [
@@ -276,7 +274,7 @@ export default function Topbar() {
                 >
                   {group.label}
                 </button>
-                {isOpen && (
+                {(isOpen || active) && (
                   <div className="nav-dropdown">
                     {allowedChildren.map(link => (
                       <Link

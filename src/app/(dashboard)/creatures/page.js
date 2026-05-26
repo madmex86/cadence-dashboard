@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "../../../lib/supabase/client";
+import Link from "next/link";
 import CreatureModal from "./CreatureModal";
 import ScannerModal from "../ScannerModal";
 import styles from "./creatures.module.css";
@@ -355,6 +356,7 @@ export default function CreaturesPage() {
 
                 <div className={styles.actions}>
                   <button className="btn sm" onClick={() => openEdit(c)}>Edit</button>
+                  <Link className="btn sm" href={`/lure-forge?id=${c.id}`} style={{ color: "var(--goldl)", borderColor: "rgba(201,168,76,0.25)" }}>🪄 Lore</Link>
                   <button className="btn sm" style={{ color: "var(--teal)", borderColor: "rgba(91,191,212,0.3)" }} onClick={() => printBinLabel(c)}>🏷</button>
                   <button className="btn sm" style={{ color: "var(--goldl)", borderColor: "rgba(201,168,76,0.3)" }} onClick={() => printRoundSticker(c)}>⭕</button>
                   {c.etsy_url && (

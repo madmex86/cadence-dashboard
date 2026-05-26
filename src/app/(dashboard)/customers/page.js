@@ -17,6 +17,9 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState(null);
+  const [tab, setTab] = useState("directory");
+  const [allSubmissions, setAllSubmissions] = useState([]);
+  const [expandedMsg, setExpandedMsg] = useState(null);
 
   // Statistics
   const [stats, setStats] = useState({
@@ -230,11 +233,18 @@ export default function CustomersPage() {
         newThisMonth
       });
 
+      setAllSubmissions(submissions);
       setCustomers(mergedList);
       setLoading(false);
     }
     load();
   }, []);
+
+  async function markRead(id) {
+    const supabase = createClient();
+    await supabase.from("contact_submissions").update({ is_read: true }).eq("id", id);
+    setAllSubmissions(prev => prev.map(m => m.id === id ? { ...m, is_read: true } : m));
+  }
 
   // Filter list by search term
   const visible = customers.filter(c => {
@@ -261,6 +271,8 @@ export default function CustomersPage() {
     return matchesName || matchesEmail || matchesSource || matchesItems || matchesMessages;
   });
 
+  const unreadCount = allSubmissions.filter(m => !m.is_read).length;
+
   return (
     <div>
       <div className="sec-hdr">
@@ -271,6 +283,57 @@ export default function CustomersPage() {
           </div>
         </div>
       </div>
+
+      {/* Tab switcher */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
+        <button className={`btn sm${tab === "directory" ? " gold" : ""}`} onClick={() => setTab("directory")}>Directory</button>
+        <button className={`btn sm${tab === "messages" ? " gold" : ""}`} onClick={() => setTab("messages")}>
+          Inbox{unreadCount > 0 ? ` · ${unreadCount} unread` : ""}
+        </button>
+      </div>
+
+      {tab === "messages" ? (
+        <div>
+          {allSubmissions.length === 0 ? (
+            <div className="empty-state">No messages yet</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {allSubmissions.map(m => {
+                const isOpen = expandedMsg === m.id;
+                const msgDate = m.created_at
+                  ? new Date(m.created_at).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                  : "—";
+                return (
+                  <div key={m.id} style={{ background: m.is_read ? "rgba(255,255,255,0.02)" : "rgba(91,191,212,0.06)", border: `1px solid ${m.is_read ? "var(--gold-border)" : "rgba(91,191,212,0.25)"}`, borderRadius: 6, overflow: "hidden" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", cursor: "pointer" }} onClick={() => setExpandedMsg(isOpen ? null : m.id)}>
+                      {!m.is_read && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#5BBFD4", flexShrink: 0 }} />}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, color: "var(--cream)", fontFamily: "sans-serif" }}>
+                          {m.name || "Anonymous"}{m.email && <span style={{ color: "var(--dim)", fontSize: 11, marginLeft: 6 }}>{m.email}</span>}
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--gold)", marginTop: 2 }}>{m.topic || "Inquiry"}</div>
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--dim)", flexShrink: 0, marginRight: 6 }}>{msgDate}</div>
+                      <span style={{ color: "var(--dim)", fontSize: 12 }}>{isOpen ? "▲" : "▾"}</span>
+                    </div>
+                    {isOpen && (
+                      <div style={{ padding: "0 16px 16px", borderTop: "1px solid var(--gold-border)" }}>
+                        <div style={{ fontSize: 13, color: "var(--cream-dim)", lineHeight: 1.6, marginTop: 12, marginBottom: 12 }}>{m.message}</div>
+                        {m.order_number && <div style={{ fontSize: 11, color: "var(--dim)", marginBottom: 10 }}>Reference Order: #{m.order_number}</div>}
+                        <div style={{ display: "flex", gap: 8 }}>
+                          {!m.is_read && <button className="btn sm" onClick={() => markRead(m.id)}>Mark Read</button>}
+                          {m.email && <a className="btn sm" href={`mailto:${m.email}`}>Reply ↗</a>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
 
       {/* Stats KPI Strip */}
       <div className={styles.statsStrip}>
@@ -434,6 +497,8 @@ export default function CustomersPage() {
             );
           })}
         </div>
+      )}
+        </>
       )}
     </div>
   );
