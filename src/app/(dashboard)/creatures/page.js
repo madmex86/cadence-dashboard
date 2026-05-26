@@ -48,10 +48,15 @@ export default function CreaturesPage() {
 
   async function handleSave(formData, id) {
     const supabase = createClient();
+    let error;
     if (id) {
-      await supabase.from("creatures").update(formData).eq("id", id);
+      ({ error } = await supabase.from("creatures").update(formData).eq("id", id));
     } else {
-      await supabase.from("creatures").insert(formData);
+      ({ error } = await supabase.from("creatures").insert(formData));
+    }
+    if (error) {
+      alert("Save failed: " + error.message);
+      return;
     }
     closeModal();
     load();

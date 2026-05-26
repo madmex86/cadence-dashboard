@@ -86,8 +86,11 @@ export default function CreatureModal({ creature, onClose, onSave }) {
       log_number: form.log_number ? parseInt(form.log_number) : null,
       price_retail: form.price_retail ? parseFloat(form.price_retail) : null,
       price_etsy: form.price_etsy ? parseFloat(form.price_etsy) : null,
+      cost_to_print: form.cost_to_print ? parseFloat(form.cost_to_print) : null,
       qty_on_hand: parseInt(form.qty_on_hand) || 0,
       lore_story: form.lore_story.filter(Boolean),
+      lore_observations: form.lore_observations || null,
+      reveal_date: form.reveal_date || null,
     };
     delete payload.id;
     await onSave(payload, creature?.id);
