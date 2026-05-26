@@ -28,9 +28,13 @@ export default function DashboardHub() {
 
   async function savePrinterCreature(printerId) {
     const supabase = createClient();
-    await supabase.from("printers").update({
+    const creature = creatures.find(c => c.id === printerPick);
+    const { error } = await supabase.from("printers").update({
       current_creature_id: printerPick || null,
+      current_job: creature ? creature.name : null,
+      status: printerPick ? "printing" : "idle",
     }).eq("id", printerId);
+    if (error) { alert("Update failed: " + error.message); return; }
     setEditingPrinter(null);
     loadData();
   }
