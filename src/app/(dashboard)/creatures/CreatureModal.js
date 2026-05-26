@@ -6,7 +6,7 @@ import styles from "./creatures.module.css";
 
 const BLANK = {
   name: "", species: "", sku: "", log_number: "", environment: "forest",
-  price_retail: "", price_etsy: "", qty_on_hand: 0, cost_to_print: "",
+  price_retail: "", price_etsy: "", price_ask: "", qty_on_hand: 0, cost_to_print: "",
   tagline: "", etsy_url: "", image_url: "", model_url: "", notes: "",
   lore_location: "", lore_entry_date: "", lore_story: ["", "", ""], lore_observations: "",
   active: true, is_featured: false, in_launch_queue: false, is_cami_edition: false,
@@ -109,6 +109,7 @@ export default function CreatureModal({ creature, onClose, onSave }) {
       log_number: form.log_number ? parseInt(form.log_number) : null,
       price_retail: form.price_retail ? parseFloat(form.price_retail) : null,
       price_etsy: form.price_etsy ? parseFloat(form.price_etsy) : null,
+      price_ask: form.price_ask ? parseFloat(form.price_ask) : null,
       cost_to_print: form.cost_to_print ? parseFloat(form.cost_to_print) : null,
       qty_on_hand: parseInt(form.qty_on_hand) || 0,
       lore_story: form.lore_story.filter(Boolean),
@@ -238,6 +239,10 @@ export default function CreatureModal({ creature, onClose, onSave }) {
               <div>
                 <label className="fl">Cost to Print ($)</label>
                 <input className="fi" type="number" step="0.01" min="0" value={form.cost_to_print || ""} onChange={e => set("cost_to_print", e.target.value)} />
+              </div>
+              <div>
+                <label className="fl">My Price ($)</label>
+                <input className="fi" type="number" step="0.01" min="0" value={form.price_ask || ""} onChange={e => set("price_ask", e.target.value)} placeholder="Your asking / show price" />
               </div>
               <div className="form-full">
                 <label className="fl">Print Recipe (from Queue)</label>

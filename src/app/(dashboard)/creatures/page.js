@@ -346,8 +346,9 @@ export default function CreaturesPage() {
                   <span className={styles.stockLbl}>in stock</span>
                 </div>
 
-                {(c.price_retail || c.price_etsy || c.cost_to_print) && (
+                {(c.price_retail || c.price_etsy || c.cost_to_print || c.price_ask) && (
                   <div className={styles.prices}>
+                    {c.price_ask && <span style={{ color: "var(--goldl)", fontWeight: 600 }}>My ${parseFloat(c.price_ask).toFixed(2)}</span>}
                     {c.price_retail && <span>Retail ${parseFloat(c.price_retail).toFixed(2)}</span>}
                     {c.price_etsy && <span>Etsy ${parseFloat(c.price_etsy).toFixed(2)}</span>}
                     {c.cost_to_print && <span style={{ color: "var(--teal)" }}>Cost ${parseFloat(c.cost_to_print).toFixed(2)}</span>}
