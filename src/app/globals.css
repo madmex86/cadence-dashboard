@@ -524,7 +524,13 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   .topbar-link { display: none; }
   .topbar-sub { display: none; }
   .topbar-row1 { padding: 10px 14px; }
-  .nav-group-btn { padding: 0 11px; font-size: 11px; }
+  .nav-group-btn { padding: 0 10px; font-size: 11px; }
+}
+
+@media (max-width: 414px) {
+  .nav-group-btn { padding: 0 8px; font-size: 10px; letter-spacing: 0.06em; }
+  .dash-main { padding: 12px; }
+  .sec-hdr { flex-wrap: wrap; gap: 8px; }
 }
 
 .conn-hub {
