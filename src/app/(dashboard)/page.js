@@ -22,6 +22,19 @@ export default function DashboardHub() {
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
 
+  // Inline printer editing
+  const [editingPrinter, setEditingPrinter] = useState(null);
+  const [printerPick, setPrinterPick] = useState("");
+
+  async function savePrinterCreature(printerId) {
+    const supabase = createClient();
+    await supabase.from("printers").update({
+      current_creature_id: printerPick || null,
+    }).eq("id", printerId);
+    setEditingPrinter(null);
+    loadData();
+  }
+
   const loadData = useCallback(async () => {
     const supabase = createClient();
     const [invRes, creRes, ordersRes, finRes, prRes] = await Promise.all([
@@ -145,12 +158,43 @@ export default function DashboardHub() {
           {printers.length === 0 ? <div className={styles.notifEmpty}>No printers configured.</div> : (
             printers.map(p => {
               const curC = p.current_creature_id ? creatures.find(c => c.id === p.current_creature_id) : null;
+              const isEditing = editingPrinter === p.id;
               return (
-                <div key={p.id} className={styles.notifItem}>
-                  <strong>{p.name}:</strong>{" "}
-                  {curC
-                    ? <span style={{ color: "var(--goldl)" }}>Printing {curC.name}</span>
-                    : <span style={{ color: "var(--dim)" }}>Idle</span>}
+                <div key={p.id} className={styles.notifItem} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                    <span>
+                      <strong>{p.name}:</strong>{" "}
+                      {curC
+                        ? <span style={{ color: "var(--goldl)" }}>Printing {curC.name}</span>
+                        : <span style={{ color: "var(--dim)" }}>Idle</span>}
+                    </span>
+                    <button
+                      className="btn sm"
+                      style={{ flexShrink: 0 }}
+                      onClick={() => {
+                        setEditingPrinter(isEditing ? null : p.id);
+                        setPrinterPick(p.current_creature_id || "");
+                      }}
+                    >
+                      {isEditing ? "Cancel" : "Change"}
+                    </button>
+                  </div>
+                  {isEditing && (
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <select
+                        className="fi"
+                        style={{ flex: 1, fontSize: 12 }}
+                        value={printerPick}
+                        onChange={e => setPrinterPick(e.target.value)}
+                      >
+                        <option value="">— Idle —</option>
+                        {creatures.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                      <button className="btn sm gold" onClick={() => savePrinterCreature(p.id)}>Save</button>
+                    </div>
+                  )}
                 </div>
               );
             })
