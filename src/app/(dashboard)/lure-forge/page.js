@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "../../../lib/supabase/client";
 import styles from "./lure.module.css";
 
-export default function LureForgePage() {
+function LureForgeInner() {
   const searchParams = useSearchParams();
   const didAutoSelect = useRef(false);
 
@@ -401,5 +401,13 @@ OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences, no explanati
         </button>
       </div>
     </div>
+  );
+}
+
+export default function LureForgePage() {
+  return (
+    <Suspense fallback={<div className="empty-state">Loading forge…</div>}>
+      <LureForgeInner />
+    </Suspense>
   );
 }
