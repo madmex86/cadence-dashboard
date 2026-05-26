@@ -472,6 +472,13 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 .nav-dropdown a:hover,
 .nav-dropdown a.active { color: var(--goldl); background: rgba(201, 168, 76, 0.06); }
 
+/* Last two groups drop right-aligned so they don't fall off the right edge on mobile */
+.nav-group:last-child .nav-dropdown,
+.nav-group:nth-last-child(2) .nav-dropdown {
+  left: auto;
+  right: 0;
+}
+
 /* Sub-nav strip — shows active group's links inline, no overlay */
 .subnav {
   display: flex;
