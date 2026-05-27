@@ -44,14 +44,39 @@ export default function FulfillmentPage() {
     setTimeout(() => setToast({ msg: "", type: "ok" }), 3500);
   }
 
+  async function triggerShippingEmail(order, tracking_number = null) {
+    if (!order.buyer_email) return;
+    try {
+      await fetch('/api/send-shipping', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          buyer_name: order.buyer_name,
+          buyer_email: order.buyer_email,
+          items: order.items,
+          tracking_number: tracking_number || order.tracking_number,
+          carrier: order.carrier
+        })
+      });
+    } catch (e) {
+      console.error("Failed to trigger shipping email", e);
+    }
+  }
+
   async function moveOrder(id, newStatus) {
     const supabase = createClient();
     const updateData = { status: newStatus };
     if (newStatus === "shipped") updateData.shipped_date = new Date().toISOString();
     
+    const order = orders.find(o => o.id === id);
+
     // Optimistic update
     setOrders(prev => prev.map(o => o.id === id ? { ...o, ...updateData } : o));
     await supabase.from("orders").update(updateData).eq("id", id);
+
+    if (newStatus === "shipped" && order && order.buyer_email) {
+      triggerShippingEmail(order);
+    }
   }
 
   async function toggleItem(orderId, itemIndex) {
@@ -73,8 +98,13 @@ export default function FulfillmentPage() {
   async function quickShip(id, tracking_number) {
     const supabase = createClient();
     const updateData = { status: "shipped", tracking_number, shipped_date: new Date().toISOString() };
+    const order = orders.find(o => o.id === id);
     setOrders(prev => prev.map(o => o.id === id ? { ...o, ...updateData } : o));
     await supabase.from("orders").update(updateData).eq("id", id);
+
+    if (order && order.buyer_email) {
+      triggerShippingEmail(order, tracking_number);
+    }
   }
 
   function handleDragStart(e, id) {
@@ -116,12 +146,20 @@ export default function FulfillmentPage() {
     const updateData = { status: bulkStatus };
     if (bulkStatus === "shipped") updateData.shipped_date = new Date().toISOString();
     
+    const ordersToMove = orders.filter(o => ids.includes(o.id));
+
     setOrders(prev => prev.map(o => ids.includes(o.id) ? { ...o, ...updateData } : o));
     setBulkMode(false);
     setSelectedOrders(new Set());
     
     const supabase = createClient();
     await supabase.from("orders").update(updateData).in("id", ids);
+
+    if (bulkStatus === "shipped") {
+      for (const order of ordersToMove) {
+        if (order.buyer_email) triggerShippingEmail(order);
+      }
+    }
   }
 
   function printLabel(order) {
@@ -468,6 +506,7 @@ export default function FulfillmentPage() {
             <option value="printing">Move to Printing</option>
             <option value="printed">Move to Printed</option>
             <option value="packaging">Move to Packaging</option>
+            <option value="shipped">Move to Shipped</option>
           </select>
           <button className="btn pri" onClick={applyBulkMove}>Apply</button>
           <button className="btn" onClick={() => { setBulkMode(false); setSelectedOrders(new Set()); }}>Cancel</button>

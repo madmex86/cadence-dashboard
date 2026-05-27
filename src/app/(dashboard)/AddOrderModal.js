@@ -7,6 +7,7 @@ import styles from "./hub.module.css";
 export default function AddOrderModal({ isOpen, onClose, creatures, onSave }) {
   const [oEid, setOEid] = useState("");
   const [oBuyer, setOBuyer] = useState("");
+  const [oEmail, setOEmail] = useState("");
   const [oItems, setOItems] = useState([{ name: "", qty: 1 }]);
   const [oSt, setOSt] = useState("queued");
   const [oPrinter, setOPrinter] = useState("Vision");
@@ -27,6 +28,7 @@ export default function AddOrderModal({ isOpen, onClose, creatures, onSave }) {
     await supabase.from("orders").insert([{
       etsy_order_id: oEid,
       buyer_name: oBuyer,
+      buyer_email: oEmail || null,
       items,
       status: oSt,
       printer_name: oPrinter,
@@ -40,6 +42,7 @@ export default function AddOrderModal({ isOpen, onClose, creatures, onSave }) {
     // Reset state
     setOEid("");
     setOBuyer("");
+    setOEmail("");
     setOItems([{ name: "", qty: 1 }]);
     setOSt("queued");
     setOPrinter("Vision");
@@ -61,6 +64,7 @@ export default function AddOrderModal({ isOpen, onClose, creatures, onSave }) {
             <div><label className={styles.fl}>Etsy Order ID</label><input className="fi" value={oEid} onChange={e => setOEid(e.target.value)} placeholder="e.g. 1234567890" /></div>
             <div><label className={styles.fl}>Buyer Name</label><input className="fi" value={oBuyer} onChange={e => setOBuyer(e.target.value)} /></div>
           </div>
+          <div><label className={styles.fl}>Buyer Email</label><input className="fi" type="email" value={oEmail} onChange={e => setOEmail(e.target.value)} placeholder="Optional" /></div>
           <div>
             <label className={styles.fl}>Items</label>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "6px" }}>
