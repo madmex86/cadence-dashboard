@@ -9,7 +9,7 @@ export default function EmailBlastPage() {
   const [templates, setTemplates] = useState([]);
   const [history, setHistory] = useState([]);
   
-  const [fromAddress, setFromAddress] = useState("news@cadencecreatures.com");
+  const [fromAddress, setFromAddress] = useState("noreply@cadencecreatures.com");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   
@@ -146,7 +146,7 @@ export default function EmailBlastPage() {
   }
 
   function loadTemplate(t) {
-    setFromAddress(t.from_address || "news@cadencecreatures.com");
+    setFromAddress(t.from_address || "noreply@cadencecreatures.com");
     setSubject(t.subject || "");
     setBody(t.body || "");
   }
@@ -195,7 +195,7 @@ export default function EmailBlastPage() {
             <div style={{ marginBottom: "14px" }}>
               <label className={styles.fl}>From</label>
               <select className={styles.fi} value={fromAddress} onChange={e => setFromAddress(e.target.value)}>
-                <option value="news@cadencecreatures.com">Newsletter — news@cadencecreatures.com</option>
+                <option value="noreply@cadencecreatures.com">Newsletter — noreply@cadencecreatures.com</option>
                 <option value="hello@cadencecreatures.com">General — hello@cadencecreatures.com</option>
               </select>
             </div>
@@ -260,7 +260,7 @@ export default function EmailBlastPage() {
                       <div className={styles.tplSubject}>{t.subject}</div>
                     </div>
                     <span className={styles.tplFromBadge}>
-                      {t.from_address === 'hello@cadencecreatures.com' ? 'hello@' : 'news@'}
+                      {t.from_address === 'hello@cadencecreatures.com' ? 'hello@' : 'noreply@'}
                     </span>
                     <div className={styles.tplActions}>
                       <button className="btn sm" onClick={() => loadTemplate(t)}>Load</button>

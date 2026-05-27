@@ -1,0 +1,54 @@
+
+> cc-dashboard-nextjs@0.1.0 dev
+> next dev
+
+⚠ Port 3000 is in use by process 75378, using available port 3001 instead.
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://10.0.0.12:3001
+- Environments: .env.local
+✓ Ready in 256ms
+
+⨯ Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at proxy (src/proxy.js:7:38)
+   5 |   let supabaseResponse = NextResponse.next({ request });
+   6 |
+>  7 |   const supabase = createServerClient(
+     |                                      ^
+   8 |     process.env.NEXT_PUBLIC_SUPABASE_URL,
+   9 |     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  10 |     {
+⨯ Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at proxy (src/proxy.js:7:38)
+   5 |   let supabaseResponse = NextResponse.next({ request });
+   6 |
+>  7 |   const supabase = createServerClient(
+     |                                      ^
+   8 |     process.env.NEXT_PUBLIC_SUPABASE_URL,
+   9 |     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  10 |     {
+ GET / 404 in 56ms (next.js: -7431µs, proxy.ts: 54ms, application-code: 9ms)
+[browser] Uncaught Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createServerClient (file:///Users/stevenportugal/Library/CloudStorage/GoogleDrive-stevenportugal86@gmail.com/My Drive/Cadence Creatures/cc_Dashboard_Next.js/.next/dev/server/chunks/node_modules_0l36q3-._.js:10499:15)
+    at proxy (file:///Users/stevenportugal/Library/CloudStorage/GoogleDrive-stevenportugal86@gmail.com/My Drive/Cadence Creatures/cc_Dashboard_Next.js/.next/dev/server/chunks/[root-of-the-server]__0is0huw._.js:91:218)
+    at <unknown> (file:///Users/stevenportugal/Library/CloudStorage/GoogleDrive-stevenportugal86@gmail.com/My Drive/Cadence Creatures/cc_Dashboard_Next.js/.next/dev/server/chunks/node_modules_next_049vb8i._.js:19590:26)
+    at <unknown> (file:///Users/stevenportugal/Library/CloudStorage/GoogleDrive-stevenportugal86@gmail.com/My Drive/Cadence Creatures/cc_Dashboard_Next.js/.next/dev/server/chunks/node_modules_next_049vb8i._.js:7062:633)
+    at <unknown> (file:///Users/stevenportugal/Library/CloudStorage/GoogleDrive-stevenportugal86@gmail.com/My Drive/Cadence Creatures/cc_Dashboard_Next.js/.next/dev/server/chunks/node_modules_next_049vb8i._.js:7062:314)
+    at async adapter (file:///Users/stevenportugal/Library/CloudStorage/GoogleDrive-stevenportugal86@gmail.com/My Drive/Cadence Creatures/cc_Dashboard_Next.js/.next/dev/server/chunks/node_modules_next_049vb8i._.js:7016:16)
+[?25h
