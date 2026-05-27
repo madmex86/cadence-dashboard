@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req) {
   try {
-    const { buyer_name, buyer_email, tracking_number, items, carrier } = await req.json();
+    const { buyer_name, buyer_email, tracking_number, items, carrier, order_number } = await req.json();
 
     if (!buyer_email) {
       return NextResponse.json({ success: false, error: 'No buyer email provided' }, { status: 400 });
@@ -21,28 +21,27 @@ export async function POST(req) {
       : `<li>${items}</li>`;
 
     const trackingSection = tracking_number 
-      ? `<p>Tracking (${carrier || 'Auto-detect'}): <strong>${tracking_number}</strong></p>` 
-      : `<p>Your package is on its way via standard post.</p>`;
+      ? `<p>You can follow its progress here: <a href="https://tools.usps.com/go/TrackConfirmAction?tLabels=${tracking_number}" style="color: #C9A84C;">${tracking_number}</a></p>` 
+      : ``;
 
     const html = `
-      <div style="font-family: 'Lora', Georgia, serif; color: #1C1612; max-width: 500px; margin: 0 auto; line-height: 1.6;">
+      <div style="font-family: 'Lora', Georgia, serif; color: #1C1612; max-width: 500px; margin: 0 auto; line-height: 1.6; background-color: #FAF6F0; padding: 40px; border-radius: 8px;">
         <p>Hello ${buyer_name || 'there'},</p>
         
         <p>the box is taped. the label is printed. a new companion is ready for the journey.</p>
         
-        <p>Your order has officially shipped and is on its way to you.</p>
+        <p>Your order <strong>#${order_number || 'N/A'}</strong> is officially on its way. We've packed the following carefully for the trip:</p>
 
-        <div style="margin: 30px 0; padding: 20px; border-top: 1px solid #C9A84C; border-bottom: 1px solid #C9A84C; background-color: #FAF6F0;">
-          <h3 style="margin-top: 0; color: #5BBFD4;">Inside the box:</h3>
-          <ul style="margin: 0; padding-left: 20px;">
+        <div style="margin: 20px 0;">
+          <ul style="margin: 0; padding-left: 20px; color: #5BBFD4;">
             ${itemsList}
           </ul>
         </div>
 
         ${trackingSection}
 
-        <p style="margin-top: 40px; font-style: italic;">
-          And so another creature found its way into the world, carrying her name a little further.
+        <p style="margin-top: 40px; font-style: italic; color: #C9A84C;">
+          “And so another creature found its way into the world, carrying her name a little further.”
         </p>
 
         <p style="margin-top: 40px; font-size: 0.9em; color: #666;">

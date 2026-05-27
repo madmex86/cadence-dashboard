@@ -53,9 +53,10 @@ export default function FulfillmentPage() {
         body: JSON.stringify({
           buyer_name: order.buyer_name,
           buyer_email: order.buyer_email,
-          items: order.items,
+          order_number: order.etsy_order_id || order.id.slice(0, 8).toUpperCase(),
           tracking_number: tracking_number || order.tracking_number,
-          carrier: order.carrier
+          items: order.items,
+          carrier: order.carrier || 'USPS'
         })
       });
     } catch (e) {
