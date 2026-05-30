@@ -158,7 +158,11 @@ export async function POST(request) {
       return NextResponse.json({ error: "Script generation failed", detail: e.message }, { status: 500 });
     }
 
-    await supabase.from("video_jobs").update({ status: "generating_video", claude_script: script }).eq("id", job.id);
+    await supabase.from("video_jobs").update({
+      status: "generating_video",
+      claude_script: script,
+      dispatched_at: new Date().toISOString(),
+    }).eq("id", job.id);
 
     // Step 2: Concurrent D-ID + Runway dispatch
     const [didResult, runwayResult] = await Promise.allSettled([
@@ -237,7 +241,7 @@ export async function PATCH(request) {
 
     if (service === "runway") {
       const webhookUrl = `${base}/api/video/webhook?jobId=${job.id}&source=runway${secret}`;
-      await supabase.from("video_jobs").update({ runway_status: "processing", status: "generating_video" }).eq("id", jobId);
+      await supabase.from("video_jobs").update({ runway_status: "processing", status: "generating_video", dispatched_at: new Date().toISOString() }).eq("id", jobId);
       const taskId = await dispatchRunway(job.claude_script, webhookUrl);
       await supabase.from("video_jobs").update({ runway_task_id: taskId }).eq("id", jobId);
       return NextResponse.json({ ok: true, runway_task_id: taskId });

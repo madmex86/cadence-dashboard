@@ -41,58 +41,85 @@ function getPhases(job) {
   ];
 }
 
+// Typical render durations in seconds per service
+const ETA_SECONDS = { script: 8, did: 50, runway: 100 };
+
+function fmt(secs) {
+  if (secs <= 0)  return "any moment…";
+  if (secs < 60)  return `~${secs}s`;
+  return `~${Math.ceil(secs / 60)}m`;
+}
+
 function ProgressBar({ job }) {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!job?.dispatched_at) { setElapsed(0); return; }
+    const start = new Date(job.dispatched_at).getTime();
+    const tick  = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
+    setElapsed(Math.floor((Date.now() - start) / 1000));
+    return () => clearInterval(tick);
+  }, [job?.id, job?.dispatched_at]);
+
   if (!job || job.status === "pending") return null;
-  const phases = getPhases(job);
+
+  const phases    = getPhases(job);
   const completed = job.status === "completed";
-  const failed    = job.status === "failed";
 
   return (
     <div style={{ marginBottom: 18 }}>
-      {/* Overall bar */}
+      {/* Track */}
       <div style={{
         height: 4, background: "rgba(255,255,255,.08)", borderRadius: 2,
         overflow: "hidden", marginBottom: 10, position: "relative",
       }}>
-        {phases.map((p, i) => {
-          const left = `${i * 33.33}%`;
+        {completed ? (
+          <div style={{ position: "absolute", inset: 0, background: "#7dc994" }} />
+        ) : phases.map((p, i) => {
           const color = p.failed ? "#e87070" : p.done ? "#7dc994" : "#C9A84C";
+          const fill  = p.done ? "33.33%" : p.running ? "33.33%" : "0%";
           return (
             <div key={i} style={{
-              position: "absolute", top: 0, left, height: "100%",
-              width: p.done || completed ? "33.33%" : p.running ? "33.33%" : "0%",
-              background: color,
-              transition: "width .6s ease",
-              // shimmer overlay for running phases
-              backgroundImage: (p.running && !p.done)
-                ? `linear-gradient(90deg, ${color}cc 0%, ${color}ff 40%, ${color}cc 100%)`
-                : undefined,
+              position: "absolute", top: 0, left: `${i * 33.33}%`,
+              height: "100%", width: fill,
+              background: color, transition: "width .6s ease",
               animation: (p.running && !p.done) ? "shimmer 1.6s ease-in-out infinite" : undefined,
             }} />
           );
         })}
-        {/* Full fill when completed */}
-        {completed && (
-          <div style={{ position: "absolute", inset: 0, background: "#7dc994", transition: "all .4s" }} />
-        )}
       </div>
 
-      {/* Phase labels */}
+      {/* Phase labels + ETAs */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4 }}>
         {phases.map((p, i) => {
+          const etaKey   = ["script", "did", "runway"][i];
+          const estimate = ETA_SECONDS[etaKey];
+          const remaining = Math.max(0, estimate - elapsed);
           const color = p.failed ? "#e87070" : p.done || completed ? "#7dc994" : p.running ? "#C9A84C" : "rgba(196,188,178,.25)";
           const icon  = p.failed ? "✕" : p.done || completed ? "✓" : p.running ? "⟳" : "·";
+          const align = i === 0 ? "left" : i === 1 ? "center" : "right";
+
           return (
-            <div key={i} style={{ textAlign: i === 1 ? "center" : i === 2 ? "right" : "left" }}>
+            <div key={i} style={{ textAlign: align }}>
               <div style={{ fontSize: 10, color, letterSpacing: ".08em", transition: "color .4s" }}>
-                <span style={{
-                  display: "inline-block",
-                  animation: p.running ? "spin 1.2s linear infinite" : "none",
-                  marginRight: 4,
-                }}>{icon}</span>
+                <span style={{ display: "inline-block", animation: p.running ? "spin 1.2s linear infinite" : "none", marginRight: 3 }}>
+                  {icon}
+                </span>
                 {p.label}
               </div>
-              <div style={{ fontSize: 9, color: "rgba(196,188,178,.3)", letterSpacing: ".06em" }}>{p.sub}</div>
+              <div style={{ fontSize: 9, letterSpacing: ".06em", marginTop: 1 }}>
+                {p.running && !p.done ? (
+                  <span style={{ color: remaining > 0 ? "rgba(201,168,76,.55)" : "rgba(91,191,212,.7)" }}>
+                    {fmt(remaining)}
+                  </span>
+                ) : p.done ? (
+                  <span style={{ color: "rgba(125,201,148,.5)" }}>
+                    {elapsed > 0 ? `${elapsed}s` : "done"}
+                  </span>
+                ) : (
+                  <span style={{ color: "rgba(196,188,178,.2)" }}>{p.sub}</span>
+                )}
+              </div>
             </div>
           );
         })}
