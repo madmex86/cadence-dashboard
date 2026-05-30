@@ -180,6 +180,30 @@ export default function VideoPage() {
   const isActive  = (s) => s === "generating_script" || s === "generating_video";
   const activeJob = jobs.find(j => isActive(j.status));
 
+  async function retryService(service) {
+    if (!selectedJob) return;
+    try {
+      const res = await fetch("/api/video", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: selectedJob.id, service }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Retry failed"); return; }
+      // Optimistically update local state and start polling
+      const updated = {
+        ...selectedJob,
+        status: "generating_video",
+        ...(service === "runway" ? { runway_status: "processing" } : { did_status: "processing" }),
+      };
+      setSelectedJob(updated);
+      setJobs(prev => prev.map(j => j.id === selectedJob.id ? updated : j));
+      startPolling(selectedJob.id);
+    } catch (e) {
+      setError("Retry failed: " + e.message);
+    }
+  }
+
   return (
     <div>
       {/* Pulse animation keyframes */}
@@ -342,8 +366,28 @@ export default function VideoPage() {
                 {(selectedJob.did_status || selectedJob.runway_status) && (
                   <div style={{ marginBottom: 18 }}>
                     <div style={{ fontSize: 11, color: "rgba(196,188,178,.45)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 8 }}>Render Status</div>
-                    <ServiceBadge label="D-ID  —  Talking Head" status={selectedJob.did_status} />
-                    <ServiceBadge label="Runway  —  B-Roll"     status={selectedJob.runway_status} />
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <div style={{ flex: 1 }}>
+                        <ServiceBadge label="D-ID  —  Talking Head" status={selectedJob.did_status} />
+                      </div>
+                      {selectedJob.did_status === "failed" && selectedJob.claude_script && (
+                        <button className="btn sm" onClick={() => retryService("did")} style={{ flexShrink: 0, fontSize: 10 }}>
+                          ↺ Retry
+                        </button>
+                      )}
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ flex: 1 }}>
+                        <ServiceBadge label="Runway  —  B-Roll" status={selectedJob.runway_status} />
+                      </div>
+                      {selectedJob.runway_status === "failed" && selectedJob.claude_script && (
+                        <button className="btn sm" onClick={() => retryService("runway")} style={{ flexShrink: 0, fontSize: 10 }}>
+                          ↺ Retry
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
 

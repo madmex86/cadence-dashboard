@@ -206,6 +206,57 @@ export async function POST(request) {
   }
 }
 
+// ─── PATCH /api/video — retry a single failed service ────────────────────────
+// Body: { jobId, service: "runway" | "did" }
+export async function PATCH(request) {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { jobId, service } = await request.json();
+    if (!jobId || !["runway", "did"].includes(service)) {
+      return NextResponse.json({ error: "jobId and service (runway|did) required" }, { status: 400 });
+    }
+
+    const { data: job, error: fetchErr } = await supabase
+      .from("video_jobs").select("*").eq("id", jobId).single();
+    if (fetchErr || !job) {
+      return NextResponse.json({ error: "Job not found" }, { status: 404 });
+    }
+    if (!job.claude_script) {
+      return NextResponse.json({ error: "No script found — cannot retry without a generated script" }, { status: 400 });
+    }
+
+    const base   = getBaseUrl(request);
+    const secret = process.env.VIDEO_WEBHOOK_SECRET
+      ? `&secret=${encodeURIComponent(process.env.VIDEO_WEBHOOK_SECRET)}`
+      : "";
+
+    if (service === "runway") {
+      const webhookUrl = `${base}/api/video/webhook?jobId=${job.id}&source=runway${secret}`;
+      await supabase.from("video_jobs").update({ runway_status: "processing", status: "generating_video" }).eq("id", jobId);
+      const taskId = await dispatchRunway(job.claude_script, webhookUrl);
+      await supabase.from("video_jobs").update({ runway_task_id: taskId }).eq("id", jobId);
+      return NextResponse.json({ ok: true, runway_task_id: taskId });
+    }
+
+    if (service === "did") {
+      const webhookUrl = `${base}/api/video/webhook?jobId=${job.id}&source=did${secret}`;
+      await supabase.from("video_jobs").update({ did_status: "processing", status: "generating_video" }).eq("id", jobId);
+      const talkId = await dispatchDID(job.claude_script, webhookUrl);
+      await supabase.from("video_jobs").update({ did_talk_id: talkId }).eq("id", jobId);
+      return NextResponse.json({ ok: true, did_talk_id: talkId });
+    }
+
+  } catch (err) {
+    console.error("Retry error:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
 // ─── GET /api/video?jobId=xxx ─────────────────────────────────────────────────
 export async function GET(request) {
   try {
