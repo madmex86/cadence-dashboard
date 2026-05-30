@@ -223,8 +223,8 @@ export default function Topbar() {
             <div className="conn-item" title={`Runway Gen-3 Alpha`}>
               <div className="conn-dot" style={{ background: creditsData.runway?.status === 'ok' ? '#4a8c5c' : '#C9A84C' }}></div> Runway
             </div>
-            <div className="conn-item" title={creditsData.did?.credits !== null ? `D-ID API (${creditsData.did.credits} credits left)` : `D-ID API`}>
-              <div className="conn-dot" style={{ background: creditsData.did?.status === 'ok' ? (creditsData.did?.credits !== null && creditsData.did?.credits < 15 ? '#C9A84C' : '#4a8c5c') : '#C9A84C' }}></div> D-ID
+            <div className="conn-item" title={creditsData.did?.credits != null ? `D-ID API (${creditsData.did?.credits} credits left)` : `D-ID API`}>
+              <div className="conn-dot" style={{ background: creditsData.did?.status === 'ok' ? (creditsData.did?.credits != null && creditsData.did?.credits < 15 ? '#C9A84C' : '#4a8c5c') : '#C9A84C' }}></div> D-ID
             </div>
             <div className="conn-item" title="Discord Alerts">
               <div className="conn-dot" style={{ background: '#4a8c5c' }}></div> Discord
