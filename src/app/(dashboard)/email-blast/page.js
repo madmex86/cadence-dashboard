@@ -3,6 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "../../../lib/supabase/client";
 import styles from "./email.module.css";
+import dynamic from "next/dynamic";
+
+const RichTextEditor = dynamic(() => import("./RichTextEditor"), { ssr: false });
 
 export default function EmailBlastPage() {
   const [subCount, setSubCount] = useState(0);
@@ -50,8 +53,8 @@ export default function EmailBlastPage() {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  const previewBody = body
-    ? escHtml(body).replace(/\{\{name\}\}/g, '<em>Sarah</em>')
+  const previewBody = body && body !== "<p></p>"
+    ? body.replace(/\{\{name\}\}/g, '<em>Sarah</em>')
     : '<span class="' + styles.previewPlaceholder + '">Your message will appear here…</span>';
 
   const lastBlastDate = history.length > 0 
@@ -65,7 +68,7 @@ export default function EmailBlastPage() {
       setIsError(true);
       return;
     }
-    if (!body.trim()) {
+    if (!body.trim() || body === "<p></p>") {
       setStatus("Please write a message body.");
       setIsError(true);
       return;
@@ -213,15 +216,11 @@ export default function EmailBlastPage() {
 
             <div style={{ marginBottom: "4px" }}>
               <label className={styles.fl}>Message Body</label>
-              <textarea 
-                className={styles.fi} 
-                value={body} 
-                onChange={e => setBody(e.target.value)} 
-                placeholder="Hi {{name}},&#10;&#10;Write your message here…" 
-              />
+              <RichTextEditor value={body} onChange={setBody} />
             </div>
             <div className={styles.hint}>
               Use <code style={{ background: "rgba(201,168,76,.1)", padding: "1px 5px", borderRadius: "2px", fontSize: "11px" }}>{"{{name}}"}</code> to personalize with each subscriber's first name.
+              The editor supports bold, italic, underline, headings, lists, and hyperlinks.
             </div>
 
             <div className={styles.sendRow}>
