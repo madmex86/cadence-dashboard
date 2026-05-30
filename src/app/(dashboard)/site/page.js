@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { saveNotifSettings, insertFaq, updateFaq, deleteFaqById, swapFaqOrder } from "./actions";
 
 const EMPTY_FAQ = { question: "", answer: "", sort_order: 0, active: true };
 
@@ -44,16 +45,14 @@ export default function SitePage() {
 
   async function saveNotif() {
     setSavingNotif(true);
-    const supabase = createClient();
-    const { error } = await supabase.from("site_settings").update({
-      notif_visible: notif.show,
-      notif_text: notif.text_long,
-      notif_short: notif.text_short,
-      notif_cta_label: notif.cta_label,
-      notif_cta_url: notif.cta_url,
-    }).eq("id", 1);
-    setSavingNotif(false);
-    showToast(error ? "Save failed: " + error.message : "Notification bar saved");
+    try {
+      await saveNotifSettings(notif);
+      showToast("Notification bar saved");
+    } catch (e) {
+      showToast("Save failed: " + e.message);
+    } finally {
+      setSavingNotif(false);
+    }
   }
 
   function openAddFaq() {
@@ -68,47 +67,57 @@ export default function SitePage() {
 
   async function saveFaq() {
     setSavingFaq(true);
-    const supabase = createClient();
-    if (faqModal === "add") {
-      const { data } = await supabase.from("faqs").insert(faqForm).select().single();
-      if (data) setFaqs(prev => [...prev, data].sort((a, b) => a.sort_order - b.sort_order));
-    } else {
-      await supabase.from("faqs").update(faqForm).eq("id", faqModal);
-      setFaqs(prev => prev.map(f => f.id === faqModal ? { ...f, ...faqForm } : f));
+    try {
+      if (faqModal === "add") {
+        const data = await insertFaq(faqForm);
+        if (data) setFaqs(prev => [...prev, data].sort((a, b) => a.sort_order - b.sort_order));
+      } else {
+        await updateFaq(faqModal, faqForm);
+        setFaqs(prev => prev.map(f => f.id === faqModal ? { ...f, ...faqForm } : f));
+      }
+      setFaqModal(null);
+      showToast("FAQ saved");
+    } catch (e) {
+      showToast("Save failed: " + e.message);
+    } finally {
+      setSavingFaq(false);
     }
-    setSavingFaq(false);
-    setFaqModal(null);
-    showToast("FAQ saved");
   }
 
   async function deleteFaq(id) {
     if (!confirm("Delete this FAQ?")) return;
-    const supabase = createClient();
-    await supabase.from("faqs").delete().eq("id", id);
-    setFaqs(prev => prev.filter(f => f.id !== id));
+    try {
+      await deleteFaqById(id);
+      setFaqs(prev => prev.filter(f => f.id !== id));
+    } catch (e) {
+      showToast("Delete failed: " + e.message);
+    }
   }
 
   async function toggleFaqActive(faq) {
-    const supabase = createClient();
-    await supabase.from("faqs").update({ active: !faq.active }).eq("id", faq.id);
-    setFaqs(prev => prev.map(f => f.id === faq.id ? { ...f, active: !faq.active } : f));
+    try {
+      await updateFaq(faq.id, { active: !faq.active });
+      setFaqs(prev => prev.map(f => f.id === faq.id ? { ...f, active: !faq.active } : f));
+    } catch (e) {
+      showToast("Update failed: " + e.message);
+    }
   }
 
   async function moveFaq(id, dir) {
     const idx = faqs.findIndex(f => f.id === id);
     const swapIdx = idx + dir;
     if (swapIdx < 0 || swapIdx >= faqs.length) return;
-    const supabase = createClient();
     const a = faqs[idx];
     const b = faqs[swapIdx];
-    await Promise.all([
-      supabase.from("faqs").update({ sort_order: b.sort_order }).eq("id", a.id),
-      supabase.from("faqs").update({ sort_order: a.sort_order }).eq("id", b.id),
-    ]);
-    const newFaqs = [...faqs];
-    newFaqs[idx] = { ...a, sort_order: b.sort_order };
-    newFaqs[swapIdx] = { ...b, sort_order: a.sort_order };
-    setFaqs(newFaqs.sort((x, y) => x.sort_order - y.sort_order));
+    try {
+      await swapFaqOrder(a.id, a.sort_order, b.id, b.sort_order);
+      const newFaqs = [...faqs];
+      newFaqs[idx] = { ...a, sort_order: b.sort_order };
+      newFaqs[swapIdx] = { ...b, sort_order: a.sort_order };
+      setFaqs(newFaqs.sort((x, y) => x.sort_order - y.sort_order));
+    } catch (e) {
+      showToast("Reorder failed: " + e.message);
+    }
   }
 
   return (
