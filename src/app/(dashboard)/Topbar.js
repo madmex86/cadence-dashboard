@@ -26,6 +26,7 @@ const NAV_GROUPS = [
     { label: "Cami Edition", href: "/cami" },
     { label: "Review Forge", href: "/reviews" },
     { label: "Lure Forge", href: "/lure-forge" },
+    { label: "Video Engine", href: "/video" },
   ]},
   { label: "CUSTOMERS", children: [
     { label: "Customers", href: "/customers" },
@@ -158,7 +159,7 @@ export default function Topbar() {
     const isAdmin = isOwner || userRole === 'admin';
 
     // 1. Pages restricted to admin
-    const adminOnlyPaths = ['/admin', '/activity', '/cami', '/launch', '/email', '/site', '/links', '/lure-forge', '/reviews'];
+    const adminOnlyPaths = ['/admin', '/activity', '/cami', '/launch', '/email', '/site', '/links', '/lure-forge', '/reviews', '/video'];
     if (adminOnlyPaths.some(p => href.startsWith(p))) {
       return isAdmin;
     }
