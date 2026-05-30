@@ -205,9 +205,26 @@ function Compositor({ scriptMeta }) {
       const runway = runwayRef.current;
       const did = didRef.current;
 
-      // 1. Draw Runway B-roll as full background
+      // 1. Draw Runway B-roll with Ken Burns oscillating zoom
+      //    A slow sine wave breathes between 1.0x and 1.12x scale, reversing
+      //    direction smoothly — no jarring loop cuts visible.
       if (runway.readyState >= 2) {
-        ctx.drawImage(runway, 0, 0, canvas.width, canvas.height);
+        const t = performance.now() / 1000; // seconds
+        const cycleSecs = 8;                // full zoom-in-out cycle duration
+        // oscillates 0→1→0 using (1 - cos) / 2
+        const wave = (1 - Math.cos((t / cycleSecs) * Math.PI * 2)) / 2;
+        const minScale = 1.0;
+        const maxScale = 1.12;
+        const scale = minScale + (maxScale - minScale) * wave;
+
+        // Pan offsets: drift subtly in the opposite direction to the zoom
+        const panX = (canvas.width  * (scale - 1)) * (0.5 - wave * 0.3);
+        const panY = (canvas.height * (scale - 1)) * (0.5 - wave * 0.15);
+
+        ctx.save();
+        ctx.translate(-panX, -panY);
+        ctx.drawImage(runway, 0, 0, canvas.width * scale, canvas.height * scale);
+        ctx.restore();
       } else {
         ctx.fillStyle = "#000";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
