@@ -245,8 +245,8 @@ function Compositor({ scriptMeta }) {
         ctx.shadowColor = "rgba(0,0,0,0.8)";
         ctx.shadowBlur = 12;
         
-        const duration = runway.duration || 5;
-        const time = runway.currentTime;
+        const duration = did.duration || 5;
+        const time = did.currentTime;
         const segmentDuration = duration / segments.length;
         const index = Math.floor(time / segmentDuration);
         
@@ -295,10 +295,15 @@ function Compositor({ scriptMeta }) {
 
     runwayRef.current.currentTime = 0;
     didRef.current.currentTime = 0;
+    // Loop the B-roll so it continuously tiles behind the full-length voiceover
+    runwayRef.current.loop = true;
     runwayRef.current.play();
     didRef.current.play();
 
-    runwayRef.current.onended = () => {
+    // D-ID voiceover is the master clock — stop recording when IT ends, not Runway
+    didRef.current.onended = () => {
+      runwayRef.current.pause();
+      runwayRef.current.loop = false;
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
         mediaRecorderRef.current.stop();
       }
@@ -315,8 +320,8 @@ function Compositor({ scriptMeta }) {
       </div>
       
       <div style={{ display: "none" }}>
-        <video ref={runwayRef} src={`/api/proxy-video?url=${encodeURIComponent(scriptMeta._runway_video_url)}`} crossOrigin="anonymous" playsInline />
-        <video ref={didRef} src={`/api/proxy-video?url=${encodeURIComponent(scriptMeta._did_video_url)}`} crossOrigin="anonymous" playsInline />
+        <video ref={runwayRef} src={`/api/proxy-video?url=${encodeURIComponent(scriptMeta._runway_video_url)}`} playsInline />
+        <video ref={didRef} src={`/api/proxy-video?url=${encodeURIComponent(scriptMeta._did_video_url)}`} playsInline />
       </div>
       
       <div style={{ position: "relative", width: "100%", aspectRatio: "1280/720", background: "#000", borderRadius: 4, overflow: "hidden", marginBottom: 12 }}>
@@ -327,8 +332,13 @@ function Compositor({ scriptMeta }) {
         <button className="btn" onClick={() => {
           runwayRef.current.currentTime = 0;
           didRef.current.currentTime = 0;
+          runwayRef.current.loop = true;
           runwayRef.current.play();
           didRef.current.play();
+          didRef.current.onended = () => {
+            runwayRef.current.pause();
+            runwayRef.current.loop = false;
+          };
         }} style={{ flex: 1 }}>
           ▶ Play Preview
         </button>
