@@ -39,7 +39,7 @@ Return ONLY a minified JSON object — no markdown fences, no explanation — ma
 {
   "avatar_script": "30-45 second spoken script for the video presenter. Warm, whimsical tone. Mention the creature by name. Explicitly mention the Field Notes lore card and Cadence Creatures box if it fits the brief.",
   "voice_accent": "en_us_female_warm",
-  "b_roll_prompt": "Cinematic visual prompt for Runway. MUST explicitly describe a '3D printed plastic articulated flexi toy made of vibrant glossy filament' to ensure a toy is generated. Use the creature's specific color and environment from the bestiary. DO NOT describe photorealistic animals or giant robots.",
+  "b_roll_prompt": "Cinematic motion prompt for Runway image-to-video. The creature's actual photo will be used as the starting frame — describe only the MOTION and ATMOSPHERE, NOT the creature's appearance. Example: 'slow gentle breathing, soft bokeh background, golden hour light, shallow depth of field, subtle camera drift forward'. Keep it under 40 words.",
   "overlay_text_segments": ["Hook 6 words max", "Core benefit 8 words max", "Call to action 6 words max"]
 }`,
         },
@@ -98,17 +98,40 @@ async function dispatchDID(script, webhookUrl) {
 }
 
 // ─── Runway: generate B-roll backdrop video ───────────────────────────────────
-// Using gen4.5 as it supports pure text-to-video on the /v1/text_to_video endpoint
-async function dispatchRunway(script, webhookUrl) {
-  const body = {
-    model: process.env.RUNWAY_MODEL || "gen4.5",
-    promptText: script.b_roll_prompt,
-    duration: 5,       // 5 or 10; use 5 to reduce credit cost while testing
-    ratio: "1280:720", // 16:9 landscape
-    webhookUrl,
-  };
+// If the creature has a real photo (imageUrl), we use image-to-video so the B-roll
+// is anchored to the actual creature — not an AI hallucination. Falls back to
+// text-to-video when no image is available.
+async function dispatchRunway(script, webhookUrl, imageUrl = null) {
+  const model = process.env.RUNWAY_MODEL || "gen4_turbo";
 
-  const res = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
+  let endpoint, body;
+
+  if (imageUrl) {
+    // Image-to-video: use the real creature photo as the first frame
+    endpoint = "https://api.dev.runwayml.com/v1/image_to_video";
+    body = {
+      model,
+      promptImage: imageUrl,
+      promptText: script.b_roll_prompt,
+      duration: 5,
+      ratio: "1280:720",
+      webhookUrl,
+    };
+    console.log(`Runway: image-to-video with creature photo → ${imageUrl}`);
+  } else {
+    // Text-to-video fallback (no creature photo available)
+    endpoint = "https://api.dev.runwayml.com/v1/text_to_video";
+    body = {
+      model,
+      promptText: script.b_roll_prompt,
+      duration: 5,
+      ratio: "1280:720",
+      webhookUrl,
+    };
+    console.log(`Runway: text-to-video fallback (no creature photo)`);
+  }
+
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.RUNWAY_API_KEY}`,
@@ -120,7 +143,6 @@ async function dispatchRunway(script, webhookUrl) {
 
   const text = await res.text();
   if (!res.ok) {
-    // Log the full response so we can see the exact validation error
     console.error(`Runway API error (${res.status}):`, text);
     throw new Error(`Runway dispatch failed (${res.status}): ${text}`);
   }
@@ -158,10 +180,10 @@ export async function POST(request) {
     const didWebhook    = `${base}/api/video/webhook?jobId=${job.id}&source=did${secret}`;
     const runwayWebhook = `${base}/api/video/webhook?jobId=${job.id}&source=runway${secret}`;
 
-    // Fetch creatures to inject into the prompt
+    // Fetch creatures to inject into the prompt + find a matching creature photo
     const { data: creatures } = await supabase
       .from("creatures")
-      .select("name, species, filament_color, environment, notes")
+      .select("name, species, filament_color, environment, notes, image_url")
       .eq("active", true);
 
     const loreContext = creatures ? JSON.stringify(creatures) : "No bestiary data available.";
@@ -177,6 +199,18 @@ export async function POST(request) {
       return NextResponse.json({ error: "Script generation failed", detail: e.message }, { status: 500 });
     }
 
+    // Find a creature photo to anchor the Runway B-roll to the real creature.
+    // Match by scanning the campaign brief for any creature name in the bestiary.
+    let creatureImageUrl = null;
+    if (creatures?.length) {
+      const briefLower = campaignInput.toLowerCase();
+      const matched = creatures.find(c => c.name && briefLower.includes(c.name.toLowerCase()));
+      if (matched?.image_url) {
+        creatureImageUrl = matched.image_url;
+        console.log(`Matched creature "${matched.name}" → using photo for Runway B-roll`);
+      }
+    }
+
     await supabase.from("video_jobs").update({
       status: "generating_video",
       claude_script: script,
@@ -186,7 +220,7 @@ export async function POST(request) {
     // Step 2: Concurrent D-ID + Runway dispatch
     const [didResult, runwayResult] = await Promise.allSettled([
       dispatchDID(script, didWebhook),
-      dispatchRunway(script, runwayWebhook),
+      dispatchRunway(script, runwayWebhook, creatureImageUrl),
     ]);
 
     const update = {};
@@ -341,8 +375,18 @@ export async function PATCH(request) {
 
     if (service === "runway") {
       const webhookUrl = `${base}/api/video/webhook?jobId=${job.id}&source=runway${secret}`;
+      
+      // Re-fetch the creature image for the retry too
+      let retryImageUrl = null;
+      const { data: creatures } = await supabase.from("creatures").select("name, image_url").eq("active", true);
+      if (creatures?.length && job.campaign_input) {
+        const briefLower = job.campaign_input.toLowerCase();
+        const matched = creatures.find(c => c.name && briefLower.includes(c.name.toLowerCase()));
+        if (matched?.image_url) retryImageUrl = matched.image_url;
+      }
+
       await supabase.from("video_jobs").update({ runway_status: "processing", status: "generating_video", dispatched_at: new Date().toISOString() }).eq("id", jobId);
-      const taskId = await dispatchRunway(job.claude_script, webhookUrl);
+      const taskId = await dispatchRunway(job.claude_script, webhookUrl, retryImageUrl);
       await supabase.from("video_jobs").update({ runway_task_id: taskId }).eq("id", jobId);
       return NextResponse.json({ ok: true, runway_task_id: taskId });
     }
