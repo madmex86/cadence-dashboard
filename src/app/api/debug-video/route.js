@@ -1,22 +1,40 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 
 export async function GET(request) {
-  try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    );
-    const { data, error } = await supabase
-      .from("video_jobs")
-      .select("id, status, error, claude_script, created_at")
-      .order("created_at", { ascending: false })
-      .limit(5);
-
-    if (error) throw error;
-    
-    return NextResponse.json({ jobs: data });
-  } catch (err) {
-    return NextResponse.json({ error: err.message, stack: err.stack }, { status: 500 });
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const models = [
+    "claude-3-5-sonnet-20241022",
+    "claude-3-5-sonnet-20240620",
+    "claude-3-5-sonnet-latest",
+    "claude-3-sonnet-20240229",
+    "claude-3-opus-20240229",
+    "claude-3-haiku-20240307",
+    "claude-sonnet-4-6"
+  ];
+  
+  const results = {};
+  
+  for (const model of models) {
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 10,
+          messages: [{ role: "user", content: "hi" }]
+        }),
+      });
+      const data = await res.json();
+      results[model] = res.ok ? "OK" : data.error?.message || res.status;
+    } catch (e) {
+      results[model] = e.message;
+    }
   }
+  
+  return NextResponse.json({ test: results });
 }
