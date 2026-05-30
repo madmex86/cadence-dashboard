@@ -17,23 +17,28 @@ export default function SitePage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const [settingsRes, faqsRes] = await Promise.all([
-        supabase.from("site_settings").select("*").eq("id", 1).single(),
-        supabase.from("faqs").select("*").order("sort_order"),
-      ]);
-      if (settingsRes.data) {
-        const s = settingsRes.data;
-        setNotif({
-          show: s.notif_visible ?? false,
-          text_long: s.notif_text || "",
-          text_short: s.notif_short || "",
-          cta_label: s.notif_cta_label || "",
-          cta_url: s.notif_cta_url || "",
-        });
+      try {
+        const supabase = createClient();
+        const [settingsRes, faqsRes] = await Promise.all([
+          supabase.from("site_settings").select("*").eq("id", 1).single(),
+          supabase.from("faqs").select("*").order("sort_order"),
+        ]);
+        if (settingsRes.data) {
+          const s = settingsRes.data;
+          setNotif({
+            show: s.notif_visible ?? false,
+            text_long: s.notif_text || "",
+            text_short: s.notif_short || "",
+            cta_label: s.notif_cta_label || "",
+            cta_url: s.notif_cta_url || "",
+          });
+        }
+        setFaqs(faqsRes.data || []);
+      } catch (e) {
+        console.error("Site page load error:", e);
+      } finally {
+        setLoading(false);
       }
-      setFaqs(faqsRes.data || []);
-      setLoading(false);
     }
     load();
   }, []);
