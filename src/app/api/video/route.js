@@ -21,7 +21,7 @@ async function generateScript(campaignInput) {
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6",
+      model: process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-latest",
       max_tokens: 1024,
       messages: [
         {
@@ -88,7 +88,7 @@ async function dispatchDID(script, webhookUrl) {
 // Using gen4.5 as it supports pure text-to-video on the /v1/text_to_video endpoint
 async function dispatchRunway(script, webhookUrl) {
   const body = {
-    model: "gen4.5",
+    model: process.env.RUNWAY_MODEL || "gen4.5",
     promptText: script.b_roll_prompt,
     duration: 5,       // 5 or 10; use 5 to reduce credit cost while testing
     ratio: "1280:720", // 16:9 landscape
