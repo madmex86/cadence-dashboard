@@ -21,8 +21,9 @@ async function generateScript(campaignInput, loreContext) {
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-latest",
-      max_tokens: 1024,
+      model: process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20241022",
+      max_tokens: 4096,
+      temperature: 0.2,
       messages: [
         {
           role: "user",
