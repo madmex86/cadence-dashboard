@@ -505,7 +505,6 @@ export default function VideoPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Retry failed"); return; }
-      // Optimistically update local state and start polling
       const updated = {
         ...selectedJob,
         status: "generating_video",
@@ -516,6 +515,19 @@ export default function VideoPage() {
       startPolling(selectedJob.id);
     } catch (e) {
       setError("Retry failed: " + e.message);
+    }
+  }
+
+  async function deleteJob(jobId, e) {
+    e.stopPropagation(); // don't select the row
+    if (!confirm("Delete this render? This cannot be undone.")) return;
+    try {
+      const res = await fetch(`/api/video?jobId=${jobId}`, { method: "DELETE" });
+      if (!res.ok) { const d = await res.json(); setError(d.error || "Delete failed"); return; }
+      setJobs(prev => prev.filter(j => j.id !== jobId));
+      if (selectedJob?.id === jobId) setSelectedJob(null);
+    } catch (err) {
+      setError("Delete failed: " + err.message);
     }
   }
 
@@ -651,6 +663,18 @@ export default function VideoPage() {
                       </div>
                     </div>
                     <StatusPill status={job.status} small />
+                    <button
+                      onClick={(e) => deleteJob(job.id, e)}
+                      title="Delete render"
+                      style={{
+                        background: "none", border: "none", cursor: "pointer",
+                        color: "rgba(196,188,178,.25)", fontSize: 14, padding: "2px 4px",
+                        lineHeight: 1, borderRadius: 3, flexShrink: 0,
+                        transition: "color .15s",
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.color = "#e87070"}
+                      onMouseLeave={e => e.currentTarget.style.color = "rgba(196,188,178,.25)"}
+                    >✕</button>
                   </div>
                 ))}
               </div>
