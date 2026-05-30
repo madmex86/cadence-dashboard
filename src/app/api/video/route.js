@@ -26,13 +26,13 @@ async function generateScript(campaignInput, loreContext) {
       messages: [
         {
           role: "user",
-          content: \`You are a video production assistant for Cadence Creatures, a boutique 3D-printed flexi animal toy shop in Visalia, CA. Each creature ships with a hidden Field Notes lore card inside a custom box.
+          content: `You are a video production assistant for Cadence Creatures, a boutique 3D-printed flexi animal toy shop in Visalia, CA. Each creature ships with a hidden Field Notes lore card inside a custom box.
 
 Here is the current active bestiary of Cadence Creatures for context (use this to ensure accurate colors, species, and lore if the user mentions one):
-\${loreContext}
+${loreContext}
 
 Generate a short-form social video script based on this campaign brief:
-"\${campaignInput}"
+"${campaignInput}"
 
 Return ONLY a minified JSON object — no markdown fences, no explanation — matching this exact schema:
 {
@@ -40,7 +40,7 @@ Return ONLY a minified JSON object — no markdown fences, no explanation — ma
   "voice_accent": "en_us_female_warm",
   "b_roll_prompt": "Cinematic visual prompt for Runway. MUST explicitly describe a '3D printed plastic articulated flexi toy made of vibrant glossy filament' to ensure a toy is generated. Use the creature's specific color and environment from the bestiary. DO NOT describe photorealistic animals or giant robots.",
   "overlay_text_segments": ["Hook 6 words max", "Core benefit 8 words max", "Call to action 6 words max"]
-}\`,
+}`,
         },
       ],
     }),
