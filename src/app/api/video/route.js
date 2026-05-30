@@ -210,6 +210,78 @@ export async function POST(request) {
   }
 }
 
+// ─── Polling fallback: check D-ID + Runway directly ─────────────────────────
+// Called from GET when a job has been "generating_video" for 30+ seconds.
+// Webhooks are unreliable; this ensures the job always completes eventually.
+async function pollServicesIfStuck(supabase, job) {
+  if (job.status !== "generating_video" || !job.dispatched_at) return job;
+  const elapsed = (Date.now() - new Date(job.dispatched_at).getTime()) / 1000;
+  if (elapsed < 30) return job; // too early — give webhooks a chance first
+
+  const update = {};
+
+  // Check D-ID
+  if (job.did_talk_id && job.did_status === "processing") {
+    try {
+      const res  = await fetch(`https://api.d-id.com/talks/${job.did_talk_id}`, {
+        headers: { Authorization: `Basic ${process.env.DID_API_KEY}` },
+      });
+      const data = await res.json();
+      if      (data.status === "done")  update.did_status = "completed";
+      else if (data.status === "error") update.did_status = "failed";
+      console.log(`D-ID poll: talk ${job.did_talk_id} → ${data.status}`);
+    } catch (e) { console.error("D-ID poll error:", e.message); }
+  }
+
+  // Check Runway
+  if (job.runway_task_id && job.runway_status === "processing") {
+    try {
+      const res  = await fetch(`https://api.dev.runwayml.com/v1/tasks/${job.runway_task_id}`, {
+        headers: {
+          Authorization: `Bearer ${process.env.RUNWAY_API_KEY}`,
+          "X-Runway-Version": "2024-11-06",
+        },
+      });
+      const data = await res.json();
+      if      (data.status === "SUCCEEDED") { update.runway_status = "completed"; update._runway_url = data.output?.[0] || null; }
+      else if (data.status === "FAILED")    update.runway_status = "failed";
+      console.log(`Runway poll: task ${job.runway_task_id} → ${data.status}`);
+    } catch (e) { console.error("Runway poll error:", e.message); }
+  }
+
+  if (!Object.keys(update).length) return job;
+
+  // Persist status changes
+  const { _runway_url, ...dbUpdate } = update;
+  await supabase.from("video_jobs").update(dbUpdate).eq("id", job.id);
+  const merged = { ...job, ...dbUpdate };
+
+  // Both done → trigger composite inline
+  if (merged.did_status === "completed" && merged.runway_status === "completed") {
+    let didUrl = null;
+    try {
+      const r = await fetch(`https://api.d-id.com/talks/${job.did_talk_id}`, {
+        headers: { Authorization: `Basic ${process.env.DID_API_KEY}` },
+      });
+      didUrl = (await r.json()).result_url || null;
+    } catch (e) { console.error("D-ID result_url fetch:", e.message); }
+
+    const outputUrl = didUrl || _runway_url;
+    const scriptMeta = { ...(merged.claude_script || {}), _did_video_url: didUrl, _runway_video_url: _runway_url };
+    await supabase.from("video_jobs").update({
+      status:        outputUrl ? "completed" : "failed",
+      output_url:    outputUrl,
+      claude_script: scriptMeta,
+    }).eq("id", job.id);
+
+    // Return fresh row
+    const { data } = await supabase.from("video_jobs").select("*").eq("id", job.id).single();
+    return data || merged;
+  }
+
+  return merged;
+}
+
 // ─── PATCH /api/video — retry a single failed service ────────────────────────
 // Body: { jobId, service: "runway" | "did" }
 export async function PATCH(request) {
@@ -286,7 +358,10 @@ export async function GET(request) {
       .from("video_jobs").select("*").eq("id", jobId).single();
 
     if (error) return NextResponse.json({ error: "Job not found" }, { status: 404 });
-    return NextResponse.json({ job: data });
+
+    // Polling fallback: actively checks D-ID + Runway if webhooks haven't fired
+    const job = await pollServicesIfStuck(supabase, data);
+    return NextResponse.json({ job });
 
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
