@@ -207,25 +207,44 @@ function Compositor({ scriptMeta }) {
       const runway = runwayRef.current;
       const did = didRef.current;
 
-      // 1. Draw Runway B-roll with Ken Burns oscillating zoom
-      //    A slow sine wave breathes between 1.0x and 1.12x scale, reversing
-      //    direction smoothly — no jarring loop cuts visible.
+      // 1. Draw Runway B-roll with proper Ken Burns pan+zoom.
+      //    Each 10-second "move" drifts linearly from one random anchor to
+      //    another. Moves chain seamlessly: end-of-move-N == start-of-move-(N+1).
       if (runway.readyState >= 2) {
-        const t = performance.now() / 1000; // seconds
-        const cycleSecs = 8;                // full zoom-in-out cycle duration
-        // oscillates 0→1→0 using (1 - cos) / 2
-        const wave = (1 - Math.cos((t / cycleSecs) * Math.PI * 2)) / 2;
-        const minScale = 1.0;
-        const maxScale = 1.12;
-        const scale = minScale + (maxScale - minScale) * wave;
+        const KB_DUR    = 10;   // seconds per directional move
+        const SCALE_MIN = 1.0;
+        const SCALE_MAX = 1.12;
 
-        // Pan offsets: drift subtly in the opposite direction to the zoom
-        const panX = (canvas.width  * (scale - 1)) * (0.5 - wave * 0.3);
-        const panY = (canvas.height * (scale - 1)) * (0.5 - wave * 0.15);
+        const t        = performance.now() / 1000;
+        const moveIdx  = Math.floor(t / KB_DUR);
+        const progress = (t % KB_DUR) / KB_DUR;
+        // Ease-in-out so each move decelerates before the next begins
+        const ease = progress < 0.5
+          ? 2 * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+        // Stable pseudo-random per move — pure math, no stored state needed
+        const rng = (seed) => {
+          const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
+          return x - Math.floor(x);
+        };
+        const anchor = (mi) => ({
+          x:     rng(mi * 4),
+          y:     rng(mi * 4 + 1),
+          scale: SCALE_MIN + rng(mi * 4 + 2) * (SCALE_MAX - SCALE_MIN),
+        });
+
+        const a0 = anchor(moveIdx);      // start of current move
+        const a1 = anchor(moveIdx + 1);  // end = start of next move (seamless chain)
+
+        const scale   = a0.scale + (a1.scale - a0.scale) * ease;
+        const maxOffX = canvas.width  * (scale - 1);
+        const maxOffY = canvas.height * (scale - 1);
+        const offsetX = (a0.x + (a1.x - a0.x) * ease) * maxOffX;
+        const offsetY = (a0.y + (a1.y - a0.y) * ease) * maxOffY;
 
         ctx.save();
-        ctx.translate(-panX, -panY);
-        ctx.drawImage(runway, 0, 0, canvas.width * scale, canvas.height * scale);
+        ctx.drawImage(runway, -offsetX, -offsetY, canvas.width * scale, canvas.height * scale);
         ctx.restore();
       } else {
         ctx.fillStyle = "#000";
