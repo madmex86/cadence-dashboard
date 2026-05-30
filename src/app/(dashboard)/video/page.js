@@ -201,6 +201,8 @@ function Compositor({ scriptMeta }) {
     let animId;
 
     function render() {
+      // Always reschedule — even if videos aren't ready yet
+      animId = requestAnimationFrame(render);
       if (!canvas || !runwayRef.current || !didRef.current) return;
       const runway = runwayRef.current;
       const did = didRef.current;
@@ -272,8 +274,6 @@ function Compositor({ scriptMeta }) {
           ctx.fillText(text, canvas.width / 2, 120);
         }
       }
-
-      animId = requestAnimationFrame(render);
     }
 
     render();
