@@ -214,10 +214,10 @@ export default function VideoPage() {
         AI-generated short-form video — script · talking head · B-roll backdrop
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 24, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 24, alignItems: "start", minWidth: 0 }}>
 
         {/* ── LEFT: Compose + Queue ──────────────────────────────────────── */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, minWidth: 0, overflow: "hidden" }}>
 
           {/* Compose */}
           <div style={{ background: "rgba(255,255,255,.02)", border: "1px solid rgba(201,168,76,.15)", borderRadius: 8, padding: "20px 24px" }}>
@@ -234,7 +234,7 @@ export default function VideoPage() {
                 onChange={e => setCampaignInput(e.target.value)}
                 placeholder={`Example:\n"Holiday flexi dragon — Ember. Limited drop. Targets gift buyers on Instagram. Whimsical, warm tone. Include Field Notes lore card mention."`}
                 disabled={generating}
-                style={{ resize: "vertical", fontFamily: "inherit" }}
+                style={{ resize: "vertical", fontFamily: "inherit", width: "100%", boxSizing: "border-box" }}
               />
             </div>
             <div style={{ fontSize: 11, color: "rgba(196,188,178,.35)", marginBottom: 16, lineHeight: 1.6 }}>
@@ -287,8 +287,12 @@ export default function VideoPage() {
                       transition: "background .15s, border-color .15s",
                     }}
                   >
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, color: "rgba(250,246,240,.8)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: 3 }}>
+                    <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+                      <div style={{
+                        fontSize: 12, color: "rgba(250,246,240,.8)", marginBottom: 3,
+                        display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+                        overflow: "hidden", lineHeight: 1.4,
+                      }}>
                         {job.campaign_input || "—"}
                       </div>
                       <div style={{ fontSize: 10, color: "rgba(196,188,178,.35)", letterSpacing: "0.08em" }}>
@@ -304,7 +308,7 @@ export default function VideoPage() {
         </div>
 
         {/* ── RIGHT: Job Detail ──────────────────────────────────────────── */}
-        <div style={{ position: "sticky", top: 80 }}>
+        <div style={{ position: "sticky", top: 80, minWidth: 0, overflow: "hidden" }}>
           {!selectedJob ? (
             <div style={{
               background: "rgba(255,255,255,.02)", border: "1px solid rgba(201,168,76,.1)",
