@@ -358,6 +358,9 @@ export default function VideoPage() {
           border-radius: 20px; font-size: 11px; color: var(--goldl, #E8D08A);
           letter-spacing: .06em; margin: 3px 3px 3px 0;
         }
+        @media (max-width: 860px) {
+          .video-layout { grid-template-columns: 1fr !important; }
+        }
       `}</style>
 
       <div className="sec-hdr">
@@ -374,7 +377,7 @@ export default function VideoPage() {
         AI-generated short-form video — script · talking head · B-roll backdrop
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 24, alignItems: "start", minWidth: 0 }}>
+      <div className="video-layout" style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 24, alignItems: "start", minWidth: 0 }}>
 
         {/* ── LEFT: Compose + Queue ──────────────────────────────────────── */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20, minWidth: 0, overflow: "hidden" }}>
