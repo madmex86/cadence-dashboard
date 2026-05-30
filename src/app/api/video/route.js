@@ -53,9 +53,18 @@ Return ONLY a minified JSON object — no markdown fences, no explanation — ma
 
   const data = await res.json();
   const raw = data.content[0].text.trim();
-  // Strip accidental markdown fences if Claude includes them despite instructions
-  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
-  return JSON.parse(cleaned);
+  
+  // Extract JSON object using regex to handle conversational prefixes/suffixes
+  const match = raw.match(/\{[\s\S]*\}/);
+  if (!match) {
+    throw new Error("Claude failed to return a JSON object. Raw response: " + raw.substring(0, 100));
+  }
+  
+  try {
+    return JSON.parse(match[0]);
+  } catch (parseError) {
+    throw new Error("Claude returned malformed JSON: " + parseError.message);
+  }
 }
 
 // ─── D-ID: create talking-head video ─────────────────────────────────────────

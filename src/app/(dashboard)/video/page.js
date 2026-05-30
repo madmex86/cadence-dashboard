@@ -315,8 +315,8 @@ function Compositor({ scriptMeta }) {
       </div>
       
       <div style={{ display: "none" }}>
-        <video ref={runwayRef} src={scriptMeta._runway_video_url} crossOrigin="anonymous" playsInline />
-        <video ref={didRef} src={scriptMeta._did_video_url} crossOrigin="anonymous" playsInline />
+        <video ref={runwayRef} src={`/api/proxy-video?url=${encodeURIComponent(scriptMeta._runway_video_url)}`} crossOrigin="anonymous" playsInline />
+        <video ref={didRef} src={`/api/proxy-video?url=${encodeURIComponent(scriptMeta._did_video_url)}`} crossOrigin="anonymous" playsInline />
       </div>
       
       <div style={{ position: "relative", width: "100%", aspectRatio: "1280/720", background: "#000", borderRadius: 4, overflow: "hidden", marginBottom: 12 }}>
