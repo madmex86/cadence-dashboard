@@ -49,6 +49,7 @@ export default function Topbar() {
   const [loadingRole, setLoadingRole] = useState(true);
   const [openGroup, setOpenGroup] = useState(null);
   const [hudData, setHudData] = useState({ visitors: 0, profit: 0, printersActive: 0 });
+  const [creditsData, setCreditsData] = useState({ did: null, runway: null });
   const navRef = useRef(null);
 
   useEffect(() => {
@@ -129,6 +130,11 @@ export default function Topbar() {
         const activeCount = prData ? prData.filter(p => p.current_creature_id).length : 0;
 
         setHudData({ visitors: count || 0, profit: net, printersActive: activeCount });
+        
+        // Video Engine Credits
+        fetch('/api/credits').then(r => r.json()).then(data => {
+          if (data && data.did) setCreditsData(data);
+        }).catch(e => console.error("Credits fetch error:", e));
       } catch (e) {
         console.error("HUD load error", e);
       }
@@ -213,6 +219,12 @@ export default function Topbar() {
             </div>
             <div className="conn-item" title="Anthropic AI API">
               <div className="conn-dot" style={{ background: '#4a8c5c' }}></div> AI API
+            </div>
+            <div className="conn-item" title={`Runway Gen-3 Alpha`}>
+              <div className="conn-dot" style={{ background: creditsData.runway?.status === 'ok' ? '#4a8c5c' : '#C9A84C' }}></div> Runway
+            </div>
+            <div className="conn-item" title={creditsData.did?.credits !== null ? `D-ID API (${creditsData.did.credits} credits left)` : `D-ID API`}>
+              <div className="conn-dot" style={{ background: creditsData.did?.status === 'ok' ? (creditsData.did?.credits !== null && creditsData.did?.credits < 15 ? '#C9A84C' : '#4a8c5c') : '#C9A84C' }}></div> D-ID
             </div>
             <div className="conn-item" title="Discord Alerts">
               <div className="conn-dot" style={{ background: '#4a8c5c' }}></div> Discord
