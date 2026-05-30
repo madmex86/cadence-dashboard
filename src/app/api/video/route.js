@@ -97,7 +97,7 @@ async function dispatchRunway(script, webhookUrl) {
     webhookUrl,
   };
 
-  const res = await fetch("https://api.runwayml.com/v1/image_to_video", {
+  const res = await fetch("https://api.dev.runwayml.com/v1/image_to_video", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.RUNWAY_API_KEY}`,
