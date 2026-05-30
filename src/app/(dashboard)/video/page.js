@@ -1,6 +1,106 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 
+// ─── Progress helpers ─────────────────────────────────────────────────────────
+// Three phases, each worth 1/3 of the bar:
+//   Script (Claude)  →  Presenter (D-ID)  →  B-Roll (Runway)
+function getPhases(job) {
+  if (!job) return [];
+  const scriptDone   = !!job.claude_script;
+  const didDone      = job.did_status    === "completed";
+  const didFailed    = job.did_status    === "failed";
+  const runwayDone   = job.runway_status === "completed";
+  const runwayFailed = job.runway_status === "failed";
+
+  const scriptRunning  = job.status === "generating_script";
+  const didRunning     = !didDone    && !didFailed    && scriptDone;
+  const runwayRunning  = !runwayDone && !runwayFailed && scriptDone;
+
+  return [
+    {
+      label:   "Script",
+      sub:     "Claude",
+      done:    scriptDone,
+      running: scriptRunning,
+      failed:  false,
+    },
+    {
+      label:   "Presenter",
+      sub:     "D-ID",
+      done:    didDone,
+      running: didRunning,
+      failed:  didFailed,
+    },
+    {
+      label:   "B-Roll",
+      sub:     "Runway",
+      done:    runwayDone,
+      running: runwayRunning,
+      failed:  runwayFailed,
+    },
+  ];
+}
+
+function ProgressBar({ job }) {
+  if (!job || job.status === "pending") return null;
+  const phases = getPhases(job);
+  const completed = job.status === "completed";
+  const failed    = job.status === "failed";
+
+  return (
+    <div style={{ marginBottom: 18 }}>
+      {/* Overall bar */}
+      <div style={{
+        height: 4, background: "rgba(255,255,255,.08)", borderRadius: 2,
+        overflow: "hidden", marginBottom: 10, position: "relative",
+      }}>
+        {phases.map((p, i) => {
+          const left = `${i * 33.33}%`;
+          const color = p.failed ? "#e87070" : p.done ? "#7dc994" : "#C9A84C";
+          return (
+            <div key={i} style={{
+              position: "absolute", top: 0, left, height: "100%",
+              width: p.done || completed ? "33.33%" : p.running ? "33.33%" : "0%",
+              background: color,
+              transition: "width .6s ease",
+              // shimmer overlay for running phases
+              backgroundImage: (p.running && !p.done)
+                ? `linear-gradient(90deg, ${color}cc 0%, ${color}ff 40%, ${color}cc 100%)`
+                : undefined,
+              animation: (p.running && !p.done) ? "shimmer 1.6s ease-in-out infinite" : undefined,
+            }} />
+          );
+        })}
+        {/* Full fill when completed */}
+        {completed && (
+          <div style={{ position: "absolute", inset: 0, background: "#7dc994", transition: "all .4s" }} />
+        )}
+      </div>
+
+      {/* Phase labels */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4 }}>
+        {phases.map((p, i) => {
+          const color = p.failed ? "#e87070" : p.done || completed ? "#7dc994" : p.running ? "#C9A84C" : "rgba(196,188,178,.25)";
+          const icon  = p.failed ? "✕" : p.done || completed ? "✓" : p.running ? "⟳" : "·";
+          return (
+            <div key={i} style={{ textAlign: i === 1 ? "center" : i === 2 ? "right" : "left" }}>
+              <div style={{ fontSize: 10, color, letterSpacing: ".08em", transition: "color .4s" }}>
+                <span style={{
+                  display: "inline-block",
+                  animation: p.running ? "spin 1.2s linear infinite" : "none",
+                  marginRight: 4,
+                }}>{icon}</span>
+                {p.label}
+              </div>
+              <div style={{ fontSize: 9, color: "rgba(196,188,178,.3)", letterSpacing: ".06em" }}>{p.sub}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Status helpers ───────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
   pending:           { label: "Pending",          color: "rgba(196,188,178,.45)", pulse: false },
@@ -213,6 +313,15 @@ export default function VideoPage() {
           70%  { box-shadow: 0 0 0 6px transparent; opacity: .6; }
           100% { box-shadow: 0 0 0 0 transparent; opacity: 1; }
         }
+        @keyframes shimmer {
+          0%   { opacity: .55; }
+          50%  { opacity: 1;   }
+          100% { opacity: .55; }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
         .vj-row:hover { background: rgba(201,168,76,.04) !important; }
         .vj-row.selected { background: rgba(201,168,76,.07) !important; border-color: rgba(201,168,76,.3) !important; }
         .script-block { background: rgba(0,0,0,.25); border: 1px solid rgba(201,168,76,.1); border-radius: 4; padding: 14px; margin-bottom: 12px; }
@@ -356,38 +465,28 @@ export default function VideoPage() {
 
               <div style={{ padding: "16px 20px", maxHeight: "calc(100vh - 280px)", overflowY: "auto" }}>
 
+                {/* Progress bar */}
+                <ProgressBar job={selectedJob} />
+
                 {/* Brief */}
                 <div style={{ fontSize: 11, color: "rgba(196,188,178,.45)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 6 }}>Brief</div>
                 <div style={{ fontSize: 12, color: "rgba(250,246,240,.7)", marginBottom: 18, lineHeight: 1.5 }}>
                   {selectedJob.campaign_input}
                 </div>
 
-                {/* Service status */}
-                {(selectedJob.did_status || selectedJob.runway_status) && (
-                  <div style={{ marginBottom: 18 }}>
-                    <div style={{ fontSize: 11, color: "rgba(196,188,178,.45)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 8 }}>Render Status</div>
-
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                      <div style={{ flex: 1 }}>
-                        <ServiceBadge label="D-ID  —  Talking Head" status={selectedJob.did_status} />
-                      </div>
-                      {selectedJob.did_status === "failed" && selectedJob.claude_script && (
-                        <button className="btn sm" onClick={() => retryService("did")} style={{ flexShrink: 0, fontSize: 10 }}>
-                          ↺ Retry
-                        </button>
-                      )}
-                    </div>
-
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ flex: 1 }}>
-                        <ServiceBadge label="Runway  —  B-Roll" status={selectedJob.runway_status} />
-                      </div>
-                      {selectedJob.runway_status === "failed" && selectedJob.claude_script && (
-                        <button className="btn sm" onClick={() => retryService("runway")} style={{ flexShrink: 0, fontSize: 10 }}>
-                          ↺ Retry
-                        </button>
-                      )}
-                    </div>
+                {/* Retry buttons — only shown when a service fails */}
+                {(selectedJob.did_status === "failed" || selectedJob.runway_status === "failed") && selectedJob.claude_script && (
+                  <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                    {selectedJob.did_status === "failed" && (
+                      <button className="btn sm" onClick={() => retryService("did")} style={{ fontSize: 10 }}>
+                        ↺ Retry Presenter
+                      </button>
+                    )}
+                    {selectedJob.runway_status === "failed" && (
+                      <button className="btn sm" onClick={() => retryService("runway")} style={{ fontSize: 10 }}>
+                        ↺ Retry B-Roll
+                      </button>
+                    )}
                   </div>
                 )}
 
