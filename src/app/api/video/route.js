@@ -85,15 +85,13 @@ async function dispatchDID(script, webhookUrl) {
 }
 
 // ─── Runway: generate B-roll backdrop video ───────────────────────────────────
-// Gen-3 Alpha (gen3a) is the stable text-to-video model that
-// accepts promptText.
-// Gen-3 Alpha Turbo (gen3a_turbo) requires a promptImage.
+// Using gen4.5 as it supports pure text-to-video on the /v1/text_to_video endpoint
 async function dispatchRunway(script, webhookUrl) {
   const body = {
-    model: "gen3a",
+    model: "gen4.5",
     promptText: script.b_roll_prompt,
     duration: 5,       // 5 or 10; use 5 to reduce credit cost while testing
-    ratio: "1280:768", // 16:9 landscape — valid for gen3a_turbo
+    ratio: "1280:720", // 16:9 landscape
     webhookUrl,
   };
 
