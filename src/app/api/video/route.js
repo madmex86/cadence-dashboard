@@ -214,11 +214,20 @@ export async function POST(request) {
 // Called from GET when a job has been "generating_video" for 30+ seconds.
 // Webhooks are unreliable; this ensures the job always completes eventually.
 async function pollServicesIfStuck(supabase, job) {
-  if (job.status !== "generating_video" || !job.dispatched_at) return job;
-  const elapsed = (Date.now() - new Date(job.dispatched_at).getTime()) / 1000;
+  if (job.status !== "generating_video") return job;
+
+  // Use dispatched_at if set, fall back to created_at
+  const startTime = job.dispatched_at || job.created_at;
+  const elapsed   = (Date.now() - new Date(startTime).getTime()) / 1000;
   if (elapsed < 30) return job; // too early — give webhooks a chance first
 
   const update = {};
+
+  // If Runway was never dispatched (null task_id), mark it failed immediately
+  if (!job.runway_task_id && job.runway_status === "processing") {
+    update.runway_status = "failed";
+    update.error = "Runway was never dispatched — use Retry B-Roll";
+  }
 
   // Check D-ID
   if (job.did_talk_id && job.did_status === "processing") {
