@@ -9,7 +9,7 @@ function getBaseUrl(request) {
 }
 
 // ─── Claude: generate structured video script ────────────────────────────────
-async function generateScript(campaignInput) {
+async function generateScript(campaignInput, loreContext) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
 
@@ -26,18 +26,21 @@ async function generateScript(campaignInput) {
       messages: [
         {
           role: "user",
-          content: `You are a video production assistant for Cadence Creatures, a boutique 3D-printed flexi animal toy shop in Visalia, CA. Each creature ships with a hidden Field Notes lore card.
+          content: \`You are a video production assistant for Cadence Creatures, a boutique 3D-printed flexi animal toy shop in Visalia, CA. Each creature ships with a hidden Field Notes lore card inside a custom box.
+
+Here is the current active bestiary of Cadence Creatures for context (use this to ensure accurate colors, species, and lore if the user mentions one):
+\${loreContext}
 
 Generate a short-form social video script based on this campaign brief:
-"${campaignInput}"
+"\${campaignInput}"
 
 Return ONLY a minified JSON object — no markdown fences, no explanation — matching this exact schema:
 {
-  "avatar_script": "30-45 second spoken script for the video presenter. Warm, whimsical tone. Mention the creature by name if provided.",
+  "avatar_script": "30-45 second spoken script for the video presenter. Warm, whimsical tone. Mention the creature by name. Explicitly mention the Field Notes lore card and Cadence Creatures box if it fits the brief.",
   "voice_accent": "en_us_female_warm",
-  "b_roll_prompt": "Cinematic visual prompt for background footage. Describe textures, lighting, movement. Fantasy/nature aesthetic.",
+  "b_roll_prompt": "Cinematic visual prompt for Runway. MUST explicitly describe a '3D printed plastic articulated flexi toy made of vibrant glossy filament' to ensure a toy is generated. Use the creature's specific color and environment from the bestiary. DO NOT describe photorealistic animals or giant robots.",
   "overlay_text_segments": ["Hook 6 words max", "Core benefit 8 words max", "Call to action 6 words max"]
-}`,
+}\`,
         },
       ],
     }),
@@ -145,10 +148,18 @@ export async function POST(request) {
     const didWebhook    = `${base}/api/video/webhook?jobId=${job.id}&source=did${secret}`;
     const runwayWebhook = `${base}/api/video/webhook?jobId=${job.id}&source=runway${secret}`;
 
+    // Fetch creatures to inject into the prompt
+    const { data: creatures } = await supabase
+      .from("creatures")
+      .select("name, species, filament_color, environment, notes")
+      .eq("active", true);
+
+    const loreContext = creatures ? JSON.stringify(creatures) : "No bestiary data available.";
+
     // Step 1: Claude script
     let script;
     try {
-      script = await generateScript(campaignInput);
+      script = await generateScript(campaignInput, loreContext);
     } catch (e) {
       await supabase.from("video_jobs")
         .update({ status: "failed", error: "Script generation failed: " + e.message })

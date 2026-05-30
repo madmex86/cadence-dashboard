@@ -185,6 +185,167 @@ function ServiceBadge({ label, status }) {
   );
 }
 
+// ─── Studio Preview Compositor ────────────────────────────────────────────────
+function Compositor({ scriptMeta }) {
+  const canvasRef = useRef(null);
+  const runwayRef = useRef(null);
+  const didRef = useRef(null);
+  const [recording, setRecording] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState(null);
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    let animId;
+
+    function render() {
+      if (!canvas || !runwayRef.current || !didRef.current) return;
+      const runway = runwayRef.current;
+      const did = didRef.current;
+
+      // 1. Draw Runway B-roll as full background
+      if (runway.readyState >= 2) {
+        ctx.drawImage(runway, 0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      // 2. Draw D-ID Avatar in circular mask (TikTok reaction style)
+      if (did.readyState >= 2) {
+        const radius = 140;
+        const x = 180;
+        const y = canvas.height - 180;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        
+        ctx.drawImage(did, x - radius, y - radius, radius * 2, radius * 2);
+        ctx.restore();
+
+        // draw border around circular mask
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = "rgba(201, 168, 76, 0.8)";
+        ctx.stroke();
+      }
+
+      // 3. Render Overlay Text Segments
+      const segments = scriptMeta.overlay_text_segments || [];
+      if (segments.length > 0) {
+        ctx.fillStyle = "white";
+        ctx.font = "bold 56px system-ui, -apple-system, sans-serif";
+        ctx.textAlign = "center";
+        ctx.shadowColor = "rgba(0,0,0,0.8)";
+        ctx.shadowBlur = 12;
+        
+        const duration = runway.duration || 5;
+        const time = runway.currentTime;
+        const segmentDuration = duration / segments.length;
+        const index = Math.floor(time / segmentDuration);
+        
+        if (segments[index]) {
+          const text = segments[index].toUpperCase();
+          ctx.fillText(text, canvas.width / 2, 120);
+        }
+      }
+
+      animId = requestAnimationFrame(render);
+    }
+
+    render();
+    return () => cancelAnimationFrame(animId);
+  }, [scriptMeta]);
+
+  function startRecording() {
+    if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+    setDownloadUrl(null);
+    setRecording(true);
+    chunksRef.current = [];
+
+    const stream = canvasRef.current.captureStream(30);
+    
+    try {
+      if (didRef.current.captureStream) {
+        const didStream = didRef.current.captureStream();
+        didStream.getAudioTracks().forEach(track => stream.addTrack(track));
+      }
+    } catch(e) {
+      console.warn("Audio mixing failed", e);
+    }
+
+    const mr = new MediaRecorder(stream, { mimeType: "video/webm" });
+    mediaRecorderRef.current = mr;
+    mr.ondataavailable = e => {
+      if (e.data.size > 0) chunksRef.current.push(e.data);
+    };
+    mr.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: "video/webm" });
+      setDownloadUrl(URL.createObjectURL(blob));
+      setRecording(false);
+    };
+
+    mr.start();
+
+    runwayRef.current.currentTime = 0;
+    didRef.current.currentTime = 0;
+    runwayRef.current.play();
+    didRef.current.play();
+
+    runwayRef.current.onended = () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }
+
+  const hasVideos = scriptMeta?._runway_video_url && scriptMeta?._did_video_url;
+  if (!hasVideos) return null;
+
+  return (
+    <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: 16, border: "1px solid rgba(201,168,76,.15)", marginBottom: 16 }}>
+      <div style={{ fontSize: 11, color: "rgba(201,168,76,.8)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>
+        Studio Preview & Compositor
+      </div>
+      
+      <div style={{ display: "none" }}>
+        <video ref={runwayRef} src={scriptMeta._runway_video_url} crossOrigin="anonymous" playsInline />
+        <video ref={didRef} src={scriptMeta._did_video_url} crossOrigin="anonymous" playsInline />
+      </div>
+      
+      <div style={{ position: "relative", width: "100%", aspectRatio: "1280/720", background: "#000", borderRadius: 4, overflow: "hidden", marginBottom: 12 }}>
+        <canvas ref={canvasRef} width={1280} height={720} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+      </div>
+
+      <div style={{ display: "flex", gap: 10 }}>
+        <button className="btn" onClick={() => {
+          runwayRef.current.currentTime = 0;
+          didRef.current.currentTime = 0;
+          runwayRef.current.play();
+          didRef.current.play();
+        }} style={{ flex: 1 }}>
+          ▶ Play Preview
+        </button>
+        <button className="btn gold" onClick={startRecording} disabled={recording} style={{ flex: 1 }}>
+          {recording ? "🔴 Recording..." : "⏺ Composite & Record"}
+        </button>
+      </div>
+
+      {downloadUrl && (
+        <a href={downloadUrl} download="cadence_creatures_video.webm" className="btn pri" style={{ display: "block", textAlign: "center", marginTop: 10, textDecoration: "none" }}>
+          ↓ Download Final Video
+        </a>
+      )}
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function VideoPage() {
   const [campaignInput, setCampaignInput] = useState("");
@@ -560,8 +721,13 @@ export default function VideoPage() {
                   </div>
                 )}
 
-                {/* Output video */}
-                {selectedJob.output_url && (
+                {/* Output video via Compositor */}
+                {selectedJob.status === "completed" && selectedJob.claude_script?._runway_video_url && selectedJob.claude_script?._did_video_url && (
+                  <Compositor scriptMeta={selectedJob.claude_script} />
+                )}
+
+                {/* Fallback separate download links if compositing is not supported or videos are missing */}
+                {selectedJob.output_url && (!selectedJob.claude_script?._runway_video_url || !selectedJob.claude_script?._did_video_url) && (
                   <div style={{ marginBottom: 10 }}>
                     <div style={{ fontSize: 11, color: "rgba(196,188,178,.45)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 10 }}>Output</div>
                     <video
@@ -577,20 +743,8 @@ export default function VideoPage() {
                       className="btn gold"
                       style={{ display: "block", width: "100%", textAlign: "center", marginTop: 10, textDecoration: "none", boxSizing: "border-box" }}
                     >
-                      ↓ Download MP4
+                      ↓ Download Primary Media
                     </a>
-                    {selectedJob.claude_script?._runway_video_url && (
-                      <a
-                        href={selectedJob.claude_script._runway_video_url}
-                        download
-                        target="_blank"
-                        rel="noopener"
-                        className="btn"
-                        style={{ display: "block", width: "100%", textAlign: "center", marginTop: 6, textDecoration: "none", boxSizing: "border-box", fontSize: 11 }}
-                      >
-                        ↓ Download B-Roll (Runway)
-                      </a>
-                    )}
                   </div>
                 )}
 
