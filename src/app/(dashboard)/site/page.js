@@ -24,9 +24,9 @@ export default function SitePage() {
       if (settingsRes.data) {
         const s = settingsRes.data;
         setNotif({
-          show: s.notif_show ?? false,
-          text_long: s.notif_text_long || "",
-          text_short: s.notif_text_short || "",
+          show: s.notif_visible ?? false,
+          text_long: s.notif_text || "",
+          text_short: s.notif_short || "",
           cta_label: s.notif_cta_label || "",
           cta_url: s.notif_cta_url || "",
         });
@@ -45,15 +45,15 @@ export default function SitePage() {
   async function saveNotif() {
     setSavingNotif(true);
     const supabase = createClient();
-    await supabase.from("site_settings").update({
-      notif_show: notif.show,
-      notif_text_long: notif.text_long,
-      notif_text_short: notif.text_short,
+    const { error } = await supabase.from("site_settings").update({
+      notif_visible: notif.show,
+      notif_text: notif.text_long,
+      notif_short: notif.text_short,
       notif_cta_label: notif.cta_label,
       notif_cta_url: notif.cta_url,
     }).eq("id", 1);
     setSavingNotif(false);
-    showToast("Notification bar saved");
+    showToast(error ? "Save failed: " + error.message : "Notification bar saved");
   }
 
   function openAddFaq() {
