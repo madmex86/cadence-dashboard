@@ -9,13 +9,13 @@ async function ensureFonts() {
   if (fontsLoaded) return
   try {
     const [loraReg, loraBold, interBold] = await Promise.all([
-      fetch('https://github.com/google/fonts/raw/main/ofl/lora/static/Lora-Regular.ttf').then(r => r.arrayBuffer()),
-      fetch('https://github.com/google/fonts/raw/main/ofl/lora/static/Lora-Bold.ttf').then(r => r.arrayBuffer()),
-      fetch('https://github.com/google/fonts/raw/main/ofl/inter/static/Inter-Bold.ttf').then(r => r.arrayBuffer()),
+      fetch('https://raw.githubusercontent.com/google/fonts/main/ofl/lora/static/Lora-Regular.ttf').then(r => r.arrayBuffer()),
+      fetch('https://raw.githubusercontent.com/google/fonts/main/ofl/lora/static/Lora-Bold.ttf').then(r => r.arrayBuffer()),
+      fetch('https://raw.githubusercontent.com/google/fonts/main/ofl/inter/static/Inter-Bold.ttf').then(r => r.arrayBuffer()),
     ])
-    GlobalFonts.register(loraReg, 'Lora')
-    GlobalFonts.register(loraBold, 'LoraBold')
-    GlobalFonts.register(interBold, 'InterBold')
+    GlobalFonts.register(Buffer.from(loraReg), 'Lora')
+    GlobalFonts.register(Buffer.from(loraBold), 'LoraBold')
+    GlobalFonts.register(Buffer.from(interBold), 'InterBold')
     fontsLoaded = true
   } catch (err) {
     console.error('Failed to load fonts for canvas:', err)
