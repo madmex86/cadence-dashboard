@@ -93,20 +93,42 @@ export default function CustomersPage() {
         }
       }
 
-      // 2. Process Etsy and direct orders (merging duplicates by email)
+      function findContactByName(searchName) {
+        if (!searchName || searchName === "Mystery Buyer" || searchName === "Mystery Creature" || searchName === "Mystery Inquirer") return null;
+        const lowerName = searchName.toLowerCase();
+        for (const key in map) {
+          if (map[key].name && map[key].name.toLowerCase() === lowerName) {
+            return map[key];
+          }
+        }
+        return null;
+      }
+
+      // 2. Process Etsy and direct orders (merging duplicates by email or name)
       for (const o of orders) {
         const email = (o.buyer_email || "").trim().toLowerCase();
         const name = (o.buyer_name || "").trim() || "Mystery Buyer";
         const spent = parseFloat(o.total_amount) || 0;
 
+        let contact = null;
         if (email && map[email]) {
-          // Contact exists in subscribers! Merge.
-          const contact = map[email];
+          contact = map[email];
+        } else {
+          contact = findContactByName(name);
+        }
+
+        if (contact) {
+          // Contact exists! Merge.
           contact.is_buyer = true;
           
           // Use the order name if the subscriber name was generic/empty
           if (!contact.name || contact.name === "Mystery Creature" || contact.name === "Mystery Buyer") {
             contact.name = name;
+          }
+          
+          // If we found them by name but they lacked an email, save it
+          if (!contact.email && email) {
+            contact.email = email;
           }
           
           contact.orders.push(o);
@@ -155,15 +177,24 @@ export default function CustomersPage() {
         }
       }
 
-      // 3. Process direct contact inquiries (merging duplicates by email)
+      // 3. Process direct contact inquiries (merging duplicates by email or name)
       for (const m of submissions) {
         const email = (m.email || "").trim().toLowerCase();
         const name = (m.name || "").trim() || "Mystery Inquirer";
 
+        let contact = null;
         if (email && map[email]) {
-          const contact = map[email];
+          contact = map[email];
+        } else {
+          contact = findContactByName(name);
+        }
+
+        if (contact) {
           if (!contact.name || contact.name === "Mystery Creature" || contact.name === "Mystery Buyer" || contact.name === "Mystery Inquirer") {
             contact.name = name;
+          }
+          if (!contact.email && email) {
+            contact.email = email;
           }
           contact.messages.push(m);
           if (m.created_at && (!contact.created_at || m.created_at < contact.created_at)) {
