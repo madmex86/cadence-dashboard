@@ -57,6 +57,7 @@ export default function AssetStudio() {
   const [isRendering, setIsRendering] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
   const [savedAssetId, setSavedAssetId] = useState(null)
+  const [actionError, setActionError] = useState(null)
 
   // Publish
   const [selectedPlatforms, setSelectedPlatforms] = useState([])
@@ -86,15 +87,18 @@ export default function AssetStudio() {
   const handleGenerateCopy = async () => {
     setIsGeneratingCopy(true)
     setCopy(null)
+    setActionError(null)
     const sourceData = selectedSuggestion?.sourceData ?? { prompt: manualPrompt }
     const result = await generateAssetCopy({ triggerType, sourceData, templateId })
     setIsGeneratingCopy(false)
-    if (result.copy) setCopy(result.copy)
+    if (result.error) setActionError(`Copy generation failed: ${result.error}`)
+    else if (result.copy) setCopy(result.copy)
   }
 
   const handleRenderPreview = async () => {
     if (!copy) return
     setIsRendering(true)
+    setActionError(null)
 
     // Try to find a product image from the suggestion's sourceData
     const productImageUrl = selectedSuggestion?.sourceData?.image_url ?? null
@@ -108,6 +112,7 @@ export default function AssetStudio() {
       templateId,
     })
     setIsRendering(false)
+    if (result.error) { setActionError(`Render failed: ${result.error}`); return }
     if (result.imageUrl) {
       setImageUrl(result.imageUrl)
       setExportUrls({ [aspectRatio]: result.imageUrl })  // seed current size
@@ -344,6 +349,12 @@ export default function AssetStudio() {
               </div>
             </div>
 
+            {actionError && (
+              <div style={{ padding:'10px 12px', borderRadius:6, background:'rgba(224,112,112,0.08)', border:'1px solid rgba(224,112,112,0.25)', fontSize:12, color:'#e07070', lineHeight:1.5 }}>
+                {actionError}
+              </div>
+            )}
+
             <button onClick={handleGenerateCopy} disabled={isGeneratingCopy} className="as-btn-pri" style={{ width:'100%', justifyContent:'center', padding:'12px' }}>
               {isGeneratingCopy ? <><Spin /> Generating copy…</> : <>✦ Generate Copy</>}
             </button>
@@ -383,6 +394,12 @@ export default function AssetStudio() {
                   <span className="as-fl">Call to Action</span>
                   <input value={copy.cta} onChange={e => setCopy({...copy, cta: e.target.value})} className="as-inp" style={{ resize:'none' }} />
                 </div>
+
+                {actionError && (
+                  <div style={{ padding:'10px 12px', borderRadius:6, background:'rgba(224,112,112,0.08)', border:'1px solid rgba(224,112,112,0.25)', fontSize:12, color:'#e07070', lineHeight:1.5 }}>
+                    {actionError}
+                  </div>
+                )}
 
                 <div style={{ display:'flex', gap:10 }}>
                   <button onClick={handleGenerateCopy} disabled={isGeneratingCopy} className="as-btn-ghost" style={{ flex:1, justifyContent:'center', padding:'10px' }}>
