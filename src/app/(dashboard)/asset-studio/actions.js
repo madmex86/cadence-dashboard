@@ -58,12 +58,18 @@ const CONTEXT_BUILDERS = {
 }
 
 const TEMPLATE_TONE = {
-  'product-card':      'Clean, confident, benefit-focused.',
-  'drop-announcement': 'Hype and exclusivity. Make it feel like an event.',
-  'urgency':           'Scarcity-driven. Honest urgency, not fake.',
-  'milestone':         'Warm, celebratory, community-focused.',
-  'new-arrival':       'Fresh, exciting, discovery-focused.',
-  'quote-card':        'Brand voice front and center. Quotable and memorable.',
+  'product-card':
+    'Warm and specific. Lead with the creature\'s personality — what makes this one special. Mention the flexi articulation, the hidden Field Notes lore card, the custom box. Feels like a quiet discovery, not a sales pitch.',
+  'drop-announcement':
+    'Whimsical anticipation — like a new creature emerging from the workshop into the world. Cozy fantasy energy: a field-guide entry coming to life. Never aggressive, never hype-bro. Think "a new friend has been spotted" not "lock your doors". Reference the creature\'s lore, habitat, or personality if available.',
+  'urgency':
+    'Gentle scarcity — this creature is rare and finds its home fast. Warm, never pushy. Think "only a few left in the wild" not "BUY NOW". The tone is wistful, not panicked.',
+  'milestone':
+    'Warm and celebratory. Thank the collectors who welcomed these creatures into their homes. Community-first, never boastful.',
+  'new-arrival':
+    'The excitement of a first sighting — like spotting a rare creature in the field. Curious, delighted, welcoming. A new entry in the bestiary.',
+  'quote-card':
+    'Lean into the lore and worldbuilding. Could be a personality trait of the creature, a line from its Field Notes lore card, or something about the craft and care that goes into each one. Quotable and a little magical.',
 }
 
 // ─── GENERATE COPY ────────────────────────────────────────────────────────────
@@ -78,7 +84,7 @@ export async function generateAssetCopy({ triggerType, sourceData, templateId })
 
     const contextFn = CONTEXT_BUILDERS[triggerType] ?? CONTEXT_BUILDERS.manual
     const context = contextFn(sourceData)
-    const tone = TEMPLATE_TONE[templateId] ?? 'Authentic, direct, engaging.'
+    const tone = TEMPLATE_TONE[templateId] ?? 'Warm, whimsical, creature-lore-focused. Never aggressive or hype-bro.'
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -90,12 +96,20 @@ export async function generateAssetCopy({ triggerType, sourceData, templateId })
       body: JSON.stringify({
         model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6',
         max_tokens: 600,
-        system: `You are a social media copywriter for ${CC.name}, a ${CC.industry} shop in Visalia, CA. Each creature ships with a hidden Field Notes lore card inside a custom box.
-Write punchy, authentic copy — never corporate, never cringe.
-Tone guide: ${tone}
-Keep headlines under 8 words. Captions under 150 characters ideally.
-Hashtags: 5-8 relevant ones, no generic spam tags.
-CTA: short action phrase, no exclamation marks unless truly earned.
+        system: `You are the voice of Cadence Creatures — a boutique 3D-printed flexi animal toy shop in Visalia, CA. Each creature is handcrafted, fully articulated, and ships with a hidden Field Notes lore card tucked inside a custom box.
+
+The brand voice is: warm, whimsical, lore-rich, and genuine. Like a cozy nature journal crossed with a fantasy field guide. We celebrate the creatures as characters, not products.
+
+NEVER write: aggressive hype, threatening or alarming language ("lock your doors", "you've been warned", "this changes everything"), cold corporate copy, or generic influencer-speak.
+ALWAYS write: as if you genuinely love these little creatures and want to share them with people who will too.
+
+Tone guide for this post: ${tone}
+
+Rules:
+- Headlines: under 8 words, lead with creature name or personality when available
+- Captions: under 150 characters, warm and specific
+- Hashtags: 5-8, mix of niche collectible/toy tags and creature-specific ones — no generic spam
+- CTA: a short, warm action phrase ("Meet them here", "Claim yours", "Add to your collection")
 
 CRITICAL: Return ONLY a valid JSON object — no preamble, no markdown fences, no explanation.
 Shape: { "headline": string, "caption": string, "hashtags": string[], "cta": string }`,
