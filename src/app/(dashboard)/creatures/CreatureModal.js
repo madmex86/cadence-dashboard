@@ -5,7 +5,7 @@ import { createClient } from "../../../lib/supabase/client";
 import styles from "./creatures.module.css";
 
 const BLANK = {
-  name: "", species: "", sku: "", log_number: "", environment: "forest",
+  name: "", species: "", slug: "", sku: "", log_number: "", environment: "forest",
   price_retail: "", price_etsy: "", price_ask: "", qty_on_hand: 0, cost_to_print: "",
   tagline: "", etsy_url: "", image_url: "", model_url: "", notes: "",
   lore_location: "", lore_entry_date: "", lore_story: ["", "", ""], lore_observations: "",
@@ -106,6 +106,7 @@ export default function CreatureModal({ creature, onClose, onSave }) {
     setSaving(true);
     const payload = {
       ...form,
+      slug: form.slug || form.name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-'),
       log_number: form.log_number ? parseInt(form.log_number) : null,
       price_retail: form.price_retail ? parseFloat(form.price_retail) : null,
       price_etsy: form.price_etsy ? parseFloat(form.price_etsy) : null,
