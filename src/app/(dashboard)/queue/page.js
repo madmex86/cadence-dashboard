@@ -102,26 +102,30 @@ export default function QueuePage() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr", gap: "20px", marginBottom: "20px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", background: "rgba(0,0,0,0.2)", border: "1px solid var(--border)", borderRadius: "3px", overflow: "hidden" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", background: "rgba(0,0,0,0.2)", border: "1px solid var(--border)", borderRadius: "3px", overflow: "hidden" }}>
           <div style={{ padding: "18px 14px", textAlign: "center", borderRight: "1px solid var(--border)", background: "rgba(91,191,212,.04)", display: "flex", flexDirection: "column", justifyContent: "center" }}>
             <div style={{ fontSize: "9px", letterSpacing: ".15em", textTransform: "uppercase", color: "var(--cream-faint)", marginBottom: "5px" }}>Queued</div>
-            <div style={{ fontSize: "22px", fontWeight: "600", color: "#5BBFD4" }}>{counts["queued"]}</div>
+            <div style={{ fontSize: "22px", fontWeight: "600", color: "#5BBFD4" }}>{counts["queued"] || 0}</div>
           </div>
           <div style={{ padding: "18px 14px", textAlign: "center", borderRight: "1px solid var(--border)", background: "rgba(201,168,76,.04)", display: "flex", flexDirection: "column", justifyContent: "center" }}>
             <div style={{ fontSize: "9px", letterSpacing: ".15em", textTransform: "uppercase", color: "var(--cream-faint)", marginBottom: "5px" }}>Printing</div>
-            <div style={{ fontSize: "22px", fontWeight: "600", color: "var(--gold-light)" }}>{counts["printing"]}</div>
+            <div style={{ fontSize: "22px", fontWeight: "600", color: "var(--gold-light)" }}>{counts["printing"] || 0}</div>
           </div>
           <div style={{ padding: "18px 14px", textAlign: "center", borderRight: "1px solid var(--border)", background: "rgba(147,112,219,.04)", display: "flex", flexDirection: "column", justifyContent: "center" }}>
             <div style={{ fontSize: "9px", letterSpacing: ".15em", textTransform: "uppercase", color: "var(--cream-faint)", marginBottom: "5px" }}>Printed</div>
-            <div style={{ fontSize: "22px", fontWeight: "600", color: "#b89de8" }}>{counts["printed"]}</div>
+            <div style={{ fontSize: "22px", fontWeight: "600", color: "#b89de8" }}>{counts["printed"] || 0}</div>
+          </div>
+          <div style={{ padding: "18px 14px", textAlign: "center", borderRight: "1px solid var(--border)", background: "rgba(224,138,88,.04)", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <div style={{ fontSize: "9px", letterSpacing: ".15em", textTransform: "uppercase", color: "var(--cream-faint)", marginBottom: "5px" }}>Packaging</div>
+            <div style={{ fontSize: "22px", fontWeight: "600", color: "#e08a58" }}>{counts["packaging"] || 0}</div>
           </div>
           <div style={{ padding: "18px 14px", textAlign: "center", borderRight: "1px solid var(--border)", background: "rgba(74,140,92,.04)", display: "flex", flexDirection: "column", justifyContent: "center" }}>
             <div style={{ fontSize: "9px", letterSpacing: ".15em", textTransform: "uppercase", color: "var(--cream-faint)", marginBottom: "5px" }}>Shipped</div>
-            <div style={{ fontSize: "22px", fontWeight: "600", color: "#7dc994" }}>{counts["shipped"]}</div>
+            <div style={{ fontSize: "22px", fontWeight: "600", color: "#7dc994" }}>{counts["shipped"] || 0}</div>
           </div>
           <div style={{ padding: "18px 14px", textAlign: "center", background: "rgba(74,140,92,.07)", display: "flex", flexDirection: "column", justifyContent: "center" }}>
             <div style={{ fontSize: "9px", letterSpacing: ".15em", textTransform: "uppercase", color: "var(--cream-faint)", marginBottom: "5px" }}>Complete</div>
-            <div style={{ fontSize: "22px", fontWeight: "600", color: "#7dc994" }}>{counts["complete"]}</div>
+            <div style={{ fontSize: "22px", fontWeight: "600", color: "#7dc994" }}>{counts["complete"] || 0}</div>
           </div>
         </div>
         

@@ -44,8 +44,8 @@ export default function DashboardHub() {
     const [invRes, creRes, ordersRes, finRes, prRes] = await Promise.all([
       supabase.from("inventory").select("spool_name, brand, color, spool_count, reorder_spool_threshold"),
       supabase.from("creatures").select("id, name, species, qty_on_hand, inventory_count"),
-      supabase.from("orders").select("*").in("status", ["queued", "printing"]).order("created_at", { ascending: true }),
-      supabase.from("finance").select("amount, entry_date, entry_type").eq("entry_type", "income"),
+      supabase.from("orders").select("*").neq("status", "cancelled").order("created_at", { ascending: true }),
+      supabase.from("finance").select("amount, entry_date, entry_type, order_id").eq("entry_type", "income"),
       supabase.from("printers").select("*"),
     ]);
 
@@ -79,13 +79,23 @@ export default function DashboardHub() {
     availList.sort((a, b) => b.avail - a.avail);
 
     const now = new Date();
-    const moRev = fin.filter(e => {
+    
+    // Revenue from manual finance entries (no order_id)
+    const manualRev = fin.filter(e => {
       const d = new Date(e.entry_date);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && !e.order_id;
     }).reduce((sum, e) => sum + Number(e.amount), 0);
 
+    // Revenue from orders created this month
+    const ordersRev = qOrders.filter(o => {
+      const d = new Date(o.order_date || o.created_at);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }).reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+
+    const moRev = manualRev + ordersRev;
+
     setStats({
-      orders: qOrders.filter(o => o.status === "queued").length,
+      orders: qOrders.filter(o => ["queued", "printing", "packaging"].includes(o.status)).length,
       revenue: moRev,
       totalAvail,
       availList,
