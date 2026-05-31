@@ -66,6 +66,10 @@ export default function AssetStudio() {
   // Clipboard feedback
   const [copiedField, setCopiedField] = useState(null)
 
+  // Export pack
+  const [exportUrls, setExportUrls] = useState({})
+  const [exportRendering, setExportRendering] = useState({})
+
   // Load data on mount
   useEffect(() => {
     loadRecentAssets().then(r => { if (r.assets) setAssets(r.assets) })
@@ -106,6 +110,7 @@ export default function AssetStudio() {
     setIsRendering(false)
     if (result.imageUrl) {
       setImageUrl(result.imageUrl)
+      setExportUrls({ [aspectRatio]: result.imageUrl })  // seed current size
       setScreen('preview')
       const saveResult = await saveGeneratedAsset({
         asset: {
@@ -154,6 +159,23 @@ export default function AssetStudio() {
     setCopy(null); setImageUrl(null); setSavedAssetId(null)
     setPublishResults(null); setSelectedSuggestion(null)
     setSelectedPlatforms([]); setScheduleDate(''); setScreen('home')
+    setExportUrls({}); setExportRendering({})
+  }
+
+  const renderForExport = async (ratio) => {
+    if (exportRendering[ratio] || !copy) return
+    setExportRendering(prev => ({ ...prev, [ratio]: true }))
+    const productImageUrl = selectedSuggestion?.sourceData?.image_url ?? null
+    const result = await renderAsset({
+      headline: copy.headline,
+      caption: copy.caption,
+      cta: copy.cta,
+      productImageUrl,
+      aspectRatio: ratio,
+      templateId,
+    })
+    setExportRendering(prev => ({ ...prev, [ratio]: false }))
+    if (result.imageUrl) setExportUrls(prev => ({ ...prev, [ratio]: result.imageUrl }))
   }
 
   const connectedPlatforms = connections.filter(c => c.is_active).map(c => c.platform)
@@ -388,6 +410,40 @@ export default function AssetStudio() {
             <div style={{ display:'flex', gap:10 }}>
               <a href={imageUrl} download className="as-btn-ghost" style={{ flex:1, justifyContent:'center', padding:'10px' }}>↓ Download</a>
               <button onClick={() => setScreen('builder')} className="as-btn-ghost" style={{ flex:1, justifyContent:'center', padding:'10px' }}>↺ Regenerate</button>
+            </div>
+
+            {/* Export Pack */}
+            <div className="as-card">
+              <span className="as-fl">Export Pack</span>
+              <p style={{ fontSize:11, color:'rgba(250,246,240,0.35)', margin:'0 0 10px', lineHeight:1.5 }}>
+                Render each size for manual upload
+              </p>
+              {[
+                { ratio: '1:1',  label: 'Square 1:1',  hint: 'Instagram Feed · Facebook' },
+                { ratio: '9:16', label: 'Story 9:16',  hint: 'Stories · Reels · TikTok' },
+                { ratio: '16:9', label: 'Banner 16:9', hint: 'Facebook · Pinterest' },
+              ].map(({ ratio, label, hint }, i, arr) => (
+                <div key={ratio} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'9px 0', borderBottom: i < arr.length - 1 ? '1px solid rgba(201,168,76,0.08)' : 'none' }}>
+                  <div>
+                    <div style={{ fontSize:12, fontWeight:600 }}>{label}</div>
+                    <div style={{ fontSize:10, color:'rgba(250,246,240,0.35)', marginTop:1 }}>{hint}</div>
+                  </div>
+                  {exportUrls[ratio] ? (
+                    <a href={exportUrls[ratio]} download={`cadence-asset-${ratio.replace(':','x')}.png`} className="as-btn-ghost" style={{ padding:'5px 12px', fontSize:11 }}>
+                      ↓ Download
+                    </a>
+                  ) : (
+                    <button
+                      onClick={() => renderForExport(ratio)}
+                      disabled={!!exportRendering[ratio]}
+                      className="as-btn-ghost"
+                      style={{ padding:'5px 12px', fontSize:11, opacity: exportRendering[ratio] ? .5 : 1 }}
+                    >
+                      {exportRendering[ratio] ? <><Spin /> Rendering…</> : 'Render'}
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 
