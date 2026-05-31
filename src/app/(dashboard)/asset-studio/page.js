@@ -37,26 +37,41 @@ const PLATFORMS = [
   { id: 'pinterest', label: 'Pinterest', color: '#E60023' },
 ]
 
+const EXPORT_SIZES = [
+  { ratio: '1:1',  label: 'Square 1:1',  hint: 'Instagram Feed · Facebook' },
+  { ratio: '9:16', label: 'Story 9:16',  hint: 'Stories · Reels · TikTok' },
+  { ratio: '16:9', label: 'Banner 16:9', hint: 'Facebook · Pinterest' },
+]
+
 export default function AssetStudio() {
   const [screen, setScreen] = useState('home')
   const [assets, setAssets] = useState([])
   const [suggestions, setSuggestions] = useState([])
   const [connections, setConnections] = useState([])
 
-  // Builder state
+  // Creature selection
+  const [creatures, setCreatures] = useState([])
+  const [creatureMode, setCreatureMode] = useState('individual') // 'individual' | 'selected' | 'all'
+  const [individualCreature, setIndividualCreature] = useState(null)
+  const [selectedCreatureIds, setSelectedCreatureIds] = useState(new Set())
+
+  // Builder
   const [triggerType, setTriggerType] = useState('manual')
   const [templateId, setTemplateId] = useState('product-card')
   const [aspectRatio, setAspectRatio] = useState('1:1')
   const [manualPrompt, setManualPrompt] = useState('')
   const [copy, setCopy] = useState(null)
-  const [imageUrl, setImageUrl] = useState(null)
   const [selectedSuggestion, setSelectedSuggestion] = useState(null)
 
-  // Status
+  // Render results — array so batch works naturally
+  // Each: { creature: obj|null, imageUrl: string|null, assetId: string|null, error: string|null }
+  const [renderedImages, setRenderedImages] = useState([])
+  const [renderProgress, setRenderProgress] = useState(null) // { done, total }
+
+  // Status flags
   const [isGeneratingCopy, setIsGeneratingCopy] = useState(false)
   const [isRendering, setIsRendering] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
-  const [savedAssetId, setSavedAssetId] = useState(null)
   const [actionError, setActionError] = useState(null)
 
   // Publish
@@ -64,18 +79,30 @@ export default function AssetStudio() {
   const [scheduleDate, setScheduleDate] = useState('')
   const [publishResults, setPublishResults] = useState(null)
 
-  // Clipboard feedback
+  // Clipboard
   const [copiedField, setCopiedField] = useState(null)
 
-  // Export pack
+  // Export pack (single-mode only — per-size render for the one active creature)
   const [exportUrls, setExportUrls] = useState({})
   const [exportRendering, setExportRendering] = useState({})
 
-  // Load data on mount
+  // ── Derived ────────────────────────────────────────────────────────────────
+  const activeCreatures = (() => {
+    if (creatureMode === 'all') return creatures
+    if (creatureMode === 'selected') return creatures.filter(c => selectedCreatureIds.has(c.id))
+    if (creatureMode === 'individual' && individualCreature) return [individualCreature]
+    return []
+  })()
+
+  const isBatch = renderedImages.length > 1
+  const firstSuccess = renderedImages.find(r => r.imageUrl)
+
+  // ── Load on mount ──────────────────────────────────────────────────────────
   useEffect(() => {
     loadRecentAssets().then(r => { if (r.assets) setAssets(r.assets) })
     getSmartSuggestions().then(r => { if (r.suggestions) setSuggestions(r.suggestions) })
     loadSocialConnections().then(r => { if (r.connections) setConnections(r.connections) })
+    fetch('/api/creatures').then(r => r.json()).then(d => setCreatures(d.creatures || [])).catch(() => {})
   }, [])
 
   const copyToClipboard = useCallback(async (text, field) => {
@@ -84,12 +111,31 @@ export default function AssetStudio() {
     setTimeout(() => setCopiedField(null), 2000)
   }, [])
 
+  // ── Handlers ───────────────────────────────────────────────────────────────
   const handleGenerateCopy = async () => {
     setIsGeneratingCopy(true)
     setCopy(null)
     setActionError(null)
-    const sourceData = selectedSuggestion?.sourceData ?? { prompt: manualPrompt }
-    const result = await generateAssetCopy({ triggerType, sourceData, templateId })
+
+    let sourceData = selectedSuggestion?.sourceData ?? null
+    let effectiveTrigger = triggerType
+
+    if (!sourceData) {
+      const firstCreature = activeCreatures[0]
+      if (firstCreature) {
+        sourceData = {
+          name: firstCreature.name,
+          price: null,
+          description: [firstCreature.species, firstCreature.filament_color].filter(Boolean).join(', '),
+          image_url: firstCreature.image_url,
+        }
+        if (triggerType === 'manual') effectiveTrigger = 'new_product'
+      } else {
+        sourceData = { prompt: manualPrompt }
+      }
+    }
+
+    const result = await generateAssetCopy({ triggerType: effectiveTrigger, sourceData, templateId })
     setIsGeneratingCopy(false)
     if (result.error) setActionError(`Copy generation failed: ${result.error}`)
     else if (result.copy) setCopy(result.copy)
@@ -100,47 +146,81 @@ export default function AssetStudio() {
     setIsRendering(true)
     setActionError(null)
 
-    // Try to find a product image from the suggestion's sourceData
-    const productImageUrl = selectedSuggestion?.sourceData?.image_url ?? null
+    const toRender = activeCreatures.length > 0 ? activeCreatures : [null]
+    const results = []
+    setRenderProgress({ done: 0, total: toRender.length })
 
+    for (let i = 0; i < toRender.length; i++) {
+      const creature = toRender[i]
+      const result = await renderAsset({
+        headline: copy.headline,
+        caption: copy.caption,
+        cta: copy.cta,
+        productImageUrl: creature?.image_url ?? null,
+        aspectRatio,
+        templateId,
+      })
+
+      setRenderProgress({ done: i + 1, total: toRender.length })
+
+      if (result.imageUrl) {
+        const entry = { creature, imageUrl: result.imageUrl, assetId: null, error: null }
+        results.push(entry)
+        // Save to DB without blocking
+        saveGeneratedAsset({
+          asset: {
+            trigger_type: creature ? (triggerType === 'manual' ? 'new_product' : triggerType) : triggerType,
+            source_data: creature ? { name: creature.name, image_url: creature.image_url } : { prompt: manualPrompt },
+            template_id: templateId,
+            headline: copy.headline,
+            caption: copy.caption,
+            hashtags: copy.hashtags,
+            cta: copy.cta,
+            image_url: result.imageUrl,
+            aspect_ratio: aspectRatio,
+            status: 'draft',
+          },
+        }).then(sr => {
+          if (sr.id) setRenderedImages(prev => prev.map(r => r.imageUrl === result.imageUrl ? { ...r, assetId: sr.id } : r))
+        })
+      } else {
+        results.push({ creature, imageUrl: null, assetId: null, error: result.error ?? 'Render failed' })
+      }
+    }
+
+    setIsRendering(false)
+    setRenderProgress(null)
+
+    if (results.some(r => r.imageUrl)) {
+      setRenderedImages(results)
+      setExportUrls({})
+      setScreen('preview')
+    } else {
+      setActionError(`Render failed: ${results[0]?.error}`)
+    }
+  }
+
+  const renderForExport = async (ratio) => {
+    if (exportRendering[ratio] || !copy) return
+    setExportRendering(prev => ({ ...prev, [ratio]: true }))
     const result = await renderAsset({
       headline: copy.headline,
       caption: copy.caption,
       cta: copy.cta,
-      productImageUrl,
-      aspectRatio,
+      productImageUrl: firstSuccess?.creature?.image_url ?? null,
+      aspectRatio: ratio,
       templateId,
     })
-    setIsRendering(false)
-    if (result.error) { setActionError(`Render failed: ${result.error}`); return }
-    if (result.imageUrl) {
-      setImageUrl(result.imageUrl)
-      setExportUrls({ [aspectRatio]: result.imageUrl })  // seed current size
-      setScreen('preview')
-      const saveResult = await saveGeneratedAsset({
-        asset: {
-          trigger_type: triggerType,
-          source_data: selectedSuggestion?.sourceData ?? { prompt: manualPrompt },
-          template_id: templateId,
-          headline: copy.headline,
-          caption: copy.caption,
-          hashtags: copy.hashtags,
-          cta: copy.cta,
-          image_url: result.imageUrl,
-          aspect_ratio: aspectRatio,
-          status: 'draft',
-        },
-      })
-      if (saveResult.id) setSavedAssetId(saveResult.id)
-    }
+    setExportRendering(prev => ({ ...prev, [ratio]: false }))
+    if (result.imageUrl) setExportUrls(prev => ({ ...prev, [ratio]: result.imageUrl }))
   }
 
   const handlePublish = async () => {
-    if (!imageUrl || !copy || !savedAssetId || selectedPlatforms.length === 0) return
+    if (!firstSuccess?.imageUrl || !copy || selectedPlatforms.length === 0) return
     setIsPublishing(true)
     const result = await publishAsset({
-      assetId: savedAssetId,
-      imageUrl,
+      assetId: firstSuccess.assetId,
+      imageUrl: firstSuccess.imageUrl,
       caption: copy.caption,
       hashtags: copy.hashtags,
       platforms: selectedPlatforms,
@@ -161,31 +241,21 @@ export default function AssetStudio() {
   }
 
   const resetBuilder = () => {
-    setCopy(null); setImageUrl(null); setSavedAssetId(null)
-    setPublishResults(null); setSelectedSuggestion(null)
-    setSelectedPlatforms([]); setScheduleDate(''); setScreen('home')
-    setExportUrls({}); setExportRendering({})
+    setCopy(null); setRenderedImages([]); setPublishResults(null)
+    setSelectedSuggestion(null); setSelectedPlatforms([]); setScheduleDate('')
+    setExportUrls({}); setExportRendering({}); setActionError(null)
+    setRenderProgress(null); setScreen('home')
   }
 
-  const renderForExport = async (ratio) => {
-    if (exportRendering[ratio] || !copy) return
-    setExportRendering(prev => ({ ...prev, [ratio]: true }))
-    const productImageUrl = selectedSuggestion?.sourceData?.image_url ?? null
-    const result = await renderAsset({
-      headline: copy.headline,
-      caption: copy.caption,
-      cta: copy.cta,
-      productImageUrl,
-      aspectRatio: ratio,
-      templateId,
-    })
-    setExportRendering(prev => ({ ...prev, [ratio]: false }))
-    if (result.imageUrl) setExportUrls(prev => ({ ...prev, [ratio]: result.imageUrl }))
-  }
+  const toggleCreatureId = (id) => setSelectedCreatureIds(prev => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
 
   const connectedPlatforms = connections.filter(c => c.is_active).map(c => c.platform)
 
-  // ─── RENDER ────────────────────────────────────────────────────────────────
+  // ── RENDER ─────────────────────────────────────────────────────────────────
   return (
     <div>
       <style>{`
@@ -198,6 +268,8 @@ export default function AssetStudio() {
         .as-btn-pri:disabled { opacity:.4; cursor:default; }
         .as-btn-ghost { display:inline-flex; align-items:center; gap:.4rem; padding:.45rem .75rem; border-radius:6px; background:transparent; color:rgba(250,246,240,0.6); font-weight:500; font-size:13px; border:1px solid rgba(201,168,76,0.15); cursor:pointer; font-family:inherit; text-decoration:none; }
         .as-fl { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:rgba(250,246,240,0.4); margin:0 0 .65rem; display:block; }
+        .as-creature-row { display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:6px; cursor:pointer; transition:background .12s; }
+        .as-creature-row:hover { background:rgba(201,168,76,0.06); }
         @media(max-width:860px){ .as-two-col{ grid-template-columns:1fr !important; } }
       `}</style>
 
@@ -233,7 +305,7 @@ export default function AssetStudio() {
         </div>
       </div>
 
-      {/* HOME */}
+      {/* ── HOME ─────────────────────────────────────────────────────────── */}
       {screen === 'home' && (
         <div>
           {suggestions.length > 0 && (
@@ -246,9 +318,7 @@ export default function AssetStudio() {
                       <p style={{ margin:0, fontWeight:600, fontSize:13 }}>{s.title}</p>
                       <p style={{ margin:'3px 0 0', fontSize:12, color:'rgba(250,246,240,0.5)' }}>{s.description}</p>
                     </div>
-                    <button onClick={() => startFromSuggestion(s)} className="as-btn-pri">
-                      Create Post →
-                    </button>
+                    <button onClick={() => startFromSuggestion(s)} className="as-btn-pri">Create Post →</button>
                   </div>
                 ))}
               </div>
@@ -283,12 +353,88 @@ export default function AssetStudio() {
         </div>
       )}
 
-      {/* BUILDER */}
+      {/* ── BUILDER ──────────────────────────────────────────────────────── */}
       {screen === 'builder' && (
         <div className="as-two-col" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:24, alignItems:'start' }}>
 
           {/* LEFT — Config */}
-          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+
+            {/* Creatures */}
+            <div className="as-card">
+              <span className="as-fl">Creatures</span>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6, marginBottom:12 }}>
+                {[
+                  { id: 'individual', label: 'One' },
+                  { id: 'selected',   label: 'Pick' },
+                  { id: 'all',        label: 'All' },
+                ].map(m => (
+                  <button key={m.id} onClick={() => setCreatureMode(m.id)} className={`as-chip${creatureMode === m.id ? ' sel' : ''}`}>
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+
+              {creatureMode === 'individual' && (
+                <select
+                  className="as-inp"
+                  style={{ resize:'none' }}
+                  value={individualCreature?.id || ''}
+                  onChange={e => setIndividualCreature(creatures.find(c => c.id === e.target.value) || null)}
+                >
+                  <option value="">— no creature (text only) —</option>
+                  {creatures.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}{c.species ? ` · ${c.species}` : ''}{c.filament_color ? ` · ${c.filament_color}` : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {creatureMode === 'selected' && (
+                <div style={{ display:'flex', flexDirection:'column', gap:2, maxHeight:200, overflowY:'auto' }}>
+                  {creatures.length === 0 && (
+                    <p style={{ fontSize:12, color:'rgba(250,246,240,0.35)', margin:0 }}>No active creatures found.</p>
+                  )}
+                  {creatures.map(c => {
+                    const checked = selectedCreatureIds.has(c.id)
+                    return (
+                      <label key={c.id} className="as-creature-row" onClick={() => toggleCreatureId(c.id)}>
+                        <div style={{ width:16, height:16, borderRadius:4, border:`1.5px solid ${checked ? 'var(--gold)' : 'rgba(201,168,76,0.3)'}`, background: checked ? 'var(--gold)' : 'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all .12s' }}>
+                          {checked && <span style={{ fontSize:10, color:'#0E0C09', fontWeight:700, lineHeight:1 }}>✓</span>}
+                        </div>
+                        {c.image_url && (
+                          <img src={c.image_url} alt={c.name} style={{ width:28, height:28, borderRadius:4, objectFit:'cover', flexShrink:0 }} />
+                        )}
+                        <div>
+                          <div style={{ fontSize:12, fontWeight:600 }}>{c.name}</div>
+                          {(c.species || c.filament_color) && (
+                            <div style={{ fontSize:10, color:'rgba(250,246,240,0.4)' }}>
+                              {[c.species, c.filament_color].filter(Boolean).join(' · ')}
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    )
+                  })}
+                  {creatures.length > 0 && (
+                    <div style={{ display:'flex', gap:8, marginTop:6, paddingTop:6, borderTop:'1px solid rgba(201,168,76,0.08)' }}>
+                      <button onClick={() => setSelectedCreatureIds(new Set(creatures.map(c => c.id)))} className="as-btn-ghost" style={{ fontSize:11, padding:'3px 8px' }}>Select all</button>
+                      <button onClick={() => setSelectedCreatureIds(new Set())} className="as-btn-ghost" style={{ fontSize:11, padding:'3px 8px' }}>Clear</button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {creatureMode === 'all' && (
+                <div style={{ fontSize:12, color:'rgba(250,246,240,0.45)', padding:'4px 0' }}>
+                  {creatures.length > 0
+                    ? <>{creatures.length} active creature{creatures.length !== 1 ? 's' : ''} — one render per creature</>
+                    : 'No active creatures found.'
+                  }
+                </div>
+              )}
+            </div>
 
             {/* Trigger type */}
             <div className="as-card">
@@ -401,12 +547,24 @@ export default function AssetStudio() {
                   </div>
                 )}
 
+                {/* Render progress */}
+                {renderProgress && (
+                  <div style={{ padding:'10px 12px', borderRadius:6, background:'rgba(91,191,212,0.07)', border:'1px solid rgba(91,191,212,0.2)', fontSize:12, color:'#5BBFD4' }}>
+                    <Spin /> Rendering {renderProgress.done} / {renderProgress.total}…
+                  </div>
+                )}
+
                 <div style={{ display:'flex', gap:10 }}>
                   <button onClick={handleGenerateCopy} disabled={isGeneratingCopy} className="as-btn-ghost" style={{ flex:1, justifyContent:'center', padding:'10px' }}>
                     ↺ Regenerate
                   </button>
                   <button onClick={handleRenderPreview} disabled={isRendering} className="as-btn-pri" style={{ flex:2, justifyContent:'center', padding:'10px' }}>
-                    {isRendering ? <><Spin /> Rendering…</> : <>🖼 Render Preview</>}
+                    {isRendering
+                      ? renderProgress
+                        ? <><Spin /> {renderProgress.done}/{renderProgress.total}</>
+                        : <><Spin /> Rendering…</>
+                      : <>🖼 Render{activeCreatures.length > 1 ? ` (${activeCreatures.length})` : ' Preview'}</>
+                    }
                   </button>
                 </div>
               </>
@@ -415,137 +573,219 @@ export default function AssetStudio() {
         </div>
       )}
 
-      {/* PREVIEW */}
-      {screen === 'preview' && imageUrl && copy && (
-        <div className="as-two-col" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:24, alignItems:'start' }}>
-
-          {/* LEFT — Image */}
-          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-            <div style={{ borderRadius:10, overflow:'hidden', border:'1px solid rgba(201,168,76,0.15)' }}>
-              <img src={imageUrl} alt={copy.headline} style={{ width:'100%', display:'block' }} />
-            </div>
-            <div style={{ display:'flex', gap:10 }}>
-              <a href={imageUrl} download className="as-btn-ghost" style={{ flex:1, justifyContent:'center', padding:'10px' }}>↓ Download</a>
-              <button onClick={() => setScreen('builder')} className="as-btn-ghost" style={{ flex:1, justifyContent:'center', padding:'10px' }}>↺ Regenerate</button>
-            </div>
-
-            {/* Export Pack */}
-            <div className="as-card">
-              <span className="as-fl">Export Pack</span>
-              <p style={{ fontSize:11, color:'rgba(250,246,240,0.35)', margin:'0 0 10px', lineHeight:1.5 }}>
-                Render each size for manual upload
-              </p>
-              {[
-                { ratio: '1:1',  label: 'Square 1:1',  hint: 'Instagram Feed · Facebook' },
-                { ratio: '9:16', label: 'Story 9:16',  hint: 'Stories · Reels · TikTok' },
-                { ratio: '16:9', label: 'Banner 16:9', hint: 'Facebook · Pinterest' },
-              ].map(({ ratio, label, hint }, i, arr) => (
-                <div key={ratio} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'9px 0', borderBottom: i < arr.length - 1 ? '1px solid rgba(201,168,76,0.08)' : 'none' }}>
-                  <div>
-                    <div style={{ fontSize:12, fontWeight:600 }}>{label}</div>
-                    <div style={{ fontSize:10, color:'rgba(250,246,240,0.35)', marginTop:1 }}>{hint}</div>
-                  </div>
-                  {exportUrls[ratio] ? (
-                    <a href={exportUrls[ratio]} download={`cadence-asset-${ratio.replace(':','x')}.png`} className="as-btn-ghost" style={{ padding:'5px 12px', fontSize:11 }}>
-                      ↓ Download
-                    </a>
-                  ) : (
-                    <button
-                      onClick={() => renderForExport(ratio)}
-                      disabled={!!exportRendering[ratio]}
-                      className="as-btn-ghost"
-                      style={{ padding:'5px 12px', fontSize:11, opacity: exportRendering[ratio] ? .5 : 1 }}
-                    >
-                      {exportRendering[ratio] ? <><Spin /> Rendering…</> : 'Render'}
-                    </button>
-                  )}
+      {/* ── PREVIEW ──────────────────────────────────────────────────────── */}
+      {screen === 'preview' && renderedImages.length > 0 && copy && (
+        <div>
+          {isBatch ? (
+            /* BATCH — grid of all renders */
+            <div>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+                <div>
+                  <p style={{ fontSize:10, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase', color:'rgba(250,246,240,0.35)', margin:'0 0 4px' }}>
+                    Batch Results — {renderedImages.filter(r => r.imageUrl).length} of {renderedImages.length} rendered
+                  </p>
+                  <p style={{ fontSize:12, color:'rgba(250,246,240,0.4)', margin:0 }}>
+                    {copy.headline}
+                  </p>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* RIGHT — Publish */}
-          <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-            <div className="as-card">
-              <span className="as-fl">Publish To</span>
-              {connectedPlatforms.length === 0 ? (
-                <div style={{ textAlign:'center', padding:'24px 0' }}>
-                  <p style={{ fontSize:12, color:'rgba(250,246,240,0.4)', margin:'0 0 12px' }}>No social accounts connected yet.</p>
-                  <a href="/asset-studio/settings" className="as-btn-pri" style={{ textDecoration:'none' }}>Connect Accounts</a>
-                </div>
-              ) : (
-                <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-                  {PLATFORMS.filter(p => connectedPlatforms.includes(p.id)).map(platform => {
-                    const sel = selectedPlatforms.includes(platform.id)
-                    return (
-                      <button key={platform.id} onClick={() => setSelectedPlatforms(prev => sel ? prev.filter(p => p !== platform.id) : [...prev, platform.id])} style={{
-                        display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderRadius:6, cursor:'pointer', textAlign:'left', width:'100%', fontFamily:'inherit',
-                        border:`1px solid ${sel ? platform.color : 'rgba(201,168,76,0.12)'}`,
-                        background: sel ? `${platform.color}15` : 'transparent',
-                        color: sel ? '#FAF6F0' : 'rgba(250,246,240,0.5)',
-                      }}>
-                        <div style={{ width:8, height:8, borderRadius:'50%', background: sel ? platform.color : 'rgba(255,255,255,0.2)' }} />
-                        <span style={{ fontSize:13, fontWeight: sel ? 600 : 400 }}>{platform.label}</span>
-                        {sel && <span style={{ marginLeft:'auto', color: platform.color }}>✓</span>}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-
-            {connectedPlatforms.length > 0 && (
-              <div className="as-card">
-                <span className="as-fl">When</span>
-                <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-                  <button onClick={() => setScheduleDate('')} className={`as-chip${scheduleDate === '' ? ' sel' : ''}`}>
-                    → Post Now
-                  </button>
-                  <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                    <button onClick={() => setScheduleDate(scheduleDate || new Date(Date.now() + 3600000).toISOString().slice(0, 16))} className={`as-chip${scheduleDate !== '' ? ' sel' : ''}`} style={{ flex:1 }}>
-                      🗓 Schedule
-                    </button>
-                    {scheduleDate !== '' && (
-                      <input type="datetime-local" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} className="as-inp" style={{ flex:2, padding:'8px 10px', resize:'none' }} />
-                    )}
-                  </div>
-                </div>
+                <button onClick={() => setScreen('builder')} className="as-btn-ghost">↺ Edit Copy</button>
               </div>
-            )}
 
-            {publishResults && (
-              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                {Object.entries(publishResults).map(([platform, result]) => (
-                  <div key={platform} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', borderRadius:6, background: result.success ? 'rgba(125,201,148,0.08)' : 'rgba(224,144,144,0.08)', border:`1px solid ${result.success ? 'rgba(125,201,148,0.2)' : 'rgba(224,144,144,0.2)'}` }}>
-                    <span>{result.success ? '✓' : '✕'}</span>
-                    <span style={{ fontSize:13, textTransform:'capitalize' }}>{platform}</span>
-                    <span style={{ fontSize:11, color:'rgba(250,246,240,0.5)', marginLeft:'auto' }}>
-                      {result.success ? (scheduleDate ? 'Scheduled' : 'Posted') : result.error}
-                    </span>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:14, marginBottom:24 }}>
+                {renderedImages.map((item, i) => (
+                  <div key={i} className="as-card" style={{ padding:0, overflow:'hidden' }}>
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt={item.creature?.name ?? 'Asset'} style={{ width:'100%', aspectRatio:'1', objectFit:'cover', display:'block' }} />
+                    ) : (
+                      <div style={{ width:'100%', aspectRatio:'1', background:'rgba(232,112,112,0.06)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24 }}>✕</div>
+                    )}
+                    <div style={{ padding:'10px 12px' }}>
+                      <p style={{ margin:'0 0 6px', fontWeight:600, fontSize:12 }}>
+                        {item.creature?.name ?? 'No creature'}
+                      </p>
+                      {item.error ? (
+                        <p style={{ margin:0, fontSize:11, color:'#e07070' }}>{item.error}</p>
+                      ) : item.imageUrl ? (
+                        <a href={item.imageUrl} download={`${item.creature?.name ?? 'asset'}-${aspectRatio.replace(':','x')}.png`} className="as-btn-ghost" style={{ fontSize:11, padding:'4px 10px', width:'100%', justifyContent:'center', boxSizing:'border-box' }}>
+                          ↓ Download
+                        </a>
+                      ) : null}
+                    </div>
                   </div>
                 ))}
               </div>
-            )}
 
-            {!publishResults && (
-              <button onClick={handlePublish} disabled={isPublishing || selectedPlatforms.length === 0} className="as-btn-pri" style={{ width:'100%', justifyContent:'center', padding:'12px', opacity: selectedPlatforms.length === 0 ? .4 : 1 }}>
-                {isPublishing ? <><Spin /> Publishing…</> : scheduleDate ? <>🗓 Schedule Post</> : <>→ Publish Now</>}
-              </button>
-            )}
+              {/* Publish uses first successful render */}
+              {firstSuccess && (
+                <PublishPanel
+                  copy={copy}
+                  imageUrl={firstSuccess.imageUrl}
+                  assetId={firstSuccess.assetId}
+                  connectedPlatforms={connectedPlatforms}
+                  selectedPlatforms={selectedPlatforms}
+                  setSelectedPlatforms={setSelectedPlatforms}
+                  scheduleDate={scheduleDate}
+                  setScheduleDate={setScheduleDate}
+                  isPublishing={isPublishing}
+                  publishResults={publishResults}
+                  onPublish={handlePublish}
+                  onReset={resetBuilder}
+                  note={renderedImages.length > 1 ? `Publishing first image (${firstSuccess.creature?.name ?? 'asset'})` : null}
+                />
+              )}
+            </div>
+          ) : (
+            /* SINGLE — full view with export pack */
+            <div className="as-two-col" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:24, alignItems:'start' }}>
 
-            {publishResults && (
-              <button onClick={resetBuilder} className="as-btn-ghost" style={{ width:'100%', justifyContent:'center', padding:'10px' }}>
-                Create Another Asset
-              </button>
-            )}
-          </div>
+              {/* LEFT — image + export pack */}
+              <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                <div style={{ borderRadius:10, overflow:'hidden', border:'1px solid rgba(201,168,76,0.15)' }}>
+                  <img src={renderedImages[0].imageUrl} alt={copy.headline} style={{ width:'100%', display:'block' }} />
+                </div>
+
+                {renderedImages[0].creature && (
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    {renderedImages[0].creature.image_url && (
+                      <img src={renderedImages[0].creature.image_url} alt="" style={{ width:24, height:24, borderRadius:4, objectFit:'cover' }} />
+                    )}
+                    <span style={{ fontSize:12, color:'rgba(250,246,240,0.5)' }}>
+                      {renderedImages[0].creature.name}
+                      {renderedImages[0].creature.species ? ` · ${renderedImages[0].creature.species}` : ''}
+                    </span>
+                  </div>
+                )}
+
+                <div style={{ display:'flex', gap:10 }}>
+                  <a href={renderedImages[0].imageUrl} download={`cadence-asset-${aspectRatio.replace(':','x')}.png`} className="as-btn-ghost" style={{ flex:1, justifyContent:'center', padding:'10px' }}>↓ Download</a>
+                  <button onClick={() => setScreen('builder')} className="as-btn-ghost" style={{ flex:1, justifyContent:'center', padding:'10px' }}>↺ Regenerate</button>
+                </div>
+
+                {/* Export Pack */}
+                <div className="as-card">
+                  <span className="as-fl">Export Pack</span>
+                  <p style={{ fontSize:11, color:'rgba(250,246,240,0.35)', margin:'0 0 10px', lineHeight:1.5 }}>Render each size for manual upload</p>
+                  {EXPORT_SIZES.map(({ ratio, label, hint }, i, arr) => (
+                    <div key={ratio} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'9px 0', borderBottom: i < arr.length - 1 ? '1px solid rgba(201,168,76,0.08)' : 'none' }}>
+                      <div>
+                        <div style={{ fontSize:12, fontWeight:600 }}>{label}</div>
+                        <div style={{ fontSize:10, color:'rgba(250,246,240,0.35)', marginTop:1 }}>{hint}</div>
+                      </div>
+                      {exportUrls[ratio] ? (
+                        <a href={exportUrls[ratio]} download={`cadence-asset-${ratio.replace(':','x')}.png`} className="as-btn-ghost" style={{ padding:'5px 12px', fontSize:11 }}>↓ Download</a>
+                      ) : (
+                        <button onClick={() => renderForExport(ratio)} disabled={!!exportRendering[ratio]} className="as-btn-ghost" style={{ padding:'5px 12px', fontSize:11, opacity: exportRendering[ratio] ? .5 : 1 }}>
+                          {exportRendering[ratio] ? <><Spin /> Rendering…</> : ratio === aspectRatio ? '✓ Ready' : 'Render'}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* RIGHT — publish */}
+              <PublishPanel
+                copy={copy}
+                imageUrl={renderedImages[0].imageUrl}
+                assetId={renderedImages[0].assetId}
+                connectedPlatforms={connectedPlatforms}
+                selectedPlatforms={selectedPlatforms}
+                setSelectedPlatforms={setSelectedPlatforms}
+                scheduleDate={scheduleDate}
+                setScheduleDate={setScheduleDate}
+                isPublishing={isPublishing}
+                publishResults={publishResults}
+                onPublish={handlePublish}
+                onReset={resetBuilder}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
   )
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Sub-components ────────────────────────────────────────────────────────────
+
+function PublishPanel({ copy, imageUrl, assetId, connectedPlatforms, selectedPlatforms, setSelectedPlatforms, scheduleDate, setScheduleDate, isPublishing, publishResults, onPublish, onReset, note }) {
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+      {note && (
+        <div style={{ fontSize:11, color:'rgba(250,246,240,0.35)', padding:'6px 10px', borderRadius:6, background:'rgba(255,255,255,0.02)', border:'1px solid rgba(201,168,76,0.08)' }}>
+          {note}
+        </div>
+      )}
+
+      <div className="as-card">
+        <span className="as-fl">Publish To</span>
+        {connectedPlatforms.length === 0 ? (
+          <div style={{ textAlign:'center', padding:'24px 0' }}>
+            <p style={{ fontSize:12, color:'rgba(250,246,240,0.4)', margin:'0 0 12px' }}>No social accounts connected yet.</p>
+            <a href="/asset-studio/settings" className="as-btn-pri" style={{ textDecoration:'none' }}>Connect Accounts</a>
+          </div>
+        ) : (
+          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            {PLATFORMS.filter(p => connectedPlatforms.includes(p.id)).map(platform => {
+              const sel = selectedPlatforms.includes(platform.id)
+              return (
+                <button key={platform.id} onClick={() => setSelectedPlatforms(prev => sel ? prev.filter(p => p !== platform.id) : [...prev, platform.id])} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderRadius:6, cursor:'pointer', textAlign:'left', width:'100%', fontFamily:'inherit', border:`1px solid ${sel ? platform.color : 'rgba(201,168,76,0.12)'}`, background: sel ? `${platform.color}15` : 'transparent', color: sel ? '#FAF6F0' : 'rgba(250,246,240,0.5)' }}>
+                  <div style={{ width:8, height:8, borderRadius:'50%', background: sel ? platform.color : 'rgba(255,255,255,0.2)' }} />
+                  <span style={{ fontSize:13, fontWeight: sel ? 600 : 400 }}>{platform.label}</span>
+                  {sel && <span style={{ marginLeft:'auto', color: platform.color }}>✓</span>}
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {connectedPlatforms.length > 0 && (
+        <div className="as-card">
+          <span className="as-fl">When</span>
+          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            <button onClick={() => setScheduleDate('')} className={`as-chip${scheduleDate === '' ? ' sel' : ''}`}>→ Post Now</button>
+            <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+              <button onClick={() => setScheduleDate(scheduleDate || new Date(Date.now() + 3600000).toISOString().slice(0, 16))} className={`as-chip${scheduleDate !== '' ? ' sel' : ''}`} style={{ flex:1 }}>
+                🗓 Schedule
+              </button>
+              {scheduleDate !== '' && (
+                <input type="datetime-local" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} className="as-inp" style={{ flex:2, padding:'8px 10px', resize:'none' }} />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {publishResults && (
+        <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+          {Object.entries(publishResults).map(([platform, result]) => (
+            <div key={platform} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', borderRadius:6, background: result.success ? 'rgba(125,201,148,0.08)' : 'rgba(224,144,144,0.08)', border:`1px solid ${result.success ? 'rgba(125,201,148,0.2)' : 'rgba(224,144,144,0.2)'}` }}>
+              <span>{result.success ? '✓' : '✕'}</span>
+              <span style={{ fontSize:13, textTransform:'capitalize' }}>{platform}</span>
+              <span style={{ fontSize:11, color:'rgba(250,246,240,0.5)', marginLeft:'auto' }}>
+                {result.success ? (scheduleDate ? 'Scheduled' : 'Posted') : result.error}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!publishResults && (
+        <button onClick={onPublish} disabled={isPublishing || selectedPlatforms.length === 0} className="as-btn-pri" style={{ width:'100%', justifyContent:'center', padding:'12px', opacity: selectedPlatforms.length === 0 ? .4 : 1 }}>
+          {isPublishing ? <><Spin /> Publishing…</> : scheduleDate ? <>🗓 Schedule Post</> : <>→ Publish Now</>}
+        </button>
+      )}
+
+      {publishResults && (
+        <button onClick={onReset} className="as-btn-ghost" style={{ width:'100%', justifyContent:'center', padding:'10px' }}>
+          Create Another Asset
+        </button>
+      )}
+    </div>
+  )
+}
+
 function CopyField({ label, value, onChange, copiedField, onCopy, rows }) {
   return (
     <div className="as-card">
