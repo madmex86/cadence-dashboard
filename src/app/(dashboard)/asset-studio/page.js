@@ -141,41 +141,108 @@ export default function AssetStudio() {
     else if (result.copy) setCopy(result.copy)
   }
 
+  // Single mode: user has already generated + edited copy, just render it
   const handleRenderPreview = async () => {
     if (!copy) return
     setIsRendering(true)
     setActionError(null)
 
-    const toRender = activeCreatures.length > 0 ? activeCreatures : [null]
-    const results = []
-    setRenderProgress({ done: 0, total: toRender.length })
+    const creature = activeCreatures[0] ?? null
+    setRenderProgress({ done: 0, total: 1, stage: 'render', name: creature?.name ?? null })
 
-    for (let i = 0; i < toRender.length; i++) {
-      const creature = toRender[i]
+    const result = await renderAsset({
+      headline: copy.headline,
+      caption: copy.caption,
+      cta: copy.cta,
+      productImageUrl: creature?.image_url ?? null,
+      aspectRatio,
+      templateId,
+    })
+
+    setIsRendering(false)
+    setRenderProgress(null)
+
+    if (result.imageUrl) {
+      setRenderedImages([{ creature, imageUrl: result.imageUrl, assetId: null, error: null, copy }])
+      setExportUrls({ [aspectRatio]: result.imageUrl })
+      setScreen('preview')
+      saveGeneratedAsset({
+        asset: {
+          trigger_type: creature ? (triggerType === 'manual' ? 'new_product' : triggerType) : triggerType,
+          source_data: creature ? { name: creature.name, image_url: creature.image_url } : { prompt: manualPrompt },
+          template_id: templateId,
+          headline: copy.headline,
+          caption: copy.caption,
+          hashtags: copy.hashtags,
+          cta: copy.cta,
+          image_url: result.imageUrl,
+          aspect_ratio: aspectRatio,
+          status: 'draft',
+        },
+      }).then(sr => {
+        if (sr.id) setRenderedImages(prev => prev.map(r => r.imageUrl === result.imageUrl ? { ...r, assetId: sr.id } : r))
+      })
+    } else {
+      setActionError(`Render failed: ${result.error}`)
+    }
+  }
+
+  // Batch mode: generate creature-specific copy + render for each creature in sequence
+  const handleBatchRender = async () => {
+    setIsRendering(true)
+    setActionError(null)
+
+    const results = []
+    setRenderProgress({ done: 0, total: activeCreatures.length, stage: 'copy', name: null })
+
+    for (let i = 0; i < activeCreatures.length; i++) {
+      const creature = activeCreatures[i]
+
+      // Step 1: generate copy specific to this creature
+      setRenderProgress({ done: i, total: activeCreatures.length, stage: 'copy', name: creature.name })
+      const copyResult = await generateAssetCopy({
+        triggerType: triggerType === 'manual' ? 'new_product' : triggerType,
+        sourceData: {
+          name: creature.name,
+          price: null,
+          description: [creature.species, creature.filament_color].filter(Boolean).join(', '),
+          image_url: creature.image_url,
+        },
+        templateId,
+      })
+
+      if (!copyResult.copy) {
+        results.push({ creature, imageUrl: null, assetId: null, error: `Copy failed: ${copyResult.error}`, copy: null })
+        setRenderProgress({ done: i + 1, total: activeCreatures.length, stage: 'copy', name: creature.name })
+        continue
+      }
+
+      const renderCopy = copyResult.copy
+
+      // Step 2: render with that creature's copy + photo
+      setRenderProgress({ done: i, total: activeCreatures.length, stage: 'render', name: creature.name })
       const result = await renderAsset({
-        headline: copy.headline,
-        caption: copy.caption,
-        cta: copy.cta,
-        productImageUrl: creature?.image_url ?? null,
+        headline: renderCopy.headline,
+        caption: renderCopy.caption,
+        cta: renderCopy.cta,
+        productImageUrl: creature.image_url ?? null,
         aspectRatio,
         templateId,
       })
 
-      setRenderProgress({ done: i + 1, total: toRender.length })
+      setRenderProgress({ done: i + 1, total: activeCreatures.length, stage: 'render', name: creature.name })
 
       if (result.imageUrl) {
-        const entry = { creature, imageUrl: result.imageUrl, assetId: null, error: null }
-        results.push(entry)
-        // Save to DB without blocking
+        results.push({ creature, imageUrl: result.imageUrl, assetId: null, error: null, copy: renderCopy })
         saveGeneratedAsset({
           asset: {
-            trigger_type: creature ? (triggerType === 'manual' ? 'new_product' : triggerType) : triggerType,
-            source_data: creature ? { name: creature.name, image_url: creature.image_url } : { prompt: manualPrompt },
+            trigger_type: triggerType === 'manual' ? 'new_product' : triggerType,
+            source_data: { name: creature.name, image_url: creature.image_url },
             template_id: templateId,
-            headline: copy.headline,
-            caption: copy.caption,
-            hashtags: copy.hashtags,
-            cta: copy.cta,
+            headline: renderCopy.headline,
+            caption: renderCopy.caption,
+            hashtags: renderCopy.hashtags,
+            cta: renderCopy.cta,
             image_url: result.imageUrl,
             aspect_ratio: aspectRatio,
             status: 'draft',
@@ -184,7 +251,7 @@ export default function AssetStudio() {
           if (sr.id) setRenderedImages(prev => prev.map(r => r.imageUrl === result.imageUrl ? { ...r, assetId: sr.id } : r))
         })
       } else {
-        results.push({ creature, imageUrl: null, assetId: null, error: result.error ?? 'Render failed' })
+        results.push({ creature, imageUrl: null, assetId: null, error: result.error ?? 'Render failed', copy: renderCopy })
       }
     }
 
@@ -196,7 +263,7 @@ export default function AssetStudio() {
       setExportUrls({})
       setScreen('preview')
     } else {
-      setActionError(`Render failed: ${results[0]?.error}`)
+      setActionError(`All renders failed: ${results[0]?.error}`)
     }
   }
 
@@ -216,13 +283,14 @@ export default function AssetStudio() {
   }
 
   const handlePublish = async () => {
-    if (!firstSuccess?.imageUrl || !copy || selectedPlatforms.length === 0) return
+    if (!firstSuccess?.imageUrl || selectedPlatforms.length === 0) return
     setIsPublishing(true)
+    const publishCopy = firstSuccess.copy ?? copy
     const result = await publishAsset({
       assetId: firstSuccess.assetId,
       imageUrl: firstSuccess.imageUrl,
-      caption: copy.caption,
-      hashtags: copy.hashtags,
+      caption: publishCopy.caption,
+      hashtags: publishCopy.hashtags,
       platforms: selectedPlatforms,
       scheduledFor: scheduleDate ? new Date(scheduleDate) : undefined,
     })
@@ -501,73 +569,113 @@ export default function AssetStudio() {
               </div>
             )}
 
-            <button onClick={handleGenerateCopy} disabled={isGeneratingCopy} className="as-btn-pri" style={{ width:'100%', justifyContent:'center', padding:'12px' }}>
-              {isGeneratingCopy ? <><Spin /> Generating copy…</> : <>✦ Generate Copy</>}
-            </button>
+            {/* SINGLE MODE — separate generate + render steps */}
+            {activeCreatures.length <= 1 && (
+              <button onClick={handleGenerateCopy} disabled={isGeneratingCopy} className="as-btn-pri" style={{ width:'100%', justifyContent:'center', padding:'12px' }}>
+                {isGeneratingCopy ? <><Spin /> Generating copy…</> : <>✦ Generate Copy</>}
+              </button>
+            )}
+
+            {/* BATCH MODE — one button that generates + renders per creature */}
+            {activeCreatures.length > 1 && (
+              <button onClick={handleBatchRender} disabled={isRendering} className="as-btn-pri" style={{ width:'100%', justifyContent:'center', padding:'12px' }}>
+                {isRendering && renderProgress
+                  ? renderProgress.stage === 'copy'
+                    ? <><Spin /> Writing copy for {renderProgress.name}… ({renderProgress.done + 1}/{renderProgress.total})</>
+                    : <><Spin /> Rendering {renderProgress.name}… ({renderProgress.done + 1}/{renderProgress.total})</>
+                  : isRendering
+                    ? <><Spin /> Starting…</>
+                    : <>✦ Generate &amp; Render All ({activeCreatures.length})</>
+                }
+              </button>
+            )}
           </div>
 
-          {/* RIGHT — Copy editor */}
+          {/* RIGHT — copy editor (single) or batch plan (batch) */}
           <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-            {!copy ? (
-              <div className="as-card" style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:400, gap:12 }}>
-                <div style={{ fontSize:32, opacity:.2 }}>✦</div>
-                <p style={{ color:'rgba(250,246,240,0.4)', fontSize:13, margin:0, textAlign:'center' }}>
-                  Configure your post on the left,<br />then generate copy to see it here.
-                </p>
+
+            {activeCreatures.length > 1 ? (
+              /* BATCH — show the plan: each creature gets its own copy + render */
+              <div className="as-card" style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                <div>
+                  <span className="as-fl">Batch Plan</span>
+                  <p style={{ fontSize:12, color:'rgba(250,246,240,0.5)', margin:'0 0 14px', lineHeight:1.6 }}>
+                    Claude writes creature-specific copy for each one, then renders. Nothing is shared between creatures.
+                  </p>
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                  {activeCreatures.map((c, i) => (
+                    <div key={c.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:6, background:'rgba(201,168,76,0.04)', border:'1px solid rgba(201,168,76,0.1)' }}>
+                      {c.image_url && <img src={c.image_url} alt={c.name} style={{ width:28, height:28, borderRadius:4, objectFit:'cover', flexShrink:0 }} />}
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:12, fontWeight:600 }}>{c.name}</div>
+                        {(c.species || c.filament_color) && (
+                          <div style={{ fontSize:10, color:'rgba(250,246,240,0.4)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                            {[c.species, c.filament_color].filter(Boolean).join(' · ')}
+                          </div>
+                        )}
+                      </div>
+                      <span style={{ fontSize:10, color:'rgba(250,246,240,0.25)', textTransform:'uppercase', letterSpacing:'.06em', flexShrink:0 }}>
+                        {TEMPLATES.find(t => t.id === templateId)?.icon}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontSize:11, color:'rgba(250,246,240,0.3)', paddingTop:8, borderTop:'1px solid rgba(201,168,76,0.08)', lineHeight:1.6 }}>
+                  Template: {TEMPLATES.find(t => t.id === templateId)?.label} · Format: {ASPECT_RATIOS.find(a => a.value === aspectRatio)?.label} ({ASPECT_RATIOS.find(a => a.value === aspectRatio)?.desc})
+                </div>
               </div>
             ) : (
-              <>
-                <CopyField label="Headline" value={copy.headline} onChange={v => setCopy({...copy, headline: v})} copiedField={copiedField} onCopy={copyToClipboard} rows={2} />
-                <CopyField label="Caption" value={copy.caption} onChange={v => setCopy({...copy, caption: v})} copiedField={copiedField} onCopy={copyToClipboard} rows={4} />
+              /* SINGLE — copy editor */
+              !copy ? (
+                <div className="as-card" style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:400, gap:12 }}>
+                  <div style={{ fontSize:32, opacity:.2 }}>✦</div>
+                  <p style={{ color:'rgba(250,246,240,0.4)', fontSize:13, margin:0, textAlign:'center' }}>
+                    Configure your post on the left,<br />then generate copy to see it here.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <CopyField label="Headline" value={copy.headline} onChange={v => setCopy({...copy, headline: v})} copiedField={copiedField} onCopy={copyToClipboard} rows={2} />
+                  <CopyField label="Caption" value={copy.caption} onChange={v => setCopy({...copy, caption: v})} copiedField={copiedField} onCopy={copyToClipboard} rows={4} />
 
-                <div className="as-card">
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
-                    <span className="as-fl" style={{ margin:0 }}>Hashtags</span>
-                    <button onClick={() => copyToClipboard(copy.hashtags.map(h => `#${h.replace(/^#/,'')}`).join(' '), 'hashtags')} className="as-btn-ghost" style={{ padding:'3px 8px', fontSize:11 }}>
-                      {copiedField === 'hashtags' ? '✓' : '⎘'}
+                  <div className="as-card">
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+                      <span className="as-fl" style={{ margin:0 }}>Hashtags</span>
+                      <button onClick={() => copyToClipboard(copy.hashtags.map(h => `#${h.replace(/^#/,'')}`).join(' '), 'hashtags')} className="as-btn-ghost" style={{ padding:'3px 8px', fontSize:11 }}>
+                        {copiedField === 'hashtags' ? '✓' : '⎘'}
+                      </button>
+                    </div>
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
+                      {copy.hashtags.map((tag, i) => (
+                        <span key={i} style={{ padding:'3px 9px', background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:99, fontSize:11, color:'var(--gold)' }}>
+                          #{tag.replace(/^#/, '')}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="as-card">
+                    <span className="as-fl">Call to Action</span>
+                    <input value={copy.cta} onChange={e => setCopy({...copy, cta: e.target.value})} className="as-inp" style={{ resize:'none' }} />
+                  </div>
+
+                  {actionError && (
+                    <div style={{ padding:'10px 12px', borderRadius:6, background:'rgba(224,112,112,0.08)', border:'1px solid rgba(224,112,112,0.25)', fontSize:12, color:'#e07070', lineHeight:1.5 }}>
+                      {actionError}
+                    </div>
+                  )}
+
+                  <div style={{ display:'flex', gap:10 }}>
+                    <button onClick={handleGenerateCopy} disabled={isGeneratingCopy} className="as-btn-ghost" style={{ flex:1, justifyContent:'center', padding:'10px' }}>
+                      ↺ Regenerate
+                    </button>
+                    <button onClick={handleRenderPreview} disabled={isRendering} className="as-btn-pri" style={{ flex:2, justifyContent:'center', padding:'10px' }}>
+                      {isRendering ? <><Spin /> Rendering…</> : <>🖼 Render Preview</>}
                     </button>
                   </div>
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
-                    {copy.hashtags.map((tag, i) => (
-                      <span key={i} style={{ padding:'3px 9px', background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:99, fontSize:11, color:'var(--gold)' }}>
-                        #{tag.replace(/^#/, '')}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="as-card">
-                  <span className="as-fl">Call to Action</span>
-                  <input value={copy.cta} onChange={e => setCopy({...copy, cta: e.target.value})} className="as-inp" style={{ resize:'none' }} />
-                </div>
-
-                {actionError && (
-                  <div style={{ padding:'10px 12px', borderRadius:6, background:'rgba(224,112,112,0.08)', border:'1px solid rgba(224,112,112,0.25)', fontSize:12, color:'#e07070', lineHeight:1.5 }}>
-                    {actionError}
-                  </div>
-                )}
-
-                {/* Render progress */}
-                {renderProgress && (
-                  <div style={{ padding:'10px 12px', borderRadius:6, background:'rgba(91,191,212,0.07)', border:'1px solid rgba(91,191,212,0.2)', fontSize:12, color:'#5BBFD4' }}>
-                    <Spin /> Rendering {renderProgress.done} / {renderProgress.total}…
-                  </div>
-                )}
-
-                <div style={{ display:'flex', gap:10 }}>
-                  <button onClick={handleGenerateCopy} disabled={isGeneratingCopy} className="as-btn-ghost" style={{ flex:1, justifyContent:'center', padding:'10px' }}>
-                    ↺ Regenerate
-                  </button>
-                  <button onClick={handleRenderPreview} disabled={isRendering} className="as-btn-pri" style={{ flex:2, justifyContent:'center', padding:'10px' }}>
-                    {isRendering
-                      ? renderProgress
-                        ? <><Spin /> {renderProgress.done}/{renderProgress.total}</>
-                        : <><Spin /> Rendering…</>
-                      : <>🖼 Render{activeCreatures.length > 1 ? ` (${activeCreatures.length})` : ' Preview'}</>
-                    }
-                  </button>
-                </div>
-              </>
+                </>
+              )
             )}
           </div>
         </div>
@@ -585,7 +693,7 @@ export default function AssetStudio() {
                     Batch Results — {renderedImages.filter(r => r.imageUrl).length} of {renderedImages.length} rendered
                   </p>
                   <p style={{ fontSize:12, color:'rgba(250,246,240,0.4)', margin:0 }}>
-                    {copy.headline}
+                    {TEMPLATES.find(t => t.id === templateId)?.label} · {ASPECT_RATIOS.find(a => a.value === aspectRatio)?.label}
                   </p>
                 </div>
                 <button onClick={() => setScreen('builder')} className="as-btn-ghost">↺ Edit Copy</button>
