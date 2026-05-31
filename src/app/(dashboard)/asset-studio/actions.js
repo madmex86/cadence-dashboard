@@ -1,7 +1,26 @@
 'use server'
 
-import { createCanvas, loadImage } from '@napi-rs/canvas'
+import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas'
 import { createClient } from '@/lib/supabase/server'
+
+// Load fonts dynamically for Vercel
+let fontsLoaded = false
+async function ensureFonts() {
+  if (fontsLoaded) return
+  try {
+    const [loraReg, loraBold, interBold] = await Promise.all([
+      fetch('https://github.com/google/fonts/raw/main/ofl/lora/static/Lora-Regular.ttf').then(r => r.arrayBuffer()),
+      fetch('https://github.com/google/fonts/raw/main/ofl/lora/static/Lora-Bold.ttf').then(r => r.arrayBuffer()),
+      fetch('https://github.com/google/fonts/raw/main/ofl/inter/static/Inter-Bold.ttf').then(r => r.arrayBuffer()),
+    ])
+    GlobalFonts.register(loraReg, 'Lora')
+    GlobalFonts.register(loraBold, 'LoraBold')
+    GlobalFonts.register(interBold, 'InterBold')
+    fontsLoaded = true
+  } catch (err) {
+    console.error('Failed to load fonts for canvas:', err)
+  }
+}
 
 // ─── Cadence Creatures brand config ──────────────────────────────────────────
 const CC = {
@@ -142,6 +161,8 @@ export async function renderAsset({
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return { error: 'Unauthorized' }
 
+    await ensureFonts()
+
     const { w, h } = DIMENSIONS[aspectRatio]
     const canvas = createCanvas(w, h)
     const ctx = canvas.getContext('2d')
@@ -156,14 +177,31 @@ export async function renderAsset({
       try {
         const img = await loadImage(productImageUrl)
         const imgH = h * (aspectRatio === '9:16' ? 0.55 : 0.60)
-        ctx.drawImage(img, 0, 0, w, imgH)
+        
+        // Emulate object-fit: cover
+        const imgRatio = img.width / img.height
+        const destRatio = w / imgH
+        let drawW = img.width
+        let drawH = img.height
+        let sx = 0, sy = 0
+        
+        if (imgRatio > destRatio) {
+          drawW = img.height * destRatio
+          sx = (img.width - drawW) / 2
+        } else {
+          drawH = img.width / destRatio
+          sy = (img.height - drawH) / 2
+        }
+        
+        ctx.drawImage(img, sx, sy, drawW, drawH, 0, 0, w, imgH)
+        
         const gradient = ctx.createLinearGradient(0, imgH * 0.4, 0, imgH + h * 0.05)
         gradient.addColorStop(0, 'rgba(14,12,9,0)')
         gradient.addColorStop(0.6, 'rgba(14,12,9,0.7)')
         gradient.addColorStop(1, 'rgba(14,12,9,1)')
         ctx.fillStyle = gradient
         ctx.fillRect(0, 0, w, imgH + h * 0.05)
-      } catch {
+      } catch (e) {
         // Image load failed — continue text-only
       }
     }
@@ -185,12 +223,12 @@ export async function renderAsset({
 
     // Headline
     ctx.fillStyle = '#FAF6F0'
-    ctx.font = `bold ${Math.round(w * 0.058)}px serif`
+    ctx.font = `${Math.round(w * 0.058)}px LoraBold`
     ctx.fillText(headline, textLeft, Math.round(h * 0.695))
 
     // Caption
     ctx.fillStyle = 'rgba(250,246,240,0.72)'
-    ctx.font = `${Math.round(w * 0.031)}px serif`
+    ctx.font = `${Math.round(w * 0.031)}px Lora`
     wrapText(ctx, caption, textLeft, Math.round(h * 0.765), textRight - textLeft, Math.round(w * 0.04))
 
     // CTA pill
@@ -206,7 +244,7 @@ export async function renderAsset({
     ctx.fill()
 
     ctx.fillStyle = '#0E0C09'
-    ctx.font = `bold ${Math.round(w * 0.028)}px sans-serif`
+    ctx.font = `${Math.round(w * 0.028)}px InterBold`
     ctx.fillText(cta.toUpperCase(), pillX + Math.round(pillW * 0.1), pillY + Math.round(pillH * 0.64))
 
     // Upload to Supabase Storage
