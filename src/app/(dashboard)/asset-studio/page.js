@@ -315,6 +315,43 @@ export default function AssetStudio() {
     setRenderProgress(null); setScreen('home')
   }
 
+  const editAsset = (asset) => {
+    setTriggerType(asset.trigger_type || 'manual')
+    setTemplateId(asset.template_id || 'product-card')
+    setAspectRatio(asset.aspect_ratio || '1:1')
+    setManualPrompt(asset.source_data?.prompt || '')
+    
+    // Attempt to match creature if applicable
+    let matchedCreature = null;
+    if (asset.source_data?.name && !asset.source_data?.prompt) {
+      matchedCreature = creatures.find(c => c.name === asset.source_data.name) || {
+        name: asset.source_data.name,
+        image_url: asset.source_data.image_url
+      }
+      setCreatureMode('individual')
+      setIndividualCreature(matchedCreature)
+    }
+
+    const assetCopy = {
+      headline: asset.headline || '',
+      caption: asset.caption || '',
+      hashtags: asset.hashtags || [],
+      cta: asset.cta || 'Learn More'
+    }
+    setCopy(assetCopy)
+
+    // Load into preview mode
+    setRenderedImages([{
+      creature: matchedCreature,
+      imageUrl: asset.image_url,
+      assetId: asset.id,
+      error: null,
+      copy: assetCopy
+    }])
+    setExportUrls(asset.image_url ? { [asset.aspect_ratio || '1:1']: asset.image_url } : {})
+    setScreen('preview')
+  }
+
   const toggleCreatureId = (id) => setSelectedCreatureIds(prev => {
     const next = new Set(prev)
     next.has(id) ? next.delete(id) : next.add(id)
@@ -402,7 +439,7 @@ export default function AssetStudio() {
           ) : (
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:14 }}>
               {assets.map(asset => (
-                <div key={asset.id} className="as-card" style={{ padding:0, overflow:'hidden' }}>
+                <div key={asset.id} className="as-card" onClick={() => editAsset(asset)} style={{ padding:0, overflow:'hidden', cursor:'pointer' }}>
                   {asset.image_url
                     ? <img src={asset.image_url} alt={asset.headline ?? ''} style={{ width:'100%', aspectRatio:'1', objectFit:'cover', display:'block' }} />
                     : <div style={{ width:'100%', aspectRatio:'1', background:'rgba(255,255,255,0.03)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, opacity:.2 }}>🖼</div>
