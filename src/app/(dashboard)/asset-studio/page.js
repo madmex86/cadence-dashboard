@@ -1,0 +1,507 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import {
+  generateAssetCopy, renderAsset, saveGeneratedAsset,
+  publishAsset, getSmartSuggestions, loadRecentAssets,
+  loadSocialConnections,
+} from './actions'
+
+const TEMPLATES = [
+  { id: 'product-card',      label: 'Product Card',      icon: '📦' },
+  { id: 'drop-announcement', label: 'Drop Announcement', icon: '⚡' },
+  { id: 'urgency',           label: 'Low Stock Urgency', icon: '⚠' },
+  { id: 'milestone',         label: 'Milestone',         icon: '📈' },
+  { id: 'new-arrival',       label: 'New Arrival',       icon: '✨' },
+  { id: 'quote-card',        label: 'Brand Post',        icon: '💬' },
+]
+
+const TRIGGER_LABELS = {
+  manual:      'Manual prompt',
+  new_product: 'New product',
+  low_stock:   'Low stock alert',
+  drop:        'Upcoming drop',
+  milestone:   'Sales milestone',
+  new_arrival: 'New arrival',
+}
+
+const ASPECT_RATIOS = [
+  { value: '1:1',  label: 'Square',  desc: 'Feed post' },
+  { value: '9:16', label: 'Story',   desc: 'Stories / Reels' },
+  { value: '16:9', label: 'Banner',  desc: 'Facebook / Pinterest' },
+]
+
+const PLATFORMS = [
+  { id: 'instagram', label: 'Instagram', color: '#E1306C' },
+  { id: 'facebook',  label: 'Facebook',  color: '#1877F2' },
+  { id: 'pinterest', label: 'Pinterest', color: '#E60023' },
+]
+
+export default function AssetStudio() {
+  const [screen, setScreen] = useState('home')
+  const [assets, setAssets] = useState([])
+  const [suggestions, setSuggestions] = useState([])
+  const [connections, setConnections] = useState([])
+
+  // Builder state
+  const [triggerType, setTriggerType] = useState('manual')
+  const [templateId, setTemplateId] = useState('product-card')
+  const [aspectRatio, setAspectRatio] = useState('1:1')
+  const [manualPrompt, setManualPrompt] = useState('')
+  const [copy, setCopy] = useState(null)
+  const [imageUrl, setImageUrl] = useState(null)
+  const [selectedSuggestion, setSelectedSuggestion] = useState(null)
+
+  // Status
+  const [isGeneratingCopy, setIsGeneratingCopy] = useState(false)
+  const [isRendering, setIsRendering] = useState(false)
+  const [isPublishing, setIsPublishing] = useState(false)
+  const [savedAssetId, setSavedAssetId] = useState(null)
+
+  // Publish
+  const [selectedPlatforms, setSelectedPlatforms] = useState([])
+  const [scheduleDate, setScheduleDate] = useState('')
+  const [publishResults, setPublishResults] = useState(null)
+
+  // Clipboard feedback
+  const [copiedField, setCopiedField] = useState(null)
+
+  // Load data on mount
+  useEffect(() => {
+    loadRecentAssets().then(r => { if (r.assets) setAssets(r.assets) })
+    getSmartSuggestions().then(r => { if (r.suggestions) setSuggestions(r.suggestions) })
+    loadSocialConnections().then(r => { if (r.connections) setConnections(r.connections) })
+  }, [])
+
+  const copyToClipboard = useCallback(async (text, field) => {
+    await navigator.clipboard.writeText(text)
+    setCopiedField(field)
+    setTimeout(() => setCopiedField(null), 2000)
+  }, [])
+
+  const handleGenerateCopy = async () => {
+    setIsGeneratingCopy(true)
+    setCopy(null)
+    const sourceData = selectedSuggestion?.sourceData ?? { prompt: manualPrompt }
+    const result = await generateAssetCopy({ triggerType, sourceData, templateId })
+    setIsGeneratingCopy(false)
+    if (result.copy) setCopy(result.copy)
+  }
+
+  const handleRenderPreview = async () => {
+    if (!copy) return
+    setIsRendering(true)
+
+    // Try to find a product image from the suggestion's sourceData
+    const productImageUrl = selectedSuggestion?.sourceData?.image_url ?? null
+
+    const result = await renderAsset({
+      headline: copy.headline,
+      caption: copy.caption,
+      cta: copy.cta,
+      productImageUrl,
+      aspectRatio,
+      templateId,
+    })
+    setIsRendering(false)
+    if (result.imageUrl) {
+      setImageUrl(result.imageUrl)
+      setScreen('preview')
+      const saveResult = await saveGeneratedAsset({
+        asset: {
+          trigger_type: triggerType,
+          source_data: selectedSuggestion?.sourceData ?? { prompt: manualPrompt },
+          template_id: templateId,
+          headline: copy.headline,
+          caption: copy.caption,
+          hashtags: copy.hashtags,
+          cta: copy.cta,
+          image_url: result.imageUrl,
+          aspect_ratio: aspectRatio,
+          status: 'draft',
+        },
+      })
+      if (saveResult.id) setSavedAssetId(saveResult.id)
+    }
+  }
+
+  const handlePublish = async () => {
+    if (!imageUrl || !copy || !savedAssetId || selectedPlatforms.length === 0) return
+    setIsPublishing(true)
+    const result = await publishAsset({
+      assetId: savedAssetId,
+      imageUrl,
+      caption: copy.caption,
+      hashtags: copy.hashtags,
+      platforms: selectedPlatforms,
+      scheduledFor: scheduleDate ? new Date(scheduleDate) : undefined,
+    })
+    setIsPublishing(false)
+    if (result.results) setPublishResults(result.results)
+  }
+
+  const startFromSuggestion = (s) => {
+    setSelectedSuggestion(s)
+    setTriggerType(s.triggerType)
+    setTemplateId(
+      s.triggerType === 'low_stock' ? 'urgency' :
+      s.triggerType === 'drop' ? 'drop-announcement' : 'product-card'
+    )
+    setScreen('builder')
+  }
+
+  const resetBuilder = () => {
+    setCopy(null); setImageUrl(null); setSavedAssetId(null)
+    setPublishResults(null); setSelectedSuggestion(null)
+    setSelectedPlatforms([]); setScheduleDate(''); setScreen('home')
+  }
+
+  const connectedPlatforms = connections.filter(c => c.is_active).map(c => c.platform)
+
+  // ─── RENDER ────────────────────────────────────────────────────────────────
+  return (
+    <div>
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
+        .as-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(201,168,76,0.12); border-radius: 10px; padding: 1.25rem; }
+        .as-chip { display:flex; align-items:center; gap:.4rem; justify-content:center; padding:.5rem .75rem; border-radius:6px; background:transparent; color:rgba(250,246,240,0.5); font-size:13px; border:1px solid rgba(201,168,76,0.12); cursor:pointer; transition:all .15s; font-family:inherit; }
+        .as-chip.sel { background:rgba(201,168,76,0.1); border-color:rgba(201,168,76,0.4); color:var(--gold); font-weight:600; }
+        .as-inp { width:100%; background:rgba(255,255,255,0.03); border:1px solid rgba(201,168,76,0.15); border-radius:6px; color:#FAF6F0; font-size:14px; padding:.75rem; resize:vertical; font-family:inherit; line-height:1.5; box-sizing:border-box; outline:none; }
+        .as-btn-pri { display:inline-flex; align-items:center; gap:.4rem; padding:.5rem 1rem; border-radius:6px; background:var(--gold); color:#0E0C09; font-weight:700; font-size:13px; border:none; cursor:pointer; font-family:inherit; }
+        .as-btn-pri:disabled { opacity:.4; cursor:default; }
+        .as-btn-ghost { display:inline-flex; align-items:center; gap:.4rem; padding:.45rem .75rem; border-radius:6px; background:transparent; color:rgba(250,246,240,0.6); font-weight:500; font-size:13px; border:1px solid rgba(201,168,76,0.15); cursor:pointer; font-family:inherit; text-decoration:none; }
+        .as-fl { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:rgba(250,246,240,0.4); margin:0 0 .65rem; display:block; }
+        @media(max-width:860px){ .as-two-col{ grid-template-columns:1fr !important; } }
+      `}</style>
+
+      {/* Header */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          {screen !== 'home' && (
+            <button onClick={resetBuilder} className="as-btn-ghost" style={{ padding:'4px 8px' }}>✕</button>
+          )}
+          <div>
+            <h1 style={{ fontFamily:'var(--font-caveat,cursive)', fontSize:'2rem', color:'var(--gold)', margin:0 }}>
+              ✦ Asset Studio
+            </h1>
+            {screen !== 'home' && (
+              <span style={{ fontSize:11, color:'rgba(250,246,240,0.35)', letterSpacing:'.08em' }}>
+                {screen === 'builder' ? '› Create' : '› Preview & Publish'}
+              </span>
+            )}
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+          <a href="/asset-studio/settings" className="as-btn-ghost">
+            ⚙ Social Accounts
+            {connectedPlatforms.length > 0 && (
+              <span style={{ background:'var(--gold)', color:'#0E0C09', fontSize:10, fontWeight:700, padding:'1px 6px', borderRadius:99 }}>
+                {connectedPlatforms.length}
+              </span>
+            )}
+          </a>
+          {screen === 'home' && (
+            <button onClick={() => setScreen('builder')} className="as-btn-pri">+ New Asset</button>
+          )}
+        </div>
+      </div>
+
+      {/* HOME */}
+      {screen === 'home' && (
+        <div>
+          {suggestions.length > 0 && (
+            <div style={{ marginBottom:32 }}>
+              <p style={{ fontSize:10, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase', color:'rgba(250,246,240,0.35)', margin:'0 0 12px' }}>Smart Suggestions</p>
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {suggestions.map(s => (
+                  <div key={s.id} className="as-card" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 18px', borderLeft:`3px solid ${s.urgency === 'high' ? '#e09090' : 'var(--gold)'}` }}>
+                    <div>
+                      <p style={{ margin:0, fontWeight:600, fontSize:13 }}>{s.title}</p>
+                      <p style={{ margin:'3px 0 0', fontSize:12, color:'rgba(250,246,240,0.5)' }}>{s.description}</p>
+                    </div>
+                    <button onClick={() => startFromSuggestion(s)} className="as-btn-pri">
+                      Create Post →
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <p style={{ fontSize:10, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase', color:'rgba(250,246,240,0.35)', margin:'0 0 12px' }}>Recent Assets</p>
+          {assets.length === 0 ? (
+            <div className="as-card" style={{ textAlign:'center', padding:'48px 24px' }}>
+              <div style={{ fontSize:36, marginBottom:12, opacity:.2 }}>🖼</div>
+              <p style={{ color:'rgba(250,246,240,0.5)', margin:0, fontSize:13 }}>No assets yet. Create your first post above.</p>
+            </div>
+          ) : (
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:14 }}>
+              {assets.map(asset => (
+                <div key={asset.id} className="as-card" style={{ padding:0, overflow:'hidden' }}>
+                  {asset.image_url
+                    ? <img src={asset.image_url} alt={asset.headline ?? ''} style={{ width:'100%', aspectRatio:'1', objectFit:'cover', display:'block' }} />
+                    : <div style={{ width:'100%', aspectRatio:'1', background:'rgba(255,255,255,0.03)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, opacity:.2 }}>🖼</div>
+                  }
+                  <div style={{ padding:'12px 14px' }}>
+                    <p style={{ margin:'0 0 5px', fontWeight:600, fontSize:13, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{asset.headline ?? 'Untitled'}</p>
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                      <StatusPill status={asset.status} />
+                      <span style={{ fontSize:10, color:'rgba(250,246,240,0.35)' }}>{TRIGGER_LABELS[asset.trigger_type] ?? asset.trigger_type}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* BUILDER */}
+      {screen === 'builder' && (
+        <div className="as-two-col" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:24, alignItems:'start' }}>
+
+          {/* LEFT — Config */}
+          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+
+            {/* Trigger type */}
+            <div className="as-card">
+              <span className="as-fl">Trigger Type</span>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+                {Object.keys(TRIGGER_LABELS).map(t => (
+                  <button key={t} onClick={() => setTriggerType(t)} className={`as-chip${triggerType === t ? ' sel' : ''}`}>
+                    {TRIGGER_LABELS[t]}
+                  </button>
+                ))}
+              </div>
+              {triggerType === 'manual' && (
+                <textarea
+                  value={manualPrompt}
+                  onChange={e => setManualPrompt(e.target.value)}
+                  placeholder="Describe the post you want to create..."
+                  rows={3}
+                  className="as-inp"
+                  style={{ marginTop:10 }}
+                />
+              )}
+              {selectedSuggestion && (
+                <div style={{ marginTop:10, padding:'10px 12px', background:'rgba(201,168,76,0.08)', borderRadius:6, fontSize:12, color:'rgba(250,246,240,0.7)' }}>
+                  Using: <strong>{selectedSuggestion.title}</strong>
+                </div>
+              )}
+            </div>
+
+            {/* Template */}
+            <div className="as-card">
+              <span className="as-fl">Template</span>
+              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                {TEMPLATES.map(t => (
+                  <button key={t.id} onClick={() => setTemplateId(t.id)} style={{
+                    display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:6, cursor:'pointer', textAlign:'left', width:'100%', fontFamily:'inherit',
+                    border:`1px solid ${templateId === t.id ? 'var(--gold)' : 'rgba(201,168,76,0.12)'}`,
+                    background: templateId === t.id ? 'rgba(201,168,76,0.08)' : 'transparent',
+                    color: templateId === t.id ? 'var(--gold)' : 'rgba(250,246,240,0.6)',
+                    transition:'all .15s',
+                  }}>
+                    <span>{t.icon}</span>
+                    <span style={{ fontSize:13, fontWeight: templateId === t.id ? 600 : 400 }}>{t.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Aspect Ratio */}
+            <div className="as-card">
+              <span className="as-fl">Format</span>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
+                {ASPECT_RATIOS.map(ar => (
+                  <button key={ar.value} onClick={() => setAspectRatio(ar.value)} className={`as-chip${aspectRatio === ar.value ? ' sel' : ''}`} style={{ flexDirection:'column', gap:3, padding:'10px 6px' }}>
+                    <span style={{ fontWeight:600, fontSize:13 }}>{ar.label}</span>
+                    <span style={{ fontSize:10, opacity:.6 }}>{ar.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button onClick={handleGenerateCopy} disabled={isGeneratingCopy} className="as-btn-pri" style={{ width:'100%', justifyContent:'center', padding:'12px' }}>
+              {isGeneratingCopy ? <><Spin /> Generating copy…</> : <>✦ Generate Copy</>}
+            </button>
+          </div>
+
+          {/* RIGHT — Copy editor */}
+          <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+            {!copy ? (
+              <div className="as-card" style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:400, gap:12 }}>
+                <div style={{ fontSize:32, opacity:.2 }}>✦</div>
+                <p style={{ color:'rgba(250,246,240,0.4)', fontSize:13, margin:0, textAlign:'center' }}>
+                  Configure your post on the left,<br />then generate copy to see it here.
+                </p>
+              </div>
+            ) : (
+              <>
+                <CopyField label="Headline" value={copy.headline} onChange={v => setCopy({...copy, headline: v})} copiedField={copiedField} onCopy={copyToClipboard} rows={2} />
+                <CopyField label="Caption" value={copy.caption} onChange={v => setCopy({...copy, caption: v})} copiedField={copiedField} onCopy={copyToClipboard} rows={4} />
+
+                <div className="as-card">
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+                    <span className="as-fl" style={{ margin:0 }}>Hashtags</span>
+                    <button onClick={() => copyToClipboard(copy.hashtags.map(h => `#${h.replace(/^#/,'')}`).join(' '), 'hashtags')} className="as-btn-ghost" style={{ padding:'3px 8px', fontSize:11 }}>
+                      {copiedField === 'hashtags' ? '✓' : '⎘'}
+                    </button>
+                  </div>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
+                    {copy.hashtags.map((tag, i) => (
+                      <span key={i} style={{ padding:'3px 9px', background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:99, fontSize:11, color:'var(--gold)' }}>
+                        #{tag.replace(/^#/, '')}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="as-card">
+                  <span className="as-fl">Call to Action</span>
+                  <input value={copy.cta} onChange={e => setCopy({...copy, cta: e.target.value})} className="as-inp" style={{ resize:'none' }} />
+                </div>
+
+                <div style={{ display:'flex', gap:10 }}>
+                  <button onClick={handleGenerateCopy} disabled={isGeneratingCopy} className="as-btn-ghost" style={{ flex:1, justifyContent:'center', padding:'10px' }}>
+                    ↺ Regenerate
+                  </button>
+                  <button onClick={handleRenderPreview} disabled={isRendering} className="as-btn-pri" style={{ flex:2, justifyContent:'center', padding:'10px' }}>
+                    {isRendering ? <><Spin /> Rendering…</> : <>🖼 Render Preview</>}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* PREVIEW */}
+      {screen === 'preview' && imageUrl && copy && (
+        <div className="as-two-col" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:24, alignItems:'start' }}>
+
+          {/* LEFT — Image */}
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            <div style={{ borderRadius:10, overflow:'hidden', border:'1px solid rgba(201,168,76,0.15)' }}>
+              <img src={imageUrl} alt={copy.headline} style={{ width:'100%', display:'block' }} />
+            </div>
+            <div style={{ display:'flex', gap:10 }}>
+              <a href={imageUrl} download className="as-btn-ghost" style={{ flex:1, justifyContent:'center', padding:'10px' }}>↓ Download</a>
+              <button onClick={() => setScreen('builder')} className="as-btn-ghost" style={{ flex:1, justifyContent:'center', padding:'10px' }}>↺ Regenerate</button>
+            </div>
+          </div>
+
+          {/* RIGHT — Publish */}
+          <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+            <div className="as-card">
+              <span className="as-fl">Publish To</span>
+              {connectedPlatforms.length === 0 ? (
+                <div style={{ textAlign:'center', padding:'24px 0' }}>
+                  <p style={{ fontSize:12, color:'rgba(250,246,240,0.4)', margin:'0 0 12px' }}>No social accounts connected yet.</p>
+                  <a href="/asset-studio/settings" className="as-btn-pri" style={{ textDecoration:'none' }}>Connect Accounts</a>
+                </div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                  {PLATFORMS.filter(p => connectedPlatforms.includes(p.id)).map(platform => {
+                    const sel = selectedPlatforms.includes(platform.id)
+                    return (
+                      <button key={platform.id} onClick={() => setSelectedPlatforms(prev => sel ? prev.filter(p => p !== platform.id) : [...prev, platform.id])} style={{
+                        display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderRadius:6, cursor:'pointer', textAlign:'left', width:'100%', fontFamily:'inherit',
+                        border:`1px solid ${sel ? platform.color : 'rgba(201,168,76,0.12)'}`,
+                        background: sel ? `${platform.color}15` : 'transparent',
+                        color: sel ? '#FAF6F0' : 'rgba(250,246,240,0.5)',
+                      }}>
+                        <div style={{ width:8, height:8, borderRadius:'50%', background: sel ? platform.color : 'rgba(255,255,255,0.2)' }} />
+                        <span style={{ fontSize:13, fontWeight: sel ? 600 : 400 }}>{platform.label}</span>
+                        {sel && <span style={{ marginLeft:'auto', color: platform.color }}>✓</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {connectedPlatforms.length > 0 && (
+              <div className="as-card">
+                <span className="as-fl">When</span>
+                <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                  <button onClick={() => setScheduleDate('')} className={`as-chip${scheduleDate === '' ? ' sel' : ''}`}>
+                    → Post Now
+                  </button>
+                  <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                    <button onClick={() => setScheduleDate(scheduleDate || new Date(Date.now() + 3600000).toISOString().slice(0, 16))} className={`as-chip${scheduleDate !== '' ? ' sel' : ''}`} style={{ flex:1 }}>
+                      🗓 Schedule
+                    </button>
+                    {scheduleDate !== '' && (
+                      <input type="datetime-local" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} className="as-inp" style={{ flex:2, padding:'8px 10px', resize:'none' }} />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {publishResults && (
+              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                {Object.entries(publishResults).map(([platform, result]) => (
+                  <div key={platform} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', borderRadius:6, background: result.success ? 'rgba(125,201,148,0.08)' : 'rgba(224,144,144,0.08)', border:`1px solid ${result.success ? 'rgba(125,201,148,0.2)' : 'rgba(224,144,144,0.2)'}` }}>
+                    <span>{result.success ? '✓' : '✕'}</span>
+                    <span style={{ fontSize:13, textTransform:'capitalize' }}>{platform}</span>
+                    <span style={{ fontSize:11, color:'rgba(250,246,240,0.5)', marginLeft:'auto' }}>
+                      {result.success ? (scheduleDate ? 'Scheduled' : 'Posted') : result.error}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!publishResults && (
+              <button onClick={handlePublish} disabled={isPublishing || selectedPlatforms.length === 0} className="as-btn-pri" style={{ width:'100%', justifyContent:'center', padding:'12px', opacity: selectedPlatforms.length === 0 ? .4 : 1 }}>
+                {isPublishing ? <><Spin /> Publishing…</> : scheduleDate ? <>🗓 Schedule Post</> : <>→ Publish Now</>}
+              </button>
+            )}
+
+            {publishResults && (
+              <button onClick={resetBuilder} className="as-btn-ghost" style={{ width:'100%', justifyContent:'center', padding:'10px' }}>
+                Create Another Asset
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+function CopyField({ label, value, onChange, copiedField, onCopy, rows }) {
+  return (
+    <div className="as-card">
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+        <span className="as-fl" style={{ margin:0 }}>{label}</span>
+        <button onClick={() => onCopy(value, label)} className="as-btn-ghost" style={{ padding:'3px 8px', fontSize:11 }}>
+          {copiedField === label ? '✓' : '⎘'}
+        </button>
+      </div>
+      <textarea value={value} onChange={e => onChange(e.target.value)} rows={rows} className="as-inp" />
+    </div>
+  )
+}
+
+function Spin() {
+  return <span style={{ display:'inline-block', animation:'spin 1s linear infinite' }}>⟳</span>
+}
+
+function StatusPill({ status }) {
+  const map = {
+    draft:     { color:'rgba(250,246,240,0.5)', bg:'rgba(255,255,255,0.06)' },
+    approved:  { color:'#7dc994',               bg:'rgba(125,201,148,0.1)' },
+    posted:    { color:'#5BBFD4',               bg:'rgba(91,191,212,0.1)' },
+    scheduled: { color:'var(--gold)',            bg:'rgba(201,168,76,0.1)' },
+  }
+  const { color, bg } = map[status] ?? map.draft
+  return (
+    <span style={{ padding:'2px 8px', borderRadius:99, fontSize:10, fontWeight:600, letterSpacing:'.04em', textTransform:'uppercase', color, background:bg }}>
+      {status}
+    </span>
+  )
+}
