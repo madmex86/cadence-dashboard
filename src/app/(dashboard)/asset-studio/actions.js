@@ -54,7 +54,7 @@ const CONTEXT_BUILDERS = {
   milestone: (d) =>
     `The store just hit a milestone: $${d.amount} in sales today${d.order_count ? ` across ${d.order_count} orders` : ''}. Celebrate authentically.`,
   manual: (d) =>
-    String(d.prompt ?? 'Create a compelling marketing post for this brand.'),
+    String(d.prompt || 'Create a compelling marketing post for Cadence Creatures — a boutique 3D-printed flexi animal toy shop. Highlight the handcrafted quality, the hidden Field Notes lore card, and the custom box.'),
 }
 
 const TEMPLATE_TONE = {
