@@ -63,6 +63,7 @@ export default function AssetStudio() {
   const [copy, setCopy] = useState(null)
   const [selectedSuggestion, setSelectedSuggestion] = useState(null)
   const [editingAssetId, setEditingAssetId] = useState(null)
+  const [deletingAssetId, setDeletingAssetId] = useState(null)
 
   // Render results — array so batch works naturally
   // Each: { creature: obj|null, imageUrl: string|null, assetId: string|null, error: string|null }
@@ -112,14 +113,25 @@ export default function AssetStudio() {
     setTimeout(() => setCopiedField(null), 2000)
   }, [])
 
-  const handleDeleteAsset = async (e, id) => {
+  const triggerDelete = (e, id) => {
     e.stopPropagation()
-    if (!confirm('Are you sure you want to delete this draft?')) return
+    setDeletingAssetId(id)
+  }
+
+  const cancelDelete = (e) => {
+    e.stopPropagation()
+    setDeletingAssetId(null)
+  }
+
+  const confirmDelete = async (e, id) => {
+    e.stopPropagation()
     const res = await deleteGeneratedAsset(id)
     if (res.success) {
       setAssets(prev => prev.filter(a => a.id !== id))
+      setDeletingAssetId(null)
     } else {
       alert(`Delete failed: ${res.error}`)
+      setDeletingAssetId(null)
     }
   }
 
@@ -464,7 +476,14 @@ export default function AssetStudio() {
                       <StatusPill status={asset.status} />
                       <div style={{ display:'flex', gap:8, alignItems:'center' }}>
                         <span style={{ fontSize:10, color:'rgba(250,246,240,0.35)' }}>{TRIGGER_LABELS[asset.trigger_type] ?? asset.trigger_type}</span>
-                        <button onClick={(e) => handleDeleteAsset(e, asset.id)} style={{ background:'none', border:'none', padding:0, cursor:'pointer', color:'rgba(250,246,240,0.4)', fontSize:12 }} title="Delete">✕</button>
+                        {deletingAssetId === asset.id ? (
+                          <div style={{ display:'flex', gap: 6, alignItems: 'center' }}>
+                            <button onClick={(e) => cancelDelete(e)} style={{ background:'transparent', color:'rgba(250,246,240,0.6)', border:'none', cursor:'pointer', fontSize:11, padding:0 }}>Cancel</button>
+                            <button onClick={(e) => confirmDelete(e, asset.id)} style={{ background:'#D32F2F', color:'white', border:'none', borderRadius:4, padding:'2px 6px', cursor:'pointer', fontSize:11, fontWeight:600 }}>Delete</button>
+                          </div>
+                        ) : (
+                          <button onClick={(e) => triggerDelete(e, asset.id)} style={{ background:'none', border:'none', padding:0, cursor:'pointer', color:'rgba(250,246,240,0.4)', fontSize:12 }} title="Delete">✕</button>
+                        )}
                       </div>
                     </div>
                   </div>
