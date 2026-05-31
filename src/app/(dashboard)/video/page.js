@@ -1,6 +1,32 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 
+// ─── Camera styles for Runway B-roll ─────────────────────────────────────────
+const CAMERA_STYLES = [
+  { id: "",              label: "No preference",     prompt: null },
+  { id: "slow_dolly",   label: "Slow dolly in",      prompt: "slow camera push-in toward subject, steady forward dolly, shallow depth of field" },
+  { id: "orbital",      label: "Orbital arc",         prompt: "smooth orbital camera arc around subject, product showcase movement, steady and cinematic" },
+  { id: "pedestal",     label: "Pedestal rise",       prompt: "camera rises slowly upward, subject stays centered, dramatic vertical reveal" },
+  { id: "rack_focus",   label: "Rack focus bloom",    prompt: "background bokeh blooms outward, rack focus pulls to sharpen subject, cinematic lens breathing" },
+  { id: "handheld",     label: "Handheld breathing",  prompt: "subtle handheld micro-motion, organic naturalistic feel, gentle drift and sway" },
+  { id: "pan_reveal",   label: "Pan reveal",          prompt: "slow sweeping pan from left to right, environment reveal, tracking motion" },
+  { id: "zoom_out",     label: "Zoom-out reveal",     prompt: "start tight on subject, slow pull back to reveal full scene and environment" },
+  { id: "golden_drift", label: "Golden hour drift",   prompt: "static frame with golden hour light sweep across scene, warm atmospheric bokeh drift" },
+];
+
+// ─── Detail chips appended to the campaign brief ──────────────────────────────
+const DETAIL_OPTIONS = [
+  { id: "lore_card",    label: "Field Notes lore card" },
+  { id: "custom_box",   label: "Custom box" },
+  { id: "limited_drop", label: "Limited drop" },
+  { id: "gift",         label: "Gift-friendly" },
+  { id: "seasonal",     label: "Seasonal / holiday" },
+  { id: "shipping",     label: "Free shipping" },
+  { id: "collector",    label: "Collector's item" },
+  { id: "kids",         label: "Kid-friendly" },
+  { id: "fast_ship",    label: "Ships fast" },
+];
+
 // ─── Progress helpers ─────────────────────────────────────────────────────────
 // Three phases, each worth 1/3 of the bar:
 //   Script (Claude)  →  Presenter (D-ID)  →  B-Roll (Runway)
@@ -394,12 +420,16 @@ function Compositor({ scriptMeta }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function VideoPage() {
-  const [campaignInput, setCampaignInput] = useState("");
-  const [generating, setGenerating]       = useState(false);
-  const [error, setError]                 = useState("");
-  const [jobs, setJobs]                   = useState([]);
-  const [selectedJob, setSelectedJob]     = useState(null);
-  const [loadingJobs, setLoadingJobs]     = useState(true);
+  const [notes, setNotes]                         = useState("");
+  const [creatures, setCreatures]                 = useState([]);
+  const [selectedCreature, setSelectedCreature]   = useState(null);
+  const [cameraStyle, setCameraStyle]             = useState("");
+  const [activeDetails, setActiveDetails]         = useState(new Set());
+  const [generating, setGenerating]               = useState(false);
+  const [error, setError]                         = useState("");
+  const [jobs, setJobs]                           = useState([]);
+  const [selectedJob, setSelectedJob]             = useState(null);
+  const [loadingJobs, setLoadingJobs]             = useState(true);
   const pollRef = useRef(null);
 
   // ── Load recent jobs on mount ───────────────────────────────────────────
@@ -415,6 +445,14 @@ export default function VideoPage() {
   }, []);
 
   useEffect(() => { loadJobs(); }, [loadJobs]);
+
+  // ── Load creature list for picker ──────────────────────────────────────
+  useEffect(() => {
+    fetch("/api/creatures")
+      .then(r => r.json())
+      .then(d => setCreatures(d.creatures || []))
+      .catch(() => {});
+  }, []);
 
   // ── Poll active job ─────────────────────────────────────────────────────
   const pollJob = useCallback(async (jobId) => {
@@ -464,15 +502,29 @@ export default function VideoPage() {
 
   // ── Generate a new video ────────────────────────────────────────────────
   async function generate() {
-    if (!campaignInput.trim() || generating) return;
+    if (generating || (!selectedCreature && !notes.trim())) return;
     setGenerating(true);
     setError("");
+
+    // Build structured campaign input from all UI selections
+    const lines = [];
+    if (selectedCreature) {
+      const color = selectedCreature.filament_color ? ` · ${selectedCreature.filament_color}` : "";
+      lines.push(`Creature: ${selectedCreature.name} (${selectedCreature.species}${color})`);
+    }
+    if (activeDetails.size > 0) {
+      const labels = DETAIL_OPTIONS.filter(d => activeDetails.has(d.id)).map(d => d.label);
+      lines.push(`Highlights: ${labels.join(", ")}`);
+    }
+    if (notes.trim()) lines.push(notes.trim());
+    const builtInput = lines.join("\n");
+    const cameraPrompt = CAMERA_STYLES.find(c => c.id === cameraStyle)?.prompt ?? null;
 
     try {
       const res  = await fetch("/api/video", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ campaignInput: campaignInput.trim() }),
+        body:    JSON.stringify({ campaignInput: builtInput, cameraStylePrompt: cameraPrompt }),
       });
       const data = await res.json();
 
@@ -482,19 +534,22 @@ export default function VideoPage() {
       }
 
       const newJob = {
-        id:            data.jobId,
-        status:        data.status,
-        campaign_input: campaignInput.trim(),
-        claude_script: data.script,
-        did_status:    data.did_talk_id    ? "processing" : "failed",
-        runway_status: data.runway_task_id ? "processing" : "failed",
-        output_url:    null,
-        error:         null,
-        created_at:    new Date().toISOString(),
+        id:             data.jobId,
+        status:         data.status,
+        campaign_input: builtInput,
+        claude_script:  data.script,
+        did_status:     data.did_talk_id    ? "processing" : "failed",
+        runway_status:  data.runway_task_id ? "processing" : "failed",
+        output_url:     null,
+        error:          null,
+        created_at:     new Date().toISOString(),
       };
 
       setJobs(prev => [newJob, ...prev]);
-      setCampaignInput("");
+      setNotes("");
+      setSelectedCreature(null);
+      setCameraStyle("");
+      setActiveDetails(new Set());
       selectJob(newJob);
       startPolling(data.jobId);
     } catch (e) {
@@ -607,20 +662,92 @@ export default function VideoPage() {
               <span className="sec-title">Campaign Brief</span>
             </div>
 
+            {/* Creature picker */}
             <div style={{ marginBottom: 14 }}>
-              <label className="fl">Describe your video</label>
+              <label className="fl">Creature</label>
+              <select
+                className="fi"
+                value={selectedCreature?.id || ""}
+                onChange={e => setSelectedCreature(creatures.find(c => c.id === e.target.value) || null)}
+                disabled={generating}
+                style={{ width: "100%", boxSizing: "border-box" }}
+              >
+                <option value="">— pick a creature —</option>
+                {creatures.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}{c.species ? ` · ${c.species}` : ""}{c.filament_color ? ` · ${c.filament_color}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Camera style */}
+            <div style={{ marginBottom: 14 }}>
+              <label className="fl">Camera Style</label>
+              <select
+                className="fi"
+                value={cameraStyle}
+                onChange={e => setCameraStyle(e.target.value)}
+                disabled={generating}
+                style={{ width: "100%", boxSizing: "border-box" }}
+              >
+                {CAMERA_STYLES.map(cs => (
+                  <option key={cs.id} value={cs.id}>{cs.label}</option>
+                ))}
+              </select>
+              {cameraStyle && (
+                <div style={{ fontSize: 10, color: "rgba(91,191,212,.5)", marginTop: 5, lineHeight: 1.5, fontStyle: "italic" }}>
+                  {CAMERA_STYLES.find(c => c.id === cameraStyle)?.prompt}
+                </div>
+              )}
+            </div>
+
+            {/* Highlight chips */}
+            <div style={{ marginBottom: 14 }}>
+              <label className="fl" style={{ display: "block", marginBottom: 8 }}>Highlights</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {DETAIL_OPTIONS.map(d => {
+                  const on = activeDetails.has(d.id);
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      disabled={generating}
+                      onClick={() => setActiveDetails(prev => {
+                        const next = new Set(prev);
+                        on ? next.delete(d.id) : next.add(d.id);
+                        return next;
+                      })}
+                      style={{
+                        padding: "4px 10px", fontSize: 11, borderRadius: 20, cursor: generating ? "default" : "pointer",
+                        border: `1px solid ${on ? "rgba(201,168,76,.7)" : "rgba(201,168,76,.2)"}`,
+                        background: on ? "rgba(201,168,76,.15)" : "transparent",
+                        color: on ? "var(--goldl, #E8D08A)" : "rgba(196,188,178,.45)",
+                        letterSpacing: ".04em", transition: "all .15s",
+                      }}
+                    >
+                      {d.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div style={{ marginBottom: 14 }}>
+              <label className="fl">
+                Additional Notes{" "}
+                <span style={{ color: "rgba(196,188,178,.3)", fontWeight: 400 }}>(optional)</span>
+              </label>
               <textarea
                 className="fi"
-                rows={5}
-                value={campaignInput}
-                onChange={e => setCampaignInput(e.target.value)}
-                placeholder={`Example:\n"Holiday flexi dragon — Ember. Limited drop. Targets gift buyers on Instagram. Whimsical, warm tone. Include Field Notes lore card mention."`}
+                rows={3}
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="Platform, tone, special instructions…"
                 disabled={generating}
                 style={{ resize: "vertical", fontFamily: "inherit", width: "100%", boxSizing: "border-box" }}
               />
-            </div>
-            <div style={{ fontSize: 11, color: "rgba(196,188,178,.35)", marginBottom: 16, lineHeight: 1.6 }}>
-              Include: creature name, drop type, target platform, tone, any special features. Claude writes the script. D-ID renders the presenter. Runway generates the B-roll.
             </div>
 
             {error && (
@@ -632,7 +759,7 @@ export default function VideoPage() {
             <button
               className="btn pri"
               onClick={generate}
-              disabled={generating || !campaignInput.trim()}
+              disabled={generating || (!selectedCreature && !notes.trim())}
               style={{ width: "100%" }}
             >
               {generating ? "Generating…" : "▶ Generate Video"}

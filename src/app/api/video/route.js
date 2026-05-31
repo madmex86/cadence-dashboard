@@ -9,7 +9,7 @@ function getBaseUrl(request) {
 }
 
 // ─── Claude: generate structured video script ────────────────────────────────
-async function generateScript(campaignInput, loreContext) {
+async function generateScript(campaignInput, loreContext, cameraStylePrompt) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
 
@@ -39,7 +39,7 @@ Return ONLY a minified JSON object — no markdown fences, no explanation — ma
 {
   "avatar_script": "30-45 second spoken script for the video presenter. Warm, whimsical tone. Mention the creature by name. Explicitly mention the Field Notes lore card and Cadence Creatures box if it fits the brief.",
   "voice_accent": "en_us_female_warm",
-  "b_roll_prompt": "Cinematic motion prompt for Runway image-to-video. The creature's actual photo will be used as the starting frame — describe only the MOTION and ATMOSPHERE, NOT the creature's appearance. Example: 'slow gentle breathing, soft bokeh background, golden hour light, shallow depth of field, subtle camera drift forward'. Keep it under 40 words.",
+  "b_roll_prompt": "Cinematic motion prompt for Runway image-to-video. The creature's actual photo will be used as the starting frame — describe only the MOTION and ATMOSPHERE, NOT the creature's appearance. ${cameraStylePrompt ? `Camera movement required: ${cameraStylePrompt}.` : "Example: 'slow gentle breathing, soft bokeh background, golden hour light, shallow depth of field, subtle camera drift forward'."} Keep it under 40 words.",
   "overlay_text_segments": ["Hook 6 words max", "Core benefit 8 words max", "Call to action 6 words max"]
 }`,
         },
@@ -159,7 +159,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { campaignInput } = await request.json();
+    const { campaignInput, cameraStylePrompt = null } = await request.json();
     if (!campaignInput?.trim()) {
       return NextResponse.json({ error: "campaignInput is required" }, { status: 400 });
     }
@@ -191,7 +191,7 @@ export async function POST(request) {
     // Step 1: Claude script
     let script;
     try {
-      script = await generateScript(campaignInput, loreContext);
+      script = await generateScript(campaignInput, loreContext, cameraStylePrompt);
     } catch (e) {
       await supabase.from("video_jobs")
         .update({ status: "failed", error: "Script generation failed: " + e.message })
