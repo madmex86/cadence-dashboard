@@ -181,6 +181,7 @@ export default function InventoryPage() {
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ msg: "", type: "ok" }); // type: ok | err
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   // Scanner state
   const [showScanner, setShowScanner] = useState(false);
@@ -217,10 +218,10 @@ export default function InventoryPage() {
   }
 
   async function handleDelete(id) {
-    if (!confirm("Delete this spool entry?")) return;
     const supabase = createClient();
     await supabase.from("inventory").delete().eq("id", id);
     load();
+    setDeleteConfirmId(null);
   }
 
   // ── Scanner callbacks ────────────────────────────────────────────────────────
@@ -353,9 +354,16 @@ export default function InventoryPage() {
                         {item.purchase_url && (
                           <a href={item.purchase_url} target="_blank" rel="noopener noreferrer" className="btn sm">Buy ↗</a>
                         )}
-                        <button className="btn sm" style={{ color: "#ff6b6b", borderColor: "rgba(255,107,107,0.2)" }} onClick={() => handleDelete(item.id)}>
-                          Del
-                        </button>
+                        {deleteConfirmId === item.id ? (
+                          <div style={{ display: "flex", gap: 4 }}>
+                            <button className="btn sm" onClick={() => setDeleteConfirmId(null)}>Cancel</button>
+                            <button className="btn sm" style={{ color: "#e87070", borderColor: "rgba(232,112,112,0.3)" }} onClick={() => handleDelete(item.id)}>Confirm</button>
+                          </div>
+                        ) : (
+                          <button className="btn sm" style={{ color: "#ff6b6b", borderColor: "rgba(255,107,107,0.2)" }} onClick={() => setDeleteConfirmId(item.id)}>
+                            Del
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

@@ -19,6 +19,8 @@ export default function EmailBlastPage() {
   const [sending, setSending] = useState(false);
   const [status, setStatus] = useState("");
   const [isError, setIsError] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [confirmBlast, setConfirmBlast] = useState(false);
 
   const loadData = useCallback(async () => {
     const supabase = createClient();
@@ -76,10 +78,9 @@ export default function EmailBlastPage() {
     if (subCount === 0) {
       setStatus("No subscribers found — check Supabase.");
       setIsError(true);
+      setConfirmBlast(false);
       return;
     }
-
-    if (!confirm(`Send from ${fromAddress} to ${subCount} subscriber${subCount !== 1 ? 's' : ''}?`)) return;
 
     setSending(true);
     setStatus("");
@@ -121,6 +122,7 @@ export default function EmailBlastPage() {
       setIsError(true);
     } finally {
       setSending(false);
+      setConfirmBlast(false);
     }
   }
 
@@ -155,7 +157,6 @@ export default function EmailBlastPage() {
   }
 
   async function deleteTemplate(id) {
-    if (!confirm("Delete this template?")) return;
     const supabase = createClient();
     const { error } = await supabase.from("email_templates").delete().eq("id", id);
     if (error) {
@@ -163,6 +164,7 @@ export default function EmailBlastPage() {
     } else {
       loadData();
     }
+    setDeleteConfirmId(null);
   }
 
   return (
@@ -224,9 +226,20 @@ export default function EmailBlastPage() {
             </div>
 
             <div className={styles.sendRow}>
-              <button className="btn pri" onClick={sendBlast} disabled={sending}>
-                {sending ? "Sending…" : "Send to All Subscribers"}
-              </button>
+              {confirmBlast ? (
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <button className="btn pri" style={{ background: "#D32F2F", color: "white", border: "none" }} onClick={sendBlast} disabled={sending}>
+                    {sending ? "Sending…" : `Confirm Send (${subCount})`}
+                  </button>
+                  <button className="btn" onClick={() => setConfirmBlast(false)} disabled={sending}>
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button className="btn pri" onClick={() => setConfirmBlast(true)} disabled={sending}>
+                  {sending ? "Sending…" : "Send to All Subscribers"}
+                </button>
+              )}
               <button className="btn" onClick={saveTemplate} disabled={sending} title="Save current compose as a reusable template">
                 Save as Template
               </button>
@@ -263,7 +276,14 @@ export default function EmailBlastPage() {
                     </span>
                     <div className={styles.tplActions}>
                       <button className="btn sm" onClick={() => loadTemplate(t)}>Load</button>
-                      <button className="btn sm red" style={{ padding: "0 8px" }} onClick={() => deleteTemplate(t.id)}>✕</button>
+                      {deleteConfirmId === t.id ? (
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button className="btn sm" onClick={() => setDeleteConfirmId(null)}>Cancel</button>
+                          <button className="btn sm" style={{ color: "#e87070", borderColor: "rgba(232,112,112,0.3)" }} onClick={() => deleteTemplate(t.id)}>Confirm</button>
+                        </div>
+                      ) : (
+                        <button className="btn sm red" style={{ padding: "0 8px" }} onClick={() => setDeleteConfirmId(t.id)}>✕</button>
+                      )}
                     </div>
                   </div>
                 ))

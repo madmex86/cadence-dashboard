@@ -10,6 +10,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(null);
+  const [deactivateConfirmId, setDeactivateConfirmId] = useState(null);
   const [authorized, setAuthorized] = useState(null); // null = checking, true = authorized, false = unauthorized
 
   useEffect(() => {
@@ -63,12 +64,12 @@ export default function AdminPage() {
   }
 
   async function toggleDeactivate(id, deactivated) {
-    if (!confirm(deactivated ? "Reactivate this team member?" : "Deactivate this team member? Deactivated members cannot access the dashboard.")) return;
     setSaving(id);
     const supabase = createClient();
     await supabase.from("profiles").update({ deactivated: !deactivated }).eq("id", id);
     setUsers(prev => prev.map(u => u.id === id ? { ...u, deactivated: !deactivated } : u));
     setSaving(null);
+    setDeactivateConfirmId(null);
   }
 
   async function updateFullName(id, fullName) {
@@ -181,18 +182,25 @@ export default function AdminPage() {
                       </span>
                     </td>
                     <td>
-                      <button
-                        className="btn sm"
-                        style={{
-                          borderColor: u.deactivated ? "var(--gold-border)" : "rgba(232,112,112,0.3)",
-                          color: u.deactivated ? "var(--gold)" : "#e87070",
-                          background: "none"
-                        }}
-                        onClick={() => toggleDeactivate(u.id, u.deactivated)}
-                        disabled={saving === u.id}
-                      >
-                        {u.deactivated ? "Activate" : "Deactivate"}
-                      </button>
+                      {deactivateConfirmId === u.id ? (
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button className="btn sm" onClick={() => setDeactivateConfirmId(null)}>Cancel</button>
+                          <button className="btn sm" style={{ color: "#e87070", borderColor: "rgba(232,112,112,0.3)" }} onClick={() => toggleDeactivate(u.id, u.deactivated)}>Confirm</button>
+                        </div>
+                      ) : (
+                        <button
+                          className="btn sm"
+                          style={{
+                            borderColor: u.deactivated ? "var(--gold-border)" : "rgba(232,112,112,0.3)",
+                            color: u.deactivated ? "var(--gold)" : "#e87070",
+                            background: "none"
+                          }}
+                          onClick={() => setDeactivateConfirmId(u.id)}
+                          disabled={saving === u.id}
+                        >
+                          {u.deactivated ? "Activate" : "Deactivate"}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

@@ -305,19 +305,19 @@ export default function PLPage() {
 
 
   async function deleteFin(id) {
-    if (!confirm("Delete entry?")) return;
     const supabase = createClient();
     await supabase.from("finance").delete().eq("id", id);
     loadFin();
     showToast("Deleted");
+    setDeleteFinConfirmId(null);
   }
 
   async function deleteMile(id) {
-    if (!confirm("Delete trip?")) return;
     const supabase = createClient();
     await supabase.from("mileage").delete().eq("id", id);
     loadMiles();
     showToast("Deleted");
+    setDeleteMileConfirmId(null);
   }
 
   function exportCSV() {
@@ -471,7 +471,14 @@ export default function PLPage() {
                   {!e.isVirtual && (
                     <div style={{ display: "flex", gap: 4 }}>
                       <button className="btn sm" onClick={() => setFinModal({ open: true, entry: e, type })}>Edit</button>
-                      <button className="btn sm" style={{ color: "#ff6b6b", borderColor: "rgba(255,107,107,0.2)" }} onClick={() => deleteFin(e.id)}>✕</button>
+                      {deleteFinConfirmId === e.id ? (
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button className="btn sm" onClick={() => setDeleteFinConfirmId(null)}>Cancel</button>
+                          <button className="btn sm" style={{ color: "#e87070", borderColor: "rgba(232,112,112,0.3)" }} onClick={() => deleteFin(e.id)}>Confirm</button>
+                        </div>
+                      ) : (
+                        <button className="btn sm" style={{ color: "#ff6b6b", borderColor: "rgba(255,107,107,0.2)" }} onClick={() => setDeleteFinConfirmId(e.id)}>✕</button>
+                      )}
                     </div>
                   )}
                   {e.isVirtual && (
@@ -603,7 +610,16 @@ export default function PLPage() {
                         <td style={{ fontWeight: 500 }}>{Number(m.miles || 0).toFixed(1)} mi</td>
                         <td style={{ color: "var(--dim)", fontSize: 12 }}>{m.round_trip ? "Yes" : "No"}</td>
                         <td style={{ color: "var(--dim)", fontSize: 12 }}>{m.notes || ""}</td>
-                        <td><button className="btn sm" style={{ color: "#ff6b6b", borderColor: "rgba(255,107,107,0.2)" }} onClick={() => deleteMile(m.id)}>✕</button></td>
+                        <td>
+                          {deleteMileConfirmId === m.id ? (
+                            <div style={{ display: "flex", gap: 4 }}>
+                              <button className="btn sm" onClick={() => setDeleteMileConfirmId(null)}>Cancel</button>
+                              <button className="btn sm" style={{ color: "#e87070", borderColor: "rgba(232,112,112,0.3)" }} onClick={() => deleteMile(m.id)}>Confirm</button>
+                            </div>
+                          ) : (
+                            <button className="btn sm" style={{ color: "#ff6b6b", borderColor: "rgba(255,107,107,0.2)" }} onClick={() => setDeleteMileConfirmId(m.id)}>✕</button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

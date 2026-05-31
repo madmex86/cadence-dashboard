@@ -14,6 +14,7 @@ export default function SitePage() {
   const [faqForm, setFaqForm] = useState(EMPTY_FAQ);
   const [savingFaq, setSavingFaq] = useState(false);
   const [toast, setToast] = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -90,12 +91,13 @@ export default function SitePage() {
   }
 
   async function deleteFaq(id) {
-    if (!confirm("Delete this FAQ?")) return;
     try {
       await deleteFaqById(id);
       setFaqs(prev => prev.filter(f => f.id !== id));
+      setDeleteConfirmId(null);
     } catch (e) {
       showToast("Delete failed: " + e.message);
+      setDeleteConfirmId(null);
     }
   }
 
@@ -198,7 +200,14 @@ export default function SitePage() {
                   <span className={`badge ${faq.active ? "badge-green" : "badge-dim"}`}>{faq.active ? "Active" : "Hidden"}</span>
                   <button className="btn sm" onClick={() => toggleFaqActive(faq)}>{faq.active ? "Hide" : "Show"}</button>
                   <button className="btn sm" onClick={() => openEditFaq(faq)}>Edit</button>
-                  <button className="btn sm" style={{ color: "#e87070", borderColor: "rgba(232,112,112,0.3)" }} onClick={() => deleteFaq(faq.id)}>Del</button>
+                  {deleteConfirmId === faq.id ? (
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button className="btn sm" onClick={() => setDeleteConfirmId(null)}>Cancel</button>
+                      <button className="btn sm" style={{ color: "#e87070", borderColor: "rgba(232,112,112,0.3)" }} onClick={() => deleteFaq(faq.id)}>Confirm</button>
+                    </div>
+                  ) : (
+                    <button className="btn sm" style={{ color: "#e87070", borderColor: "rgba(232,112,112,0.3)" }} onClick={() => setDeleteConfirmId(faq.id)}>Del</button>
+                  )}
                 </div>
               </div>
             ))}

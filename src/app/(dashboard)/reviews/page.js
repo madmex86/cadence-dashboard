@@ -27,6 +27,7 @@ export default function ReviewsPage() {
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [filter, setFilter] = useState("all");
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -76,10 +77,10 @@ export default function ReviewsPage() {
   }
 
   async function deleteReview(id) {
-    if (!confirm("Delete this review?")) return;
     const supabase = createClient();
     await supabase.from("reviews").delete().eq("id", id);
     setReviews(prev => prev.filter(r => r.id !== id));
+    setDeleteConfirmId(null);
   }
 
   async function togglePublished(r) {
@@ -171,7 +172,14 @@ export default function ReviewsPage() {
                         {r.is_active ? "Unpublish" : "Publish"}
                       </button>
                       <button className="btn sm" onClick={() => openEdit(r)}>Edit</button>
-                      <button className="btn sm" style={{ color: "#e87070", borderColor: "rgba(232,112,112,0.3)" }} onClick={() => deleteReview(r.id)}>Del</button>
+                      {deleteConfirmId === r.id ? (
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button className="btn sm" onClick={() => setDeleteConfirmId(null)}>Cancel</button>
+                          <button className="btn sm" style={{ color: "#e87070", borderColor: "rgba(232,112,112,0.3)" }} onClick={() => deleteReview(r.id)}>Confirm</button>
+                        </div>
+                      ) : (
+                        <button className="btn sm" style={{ color: "#e87070", borderColor: "rgba(232,112,112,0.3)" }} onClick={() => setDeleteConfirmId(r.id)}>Del</button>
+                      )}
                     </div>
                   </td>
                 </tr>

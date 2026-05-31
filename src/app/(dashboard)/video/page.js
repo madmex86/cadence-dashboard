@@ -430,6 +430,7 @@ export default function VideoPage() {
   const [jobs, setJobs]                           = useState([]);
   const [selectedJob, setSelectedJob]             = useState(null);
   const [loadingJobs, setLoadingJobs]             = useState(true);
+  const [deleteConfirmId, setDeleteConfirmId]     = useState(null);
   const pollRef = useRef(null);
 
   // ── Load recent jobs on mount ───────────────────────────────────────────
@@ -594,14 +595,15 @@ export default function VideoPage() {
 
   async function deleteJob(jobId, e) {
     e.stopPropagation(); // don't select the row
-    if (!confirm("Delete this render? This cannot be undone.")) return;
     try {
       const res = await fetch(`/api/video?jobId=${jobId}`, { method: "DELETE" });
       if (!res.ok) { const d = await res.json(); setError(d.error || "Delete failed"); return; }
       setJobs(prev => prev.filter(j => j.id !== jobId));
       if (selectedJob?.id === jobId) setSelectedJob(null);
+      setDeleteConfirmId(null);
     } catch (err) {
       setError("Delete failed: " + err.message);
+      setDeleteConfirmId(null);
     }
   }
 
@@ -809,18 +811,25 @@ export default function VideoPage() {
                       </div>
                     </div>
                     <StatusPill status={job.status} small />
-                    <button
-                      onClick={(e) => deleteJob(job.id, e)}
-                      title="Delete render"
-                      style={{
-                        background: "none", border: "none", cursor: "pointer",
-                        color: "rgba(196,188,178,.25)", fontSize: 14, padding: "2px 4px",
-                        lineHeight: 1, borderRadius: 3, flexShrink: 0,
-                        transition: "color .15s",
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.color = "#e87070"}
-                      onMouseLeave={e => e.currentTarget.style.color = "rgba(196,188,178,.25)"}
-                    >✕</button>
+                    {deleteConfirmId === job.id ? (
+                      <div style={{ display: "flex", gap: 4, marginLeft: 8 }} onClick={e => e.stopPropagation()}>
+                        <button className="btn sm" onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(null); }}>Cancel</button>
+                        <button className="btn sm" style={{ color: "#e87070", borderColor: "rgba(232,112,112,0.3)" }} onClick={(e) => deleteJob(job.id, e)}>Confirm</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(job.id); }}
+                        title="Delete render"
+                        style={{
+                          background: "none", border: "none", cursor: "pointer",
+                          color: "rgba(196,188,178,.25)", fontSize: 14, padding: "2px 4px",
+                          lineHeight: 1, borderRadius: 3, flexShrink: 0,
+                          transition: "color .15s",
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.color = "#e87070"}
+                        onMouseLeave={e => e.currentTarget.style.color = "rgba(196,188,178,.25)"}
+                      >✕</button>
+                    )}
                   </div>
                 ))}
               </div>
