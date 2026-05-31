@@ -272,13 +272,36 @@ export async function saveGeneratedAsset({ asset }) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return { error: 'Unauthorized' }
 
+    // Strip out undefined values to ensure clean payload
+    const cleanAsset = Object.fromEntries(Object.entries(asset).filter(([_, v]) => v !== undefined))
+
     const { data, error } = await supabase
       .from('generated_assets')
-      .insert({ ...asset, created_by: user.id })
+      .upsert({ ...cleanAsset, created_by: user.id })
       .select('id')
       .single()
     if (error) throw error
     return { id: data.id }
+  } catch (err) {
+    return { error: String(err) }
+  }
+}
+
+// ─── DELETE ASSET ─────────────────────────────────────────────────────────────
+export async function deleteGeneratedAsset(id) {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return { error: 'Unauthorized' }
+
+    const { error } = await supabase
+      .from('generated_assets')
+      .delete()
+      .eq('id', id)
+      .eq('created_by', user.id)
+
+    if (error) throw error
+    return { success: true }
   } catch (err) {
     return { error: String(err) }
   }

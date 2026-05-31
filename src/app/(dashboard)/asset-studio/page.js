@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   generateAssetCopy, renderAsset, saveGeneratedAsset,
   publishAsset, getSmartSuggestions, loadRecentAssets,
-  loadSocialConnections,
+  loadSocialConnections, deleteGeneratedAsset
 } from './actions'
 
 const TEMPLATES = [
@@ -62,6 +62,7 @@ export default function AssetStudio() {
   const [manualPrompt, setManualPrompt] = useState('')
   const [copy, setCopy] = useState(null)
   const [selectedSuggestion, setSelectedSuggestion] = useState(null)
+  const [editingAssetId, setEditingAssetId] = useState(null)
 
   // Render results — array so batch works naturally
   // Each: { creature: obj|null, imageUrl: string|null, assetId: string|null, error: string|null }
@@ -110,6 +111,17 @@ export default function AssetStudio() {
     setCopiedField(field)
     setTimeout(() => setCopiedField(null), 2000)
   }, [])
+
+  const handleDeleteAsset = async (e, id) => {
+    e.stopPropagation()
+    if (!confirm('Are you sure you want to delete this draft?')) return
+    const res = await deleteGeneratedAsset(id)
+    if (res.success) {
+      setAssets(prev => prev.filter(a => a.id !== id))
+    } else {
+      alert(`Delete failed: ${res.error}`)
+    }
+  }
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleGenerateCopy = async () => {
@@ -168,6 +180,7 @@ export default function AssetStudio() {
       setScreen('preview')
       saveGeneratedAsset({
         asset: {
+          id: editingAssetId || undefined,
           trigger_type: creature ? (triggerType === 'manual' ? 'new_product' : triggerType) : triggerType,
           source_data: creature ? { name: creature.name, image_url: creature.image_url } : { prompt: manualPrompt },
           template_id: templateId,
@@ -312,10 +325,11 @@ export default function AssetStudio() {
     setCopy(null); setRenderedImages([]); setPublishResults(null)
     setSelectedSuggestion(null); setSelectedPlatforms([]); setScheduleDate('')
     setExportUrls({}); setExportRendering({}); setActionError(null)
-    setRenderProgress(null); setScreen('home')
+    setRenderProgress(null); setScreen('home'); setEditingAssetId(null)
   }
 
   const editAsset = (asset) => {
+    setEditingAssetId(asset.id)
     setTriggerType(asset.trigger_type || 'manual')
     setTemplateId(asset.template_id || 'product-card')
     setAspectRatio(asset.aspect_ratio || '1:1')
@@ -448,7 +462,10 @@ export default function AssetStudio() {
                     <p style={{ margin:'0 0 5px', fontWeight:600, fontSize:13, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{asset.headline ?? 'Untitled'}</p>
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                       <StatusPill status={asset.status} />
-                      <span style={{ fontSize:10, color:'rgba(250,246,240,0.35)' }}>{TRIGGER_LABELS[asset.trigger_type] ?? asset.trigger_type}</span>
+                      <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                        <span style={{ fontSize:10, color:'rgba(250,246,240,0.35)' }}>{TRIGGER_LABELS[asset.trigger_type] ?? asset.trigger_type}</span>
+                        <button onClick={(e) => handleDeleteAsset(e, asset.id)} style={{ background:'none', border:'none', padding:0, cursor:'pointer', color:'rgba(250,246,240,0.4)', fontSize:12 }} title="Delete">✕</button>
+                      </div>
                     </div>
                   </div>
                 </div>
