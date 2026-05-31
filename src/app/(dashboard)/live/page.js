@@ -7,16 +7,20 @@ import styles from "./live.module.css";
 export default function LivePage() {
   const [orders, setOrders] = useState([]);
   const [creatures, setCreatures] = useState([]);
+  const [finance, setFinance] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     const supabase = createClient();
-    const [ordersRes, creaturesRes] = await Promise.all([
-      supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(50),
+    const todayISO = new Date().toISOString().split('T')[0];
+    const [ordersRes, creaturesRes, finRes] = await Promise.all([
+      supabase.from("orders").select("*").neq("status", "cancelled").order("created_at", { ascending: false }).limit(50),
       supabase.from("creatures").select("id, name, qty_on_hand, active, log_number, sku, price_etsy").order("log_number"),
+      supabase.from("finance").select("amount, order_id").eq("entry_type", "income").eq("entry_date", todayISO)
     ]);
     setOrders(ordersRes.data || []);
     setCreatures(creaturesRes.data || []);
+    setFinance(finRes.data || []);
     setLoading(false);
   }, []);
 
@@ -32,7 +36,10 @@ export default function LivePage() {
 
   const today = new Date().toDateString();
   const todayOrders = orders.filter(o => new Date(o.created_at).toDateString() === today);
-  const todayRevenue = todayOrders.reduce((s, o) => s + (parseFloat(o.total_amount) || 0), 0);
+  
+  const manualRevenue = finance.filter(f => !f.order_id).reduce((s, f) => s + (parseFloat(f.amount) || 0), 0);
+  const ordersRevenue = todayOrders.reduce((s, o) => s + (parseFloat(o.total_amount) || 0), 0);
+  const todayRevenue = manualRevenue + ordersRevenue;
   const activeCreatures = creatures.filter(c => c.active);
   const lowStock = creatures.filter(c => c.active && (c.qty_on_hand || 0) < 3);
 

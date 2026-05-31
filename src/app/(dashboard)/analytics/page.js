@@ -5,34 +5,49 @@ import styles from "./analytics.module.css";
 
 export default function AnalyticsPage() {
   const [orders, setOrders] = useState([]);
+  const [finance, setFinance] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
-      const { data } = await supabase
-        .from("orders")
-        .select("id, total_amount, status, items, created_at, order_date")
-        .order("created_at", { ascending: false });
-      setOrders(data || []);
+      const [ordRes, finRes] = await Promise.all([
+        supabase.from("orders").select("id, total_amount, status, items, created_at, order_date").order("created_at", { ascending: false }),
+        supabase.from("finance").select("amount, entry_date, order_id").eq("entry_type", "income")
+      ]);
+      setOrders(ordRes.data || []);
+      setFinance(finRes.data || []);
       setLoading(false);
     }
     load();
   }, []);
 
-  const shipped = orders.filter(o => ["shipped", "complete"].includes(o.status));
-  const totalRevenue = shipped.reduce((s, o) => s + (parseFloat(o.total_amount) || 0), 0);
-  const avgOrder = shipped.length ? totalRevenue / shipped.length : 0;
+  const activeOrders = orders.filter(o => o.status !== "cancelled");
+  const shipped = activeOrders.filter(o => ["shipped", "complete"].includes(o.status));
+  const manualFinance = finance.filter(f => !f.order_id);
+
+  const totalRevenue = activeOrders.reduce((s, o) => s + (parseFloat(o.total_amount) || 0), 0) + 
+                       manualFinance.reduce((s, f) => s + (parseFloat(f.amount) || 0), 0);
+  const avgOrder = activeOrders.length ? totalRevenue / activeOrders.length : 0;
 
   // Monthly breakdown
   const byMonth = {};
-  for (const o of shipped) {
-    const d = new Date(o.created_at);
+  
+  for (const o of activeOrders) {
+    const d = new Date(o.order_date || o.created_at);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     if (!byMonth[key]) byMonth[key] = { revenue: 0, count: 0 };
     byMonth[key].revenue += parseFloat(o.total_amount) || 0;
     byMonth[key].count++;
   }
+  
+  for (const f of manualFinance) {
+    const d = new Date(f.entry_date);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (!byMonth[key]) byMonth[key] = { revenue: 0, count: 0 };
+    byMonth[key].revenue += parseFloat(f.amount) || 0;
+  }
+
   const months = Object.entries(byMonth).sort().slice(-6).reverse();
 
   // Item frequency
@@ -53,9 +68,9 @@ export default function AnalyticsPage() {
 
       <div className="kpi-grid">
         <div className="kpi"><div className="kpi-label">Total Revenue</div><div className="kpi-val">${totalRevenue.toFixed(0)}</div></div>
+        <div className="kpi"><div className="kpi-label">Active Orders</div><div className="kpi-val">{activeOrders.length}</div></div>
+        <div className="kpi"><div className="kpi-label">Avg Revenue/Order</div><div className="kpi-val">${avgOrder.toFixed(0)}</div></div>
         <div className="kpi"><div className="kpi-label">Orders Shipped</div><div className="kpi-val">{shipped.length}</div></div>
-        <div className="kpi"><div className="kpi-label">Avg Order Value</div><div className="kpi-val">${avgOrder.toFixed(0)}</div></div>
-        <div className="kpi"><div className="kpi-label">Total Orders</div><div className="kpi-val">{orders.length}</div></div>
       </div>
 
       <div className={styles.panels}>

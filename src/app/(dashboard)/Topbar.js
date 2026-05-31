@@ -118,10 +118,20 @@ export default function Topbar() {
         
         // Profit Today
         const today = new Date().toISOString().split('T')[0];
-        const { data: finData } = await supabase.from('finance').select('entry_type,amount').eq('entry_date', today);
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+
+        const [finRes, ordRes] = await Promise.all([
+          supabase.from('finance').select('entry_type,amount,order_id').eq('entry_date', today),
+          supabase.from('orders').select('total_amount').neq('status', 'cancelled').gte('created_at', startOfToday.toISOString())
+        ]);
+
         let net = 0;
-        if (finData) {
-          net = finData.reduce((s, r) => s + (r.entry_type === 'income' ? +r.amount : -+r.amount), 0);
+        if (finRes.data) {
+          net += finRes.data.filter(f => !f.order_id).reduce((s, r) => s + (r.entry_type === 'income' ? +r.amount : -+r.amount), 0);
+        }
+        if (ordRes.data) {
+          net += ordRes.data.reduce((s, o) => s + (parseFloat(o.total_amount) || 0), 0);
         }
 
         // Active Printers
