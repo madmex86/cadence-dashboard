@@ -209,8 +209,31 @@ export default function PLPage() {
 
   const loadFin = useCallback(async () => {
     const supabase = createClient();
-    const { data } = await supabase.from("finance").select("*").order("entry_date", { ascending: false });
-    setFin(data || []);
+    const [finRes, ordRes] = await Promise.all([
+      supabase.from("finance").select("*").order("entry_date", { ascending: false }),
+      supabase.from("orders").select("id, total_amount, status, order_date, etsy_order_id, buyer_name").neq("status", "cancelled")
+    ]);
+    const rawFin = finRes.data || [];
+    const ords = ordRes.data || [];
+    
+    // Map orders to finance entries if they haven't been manually imported
+    const existingOrderIds = new Set(rawFin.filter(f => f.order_id).map(f => f.order_id));
+    const nowISO = new Date().toISOString().slice(0, 10);
+    const orderFin = ords.filter(o => !existingOrderIds.has(o.id)).map(o => ({
+      id: `virtual-${o.id}`,
+      entry_type: "income",
+      category: "Etsy Sale",
+      description: `Order #${o.etsy_order_id || o.id.slice(0, 8)}${o.buyer_name ? " — " + o.buyer_name : ""}`,
+      amount: o.total_amount,
+      entry_date: o.order_date || nowISO,
+      order_id: o.id,
+      isVirtual: true // Mark as virtual so we don't try to edit/delete it as a finance row
+    }));
+    
+    // Sort combined by date
+    const combined = [...rawFin, ...orderFin].sort((a, b) => (b.entry_date || "").localeCompare(a.entry_date || ""));
+    setFin(combined);
+    setOrders(ords);
   }, []);
 
   const loadMiles = useCallback(async () => {
@@ -222,20 +245,17 @@ export default function PLPage() {
   useEffect(() => {
     async function load() {
       const supabase = createClient();
-      const [finRes, miRes, creRes, ordRes] = await Promise.all([
-        supabase.from("finance").select("*").order("entry_date", { ascending: false }),
+      await loadFin();
+      const [miRes, creRes] = await Promise.all([
         supabase.from("mileage").select("*").order("trip_date", { ascending: false }),
         supabase.from("creatures").select("id, name, sku, log_number, price_retail, price_etsy, cost_to_print, qty_on_hand").order("log_number"),
-        supabase.from("orders").select("id, total_amount, status, order_date, etsy_order_id, buyer_name").in("status", ["shipped", "complete"]),
       ]);
-      setFin(finRes.data || []);
       setMiles(miRes.data || []);
       setCreatures(creRes.data || []);
-      setOrders(ordRes.data || []);
       setLoading(false);
     }
     load();
-  }, []);
+  }, [loadFin]);
 
   function showToast(msg, type = "ok") {
     setToast({ msg, type });
@@ -282,22 +302,7 @@ export default function PLPage() {
 
   const totalMiles = miY.reduce((s, m) => s + (parseFloat(m.miles) || 0), 0);
 
-  async function importFromQueue() {
-    const existing = new Set(fin.filter(f => f.order_id).map(f => f.order_id));
-    const newOrders = orders.filter(o => !existing.has(o.id));
-    if (!newOrders.length) { showToast("All shipped orders already recorded"); return; }
-    const supabase = createClient();
-    await supabase.from("finance").insert(newOrders.map(o => ({
-      entry_type: "income",
-      category: "Etsy Sale",
-      description: `Order #${o.etsy_order_id || o.id.slice(0, 8)}${o.buyer_name ? " — " + o.buyer_name : ""}`,
-      amount: o.total_amount,
-      entry_date: o.order_date || now.toISOString().slice(0, 10),
-      order_id: o.id,
-    })));
-    showToast(`Imported ${newOrders.length} order${newOrders.length !== 1 ? "s" : ""}`);
-    loadFin();
-  }
+
 
   async function deleteFin(id) {
     if (!confirm("Delete entry?")) return;
@@ -463,10 +468,15 @@ export default function PLPage() {
                   {type === "income" ? "+" : "−"}{fmt(e.amount)}
                 </td>
                 <td>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    <button className="btn sm" onClick={() => setFinModal({ open: true, entry: e, type })}>Edit</button>
-                    <button className="btn sm" style={{ color: "#ff6b6b", borderColor: "rgba(255,107,107,0.2)" }} onClick={() => deleteFin(e.id)}>✕</button>
-                  </div>
+                  {!e.isVirtual && (
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button className="btn sm" onClick={() => setFinModal({ open: true, entry: e, type })}>Edit</button>
+                      <button className="btn sm" style={{ color: "#ff6b6b", borderColor: "rgba(255,107,107,0.2)" }} onClick={() => deleteFin(e.id)}>✕</button>
+                    </div>
+                  )}
+                  {e.isVirtual && (
+                    <span style={{ fontSize: 10, color: "var(--dim)" }}>Auto-synced from Orders</span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -542,10 +552,7 @@ export default function PLPage() {
                 <div className="kpi"><div className="kpi-label">Total Mileage</div><div className="kpi-val">{totalMiles.toFixed(1)} mi</div><div className="kpi-sub">{fmt(totalMiles * IRS_RATE)} deductible</div></div>
                 <div className="kpi"><div className="kpi-label">Orders Recorded</div><div className="kpi-val">{incomeEntries.filter(e => e.order_id).length}</div><div className="kpi-sub">from queue</div></div>
               </div>
-              <div className="sec-hdr" style={{ marginTop: 16 }}>
-                <span className="sec-title">Import from Queue</span>
-                <button className="btn sm pri" onClick={importFromQueue}>↙ Import shipped orders</button>
-              </div>
+
             </div>
           )}
 

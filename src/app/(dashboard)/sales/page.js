@@ -5,17 +5,20 @@ import { createClient } from "@/lib/supabase/client";
 export default function SalesPage() {
   const [orders, setOrders] = useState([]);
   const [creatures, setCreatures] = useState([]);
+  const [finance, setFinance] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
-      const [oRes, cRes] = await Promise.all([
+      const [oRes, cRes, fRes] = await Promise.all([
         supabase.from("orders").select("*").order("created_at", { ascending: false }),
         supabase.from("creatures").select("id, name, log_number, qty_on_hand, price_retail").order("log_number"),
+        supabase.from("finance").select("id, amount, entry_date, order_id").eq("entry_type", "income"),
       ]);
       setOrders(oRes.data || []);
       setCreatures(cRes.data || []);
+      setFinance(fRes.data || []);
       setLoading(false);
     }
     load();
@@ -24,13 +27,20 @@ export default function SalesPage() {
   const now = new Date();
   const weekAgo = new Date(now - 7 * 86400000);
 
-  const shipped = orders.filter(o => ["shipped", "complete"].includes(o.status));
-  const weekOrders = orders.filter(o => new Date(o.created_at) >= weekAgo);
-  const totalRevenue = shipped.reduce((s, o) => s + (parseFloat(o.total_price || o.total_amount) || 0), 0);
+  // Consider all active orders (not cancelled)
+  const activeOrders = orders.filter(o => o.status !== "cancelled");
+  const weekOrders = activeOrders.filter(o => new Date(o.created_at) >= weekAgo);
+  
+  // Base revenue from all active orders
+  let totalRevenue = activeOrders.reduce((s, o) => s + (parseFloat(o.total_price || o.total_amount) || 0), 0);
+
+  // Add manual income from finance (those without an order_id linked)
+  const manualIncome = finance.filter(f => !f.order_id);
+  totalRevenue += manualIncome.reduce((s, f) => s + (parseFloat(f.amount) || 0), 0);
 
   // Creature sales frequency from order items
   const itemCounts = {};
-  for (const o of orders) {
+  for (const o of activeOrders) {
     const items = Array.isArray(o.items) ? o.items : [];
     for (const item of items) {
       const key = typeof item === "string" ? item : (item.name || item.creature_name || JSON.stringify(item));
@@ -42,13 +52,22 @@ export default function SalesPage() {
 
   // Revenue by week (last 8 weeks)
   const byWeek = {};
-  for (const o of shipped) {
-    const d = new Date(o.created_at);
+  for (const o of activeOrders) {
+    const d = new Date(o.created_at || o.order_date);
     const weekStart = new Date(d - d.getDay() * 86400000);
     const key = weekStart.toISOString().slice(0, 10);
     if (!byWeek[key]) byWeek[key] = { revenue: 0, count: 0 };
     byWeek[key].revenue += parseFloat(o.total_price || o.total_amount) || 0;
     byWeek[key].count++;
+  }
+  for (const f of manualIncome) {
+    if (!f.entry_date) continue;
+    const d = new Date(f.entry_date);
+    const weekStart = new Date(d - d.getDay() * 86400000);
+    const key = weekStart.toISOString().slice(0, 10);
+    if (!byWeek[key]) byWeek[key] = { revenue: 0, count: 0 };
+    byWeek[key].revenue += parseFloat(f.amount) || 0;
+    // We don't increment order count for raw finance entries
   }
   const weeks = Object.entries(byWeek).sort().slice(-8).reverse();
 

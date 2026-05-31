@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { parseEtsyEmail } from "./actions/parseOrder";
 import styles from "./hub.module.css";
 
 export default function AddOrderModal({ isOpen, onClose, creatures, onSave }) {
@@ -16,6 +17,35 @@ export default function AddOrderModal({ isOpen, onClose, creatures, onSave }) {
   const [oTrack, setOTrack] = useState("");
   const [oCarrier, setOCarrier] = useState("");
   const [oNote, setONote] = useState("");
+
+  const [emailText, setEmailText] = useState("");
+  const [isParsing, setIsParsing] = useState(false);
+  const [parseError, setParseError] = useState("");
+
+  async function handleParseEmail() {
+    if (!emailText.trim()) return;
+    setIsParsing(true);
+    setParseError("");
+    const creatureNames = creatures.map(c => c.name);
+    const result = await parseEtsyEmail(emailText, creatureNames);
+    setIsParsing(false);
+
+    if (result.error) {
+      setParseError(result.error);
+      return;
+    }
+
+    const d = result.data;
+    if (d.etsy_order_id) setOEid(d.etsy_order_id);
+    if (d.buyer_name) setOBuyer(d.buyer_name);
+    if (d.items && Array.isArray(d.items) && d.items.length > 0) {
+      setOItems(d.items.map(i => ({ name: i.name || "", qty: i.qty || 1 })));
+    }
+    
+    // Auto-detect current date if none provided by email (usually the case)
+    setODt(new Date().toISOString().slice(0, 10));
+    setEmailText(""); // Clear after successful parse
+  }
 
   async function handleSave() {
     const items = oItems.map(i => {
@@ -39,6 +69,17 @@ export default function AddOrderModal({ isOpen, onClose, creatures, onSave }) {
       shipping_note: oNote
     }]);
 
+    // Decrement inventory for ordered creatures
+    for (const item of oItems) {
+      if (!item.name) continue;
+      const creature = creatures.find(c => c.name === item.name);
+      if (creature) {
+        const qty = parseInt(item.qty) || 1;
+        const newQty = Math.max(0, (creature.qty_on_hand || 0) - qty);
+        await supabase.from("creatures").update({ qty_on_hand: newQty }).eq("id", creature.id);
+      }
+    }
+
     // Reset state
     setOEid("");
     setOBuyer("");
@@ -57,9 +98,28 @@ export default function AddOrderModal({ isOpen, onClose, creatures, onSave }) {
 
   return (
     <div className={`${styles.overlay} ${isOpen ? styles.open : ""}`}>
-      <div className={styles.modal}>
+      <div className={styles.modal} style={{ maxWidth: "600px" }}>
         <div className={styles.modalTitle}>Add Order</div>
         <div className={styles.fg}>
+
+          <div style={{ background: "rgba(0,0,0,0.1)", padding: "12px", borderRadius: "4px", border: "1px dashed var(--gold-border)", marginBottom: "12px" }}>
+            <label className={styles.fl} style={{ color: "var(--gold)" }}>✨ Auto-fill from Etsy Email (AI)</label>
+            <textarea 
+              className="fi" 
+              rows="3" 
+              placeholder="Paste the raw text of the Etsy order confirmation email here..." 
+              value={emailText} 
+              onChange={e => setEmailText(e.target.value)}
+              style={{ resize: "vertical", fontFamily: "sans-serif", fontSize: 12 }}
+            />
+            {parseError && <div style={{ color: "#e87070", fontSize: 11, marginTop: 4 }}>{parseError}</div>}
+            <div style={{ textAlign: "right", marginTop: 8 }}>
+              <button className="btn sm pri" onClick={handleParseEmail} disabled={isParsing || !emailText.trim()}>
+                {isParsing ? "Parsing..." : "Auto-fill"}
+              </button>
+            </div>
+          </div>
+
           <div className={styles.fr}>
             <div><label className={styles.fl}>Etsy Order ID</label><input className="fi" value={oEid} onChange={e => setOEid(e.target.value)} placeholder="e.g. 1234567890" /></div>
             <div><label className={styles.fl}>Buyer Name</label><input className="fi" value={oBuyer} onChange={e => setOBuyer(e.target.value)} /></div>
