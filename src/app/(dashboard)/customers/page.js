@@ -242,8 +242,23 @@ export default function CustomersPage() {
         return new Date(b.created_at || 0) - new Date(a.created_at || 0);
       });
 
+      // Find the first 5 buyers by their earliest order date
+      const allBuyers = mergedList.filter(c => c.is_buyer).sort((a, b) => {
+         const minA = Math.min(...a.orders.map(o => new Date(o.created_at || o.order_date).getTime()));
+         const minB = Math.min(...b.orders.map(o => new Date(o.created_at || o.order_date).getTime()));
+         return minA - minB;
+      });
+      const first5Ids = new Set(allBuyers.slice(0, 5).map(c => c.id));
+
+      const categorizedList = mergedList.map(c => {
+         const isFirst5 = first5Ids.has(c.id);
+         const isVIP = c.total >= 100 || c.orders.length >= 3;
+         const isRepeat = c.orders.length === 2 && !isVIP;
+         return { ...c, isFirst5, isVIP, isRepeat };
+      });
+
       // Calculate statistics
-      const totalAudience = mergedList.length;
+      const totalAudience = categorizedList.length;
       // Active Waitlist includes landing_page and bestiary_notify, but only if they are active (subscribed !== false)
       const waitlistCount = subscribers.filter(s => 
         (s.source === "landing_page" || s.source === "bestiary_notify") && s.subscribed !== false
@@ -265,7 +280,7 @@ export default function CustomersPage() {
       });
 
       setAllSubmissions(submissions);
-      setCustomers(mergedList);
+      setCustomers(categorizedList);
       setLoading(false);
     }
     load();
@@ -420,6 +435,10 @@ export default function CustomersPage() {
                       
                       {/* Dynamic Badging System */}
                       <div className={styles.tags}>
+                        {c.isVIP && <span className={`${styles.badge} ${styles.badgeGold}`}>VIP 👑</span>}
+                        {c.isFirst5 && <span className={`${styles.badge} ${styles.badgeTeal}`}>First 5 🌟</span>}
+                        {c.isRepeat && <span className={`${styles.badge} ${styles.badgePurple}`}>Repeat Buyer</span>}
+                        
                         {c.is_subscriber && (
                           c.subscribed === false ? (
                             <span className={`${styles.badge} ${styles.badgeRed}`}>
@@ -431,15 +450,16 @@ export default function CustomersPage() {
                             </span>
                           )
                         )}
-                        {c.is_buyer ? (
+                        {!c.isFirst5 && !c.isRepeat && !c.isVIP && c.is_buyer ? (
                           <span className={`${styles.badge} ${styles.badgeGold}`}>
                             Etsy Buyer
                           </span>
-                        ) : (
+                        ) : null}
+                        {!c.is_buyer ? (
                           <span className={`${styles.badge} ${styles.badgeFaint}`}>
                             Non-Buyer
                           </span>
-                        )}
+                        ) : null}
                         {c.source && c.source !== "landing_page" && c.source !== "bestiary_notify" && c.source !== "Etsy Store" && (
                           <span className={`${styles.badge} ${styles.badgePurple}`}>
                             {c.source}
