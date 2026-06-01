@@ -13,9 +13,9 @@ async function ensureFonts() {
       fetch('https://raw.githubusercontent.com/google/fonts/main/ofl/lora/static/Lora-Bold.ttf').then(r => r.arrayBuffer()),
       fetch('https://raw.githubusercontent.com/google/fonts/main/ofl/inter/static/Inter-Bold.ttf').then(r => r.arrayBuffer()),
     ])
-    GlobalFonts.register(Buffer.from(loraReg), 'Lora')
-    GlobalFonts.register(Buffer.from(loraBold), 'Lora')
-    GlobalFonts.register(Buffer.from(interBold), 'Inter')
+    GlobalFonts.register(Buffer.from(loraReg), 'LoraRegCustom')
+    GlobalFonts.register(Buffer.from(loraBold), 'LoraBoldCustom')
+    GlobalFonts.register(Buffer.from(interBold), 'InterBoldCustom')
     fontsLoaded = true
   } catch (err) {
     console.error('Failed to load fonts for canvas:', err)
@@ -223,12 +223,12 @@ export async function renderAsset({
 
     // Headline
     ctx.fillStyle = '#FAF6F0'
-    ctx.font = `bold ${Math.round(w * 0.058)}px Lora, sans-serif`
+    ctx.font = `${Math.round(w * 0.058)}px LoraBoldCustom`
     ctx.fillText(headline || 'New Post', textLeft, Math.round(h * 0.695))
 
     // Caption
     ctx.fillStyle = 'rgba(250,246,240,0.72)'
-    ctx.font = `${Math.round(w * 0.031)}px Lora, sans-serif`
+    ctx.font = `${Math.round(w * 0.031)}px LoraRegCustom`
     wrapText(ctx, caption || '', textLeft, Math.round(h * 0.765), textRight - textLeft, Math.round(w * 0.04))
 
     // CTA pill
@@ -244,7 +244,7 @@ export async function renderAsset({
     ctx.fill()
 
     ctx.fillStyle = '#0E0C09'
-    ctx.font = `bold ${Math.round(w * 0.028)}px Inter, sans-serif`
+    ctx.font = `${Math.round(w * 0.028)}px InterBoldCustom`
     ctx.fillText((cta || 'LEARN MORE').toUpperCase(), pillX + Math.round(pillW * 0.1), pillY + Math.round(pillH * 0.64))
 
     // Upload to Supabase Storage
