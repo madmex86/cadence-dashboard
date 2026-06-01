@@ -381,6 +381,7 @@ export async function publishAsset({
         publish_status: 'pending',
       })
       if (schedError) throw schedError
+      await supabase.from('generated_assets').update({ status: 'scheduled' }).eq('id', assetId)
       return { results: Object.fromEntries(platforms.map(p => [p, { success: true }])) }
     }
 
