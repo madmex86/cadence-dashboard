@@ -1,30 +1,26 @@
 'use server'
 
 import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas'
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
+import { join } from 'path'
 import { createClient } from '@/lib/supabase/server'
 
 // ─── Font loading ─────────────────────────────────────────────────────────────
-// Uses jsDelivr (fast global CDN, reliable from Lambda) with /tmp caching so
-// warm invocations read from disk in ~1ms. No premature flag — always checks
-// the cache first, only fetches on a true cold start with no /tmp file.
+// Fonts are bundled locally in public/fonts/ so we bypass all CDNs, network latency,
+// and 50MB Github repo limits.
 
-const FONT_TMP = '/tmp/cc-fonts'
 const FONT_DEFS = [
   {
     name: 'LoraBoldCustom',
-    path: `${FONT_TMP}/lora-bold.ttf`,
-    url: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/lora/static/Lora-Bold.ttf',
+    path: join(process.cwd(), 'public', 'fonts', 'Lora-Bold.ttf'),
   },
   {
     name: 'LoraRegCustom',
-    path: `${FONT_TMP}/lora-reg.ttf`,
-    url: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/lora/static/Lora-Regular.ttf',
+    path: join(process.cwd(), 'public', 'fonts', 'Lora-Regular.ttf'),
   },
   {
     name: 'InterBoldCustom',
-    path: `${FONT_TMP}/inter-bold.ttf`,
-    url: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/inter/static/Inter-Bold.ttf',
+    path: join(process.cwd(), 'public', 'fonts', 'Inter-Bold.ttf'),
   }
 ]
 
@@ -32,20 +28,11 @@ let fontsLoaded = false
 
 async function ensureFonts() {
   if (fontsLoaded) return
-  try { mkdirSync(FONT_TMP, { recursive: true }) } catch {}
 
   let allLoaded = true
   for (const font of FONT_DEFS) {
     try {
-      let buf
-      if (existsSync(font.path)) {
-        buf = readFileSync(font.path)
-      } else {
-        const res = await fetch(font.url, { signal: AbortSignal.timeout(8000) })
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        buf = Buffer.from(await res.arrayBuffer())
-        writeFileSync(font.path, buf)
-      }
+      const buf = readFileSync(font.path)
       GlobalFonts.register(buf, font.name)
     } catch (err) {
       console.error(`Font [${font.name}] failed:`, err.message)
