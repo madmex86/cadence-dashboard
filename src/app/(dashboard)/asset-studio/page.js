@@ -821,8 +821,8 @@ export default function AssetStudio() {
 
               {/* LEFT — image + export pack */}
               <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-                <div style={{ borderRadius:10, overflow:'hidden', border:'1px solid rgba(201,168,76,0.15)' }}>
-                  <img src={renderedImages[0].imageUrl} alt={renderedImages[0].copy?.headline ?? copy?.headline ?? ''} style={{ width:'100%', display:'block' }} />
+                <div style={{ borderRadius:10, overflow:'hidden', border:'1px solid rgba(201,168,76,0.15)', maxWidth: '400px', width: '100%' }}>
+                  <img src={renderedImages[0].imageUrl} alt={renderedImages[0].copy?.headline ?? copy?.headline ?? ''} style={{ width:'100%', maxHeight:'600px', objectFit:'contain', display:'block', background:'rgba(0,0,0,0.2)' }} />
                 </div>
 
                 {renderedImages[0].creature && (
