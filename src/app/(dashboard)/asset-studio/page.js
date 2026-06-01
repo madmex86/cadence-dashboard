@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   generateAssetCopy, renderAsset, saveGeneratedAsset,
-  publishAsset, getSmartSuggestions, loadRecentAssets,
+  publishAsset, markAssetPosted, getSmartSuggestions, loadRecentAssets,
   loadSocialConnections, deleteGeneratedAsset
 } from './actions'
 
@@ -321,6 +321,15 @@ export default function AssetStudio() {
     })
     setIsPublishing(false)
     if (result.results) setPublishResults(result.results)
+  }
+
+  const handleMarkPosted = async () => {
+    if (!firstSuccess?.assetId) return
+    setIsPublishing(true)
+    await markAssetPosted(firstSuccess.assetId)
+    setAssets(prev => prev.map(a => a.id === firstSuccess.assetId ? { ...a, status: 'posted' } : a))
+    setIsPublishing(false)
+    setScreen('home')
   }
 
   const startFromSuggestion = (s) => {
@@ -810,6 +819,7 @@ export default function AssetStudio() {
                   isPublishing={isPublishing}
                   publishResults={publishResults}
                   onPublish={handlePublish}
+                  onMarkPosted={handleMarkPosted}
                   onReset={resetBuilder}
                   note={renderedImages.length > 1 ? `Publishing first image (${firstSuccess.creature?.name ?? 'asset'})` : null}
                 />
@@ -877,6 +887,7 @@ export default function AssetStudio() {
                 isPublishing={isPublishing}
                 publishResults={publishResults}
                 onPublish={handlePublish}
+                onMarkPosted={handleMarkPosted}
                 onReset={resetBuilder}
               />
             </div>
@@ -889,7 +900,7 @@ export default function AssetStudio() {
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
-function PublishPanel({ copy, imageUrl, assetId, connectedPlatforms, selectedPlatforms, setSelectedPlatforms, scheduleDate, setScheduleDate, isPublishing, publishResults, onPublish, onReset, note }) {
+function PublishPanel({ copy, imageUrl, assetId, connectedPlatforms, selectedPlatforms, setSelectedPlatforms, scheduleDate, setScheduleDate, isPublishing, publishResults, onPublish, onMarkPosted, onReset, note }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
       {note && (
@@ -953,9 +964,14 @@ function PublishPanel({ copy, imageUrl, assetId, connectedPlatforms, selectedPla
       )}
 
       {!publishResults && (
-        <button onClick={onPublish} disabled={isPublishing || selectedPlatforms.length === 0} className="as-btn-pri" style={{ width:'100%', justifyContent:'center', padding:'12px', opacity: selectedPlatforms.length === 0 ? .4 : 1 }}>
-          {isPublishing ? <><Spin /> Publishing…</> : scheduleDate ? <>🗓 Schedule Post</> : <>→ Publish Now</>}
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button onClick={onPublish} disabled={isPublishing || selectedPlatforms.length === 0} className="as-btn-pri" style={{ width:'100%', justifyContent:'center', padding:'12px', opacity: selectedPlatforms.length === 0 ? .4 : 1 }}>
+            {isPublishing ? <><Spin /> Publishing…</> : scheduleDate ? <>🗓 Schedule Post</> : <>→ Publish Now</>}
+          </button>
+          <button onClick={onMarkPosted} disabled={isPublishing} className="as-btn-ghost" style={{ width:'100%', justifyContent:'center', padding:'10px' }}>
+            ✓ Mark as Manually Posted
+          </button>
+        </div>
       )}
 
       {publishResults && (

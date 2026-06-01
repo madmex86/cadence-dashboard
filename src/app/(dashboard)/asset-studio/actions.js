@@ -399,6 +399,20 @@ export async function publishAsset({
 }
 
 // ─── SMART SUGGESTIONS ────────────────────────────────────────────────────────
+
+export async function markAssetPosted(assetId) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthorized' }
+    
+    await supabase.from('generated_assets').update({ status: 'posted' }).eq('id', assetId)
+    return { success: true }
+  } catch (err) {
+    return { error: String(err) }
+  }
+}
+
 export async function getSmartSuggestions() {
   try {
     const supabase = await createClient()
