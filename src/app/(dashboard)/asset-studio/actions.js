@@ -243,22 +243,29 @@ export async function renderAsset({
 
     const textLeft = Math.round(w * 0.075)
     const textRight = Math.round(w * 0.88)
+    const maxTextWidth = textRight - textLeft
 
     // Headline
     ctx.fillStyle = '#FAF6F0'
     ctx.font = `${Math.round(w * 0.058)}px LoraBoldCustom, serif`
-    ctx.fillText(headline || 'New Post', textLeft, Math.round(h * 0.695))
+    let currentY = Math.round(h * 0.695)
+    currentY = wrapText(ctx, headline || 'New Post', textLeft, currentY, maxTextWidth, Math.round(w * 0.065))
 
     // Caption
+    currentY += Math.round(h * 0.03) // Space between headline and caption
     ctx.fillStyle = 'rgba(250,246,240,0.72)'
     ctx.font = `${Math.round(w * 0.031)}px LoraRegCustom, serif`
-    wrapText(ctx, caption || '', textLeft, Math.round(h * 0.765), textRight - textLeft, Math.round(w * 0.04))
+    wrapText(ctx, caption || '', textLeft, currentY, maxTextWidth, Math.round(w * 0.04))
 
     // CTA pill
+    const ctaText = (cta || 'LEARN MORE').toUpperCase()
+    ctx.font = `${Math.round(w * 0.028)}px InterBoldCustom, sans-serif`
+    const ctaMetrics = ctx.measureText(ctaText)
+    
     const pillX = textLeft
     const pillY = Math.round(h * 0.865)
-    const pillW = Math.round(w * 0.36)
     const pillH = Math.round(h * 0.055)
+    const pillW = ctaMetrics.width + Math.round(w * 0.08) // 4% padding on left and right
     const radius = Math.round(pillH * 0.2)
 
     ctx.fillStyle = `rgb(${r},${g},${b})`
@@ -267,8 +274,7 @@ export async function renderAsset({
     ctx.fill()
 
     ctx.fillStyle = '#0E0C09'
-    ctx.font = `${Math.round(w * 0.028)}px LoraBoldCustom, serif`
-    ctx.fillText((cta || 'LEARN MORE').toUpperCase(), pillX + Math.round(pillW * 0.1), pillY + Math.round(pillH * 0.64))
+    ctx.fillText(ctaText, pillX + Math.round(w * 0.04), pillY + Math.round(pillH * 0.64))
 
     // Upload to Supabase Storage
     const buffer = canvas.toBuffer('image/png')
