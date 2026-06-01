@@ -173,13 +173,16 @@ Shape: { "headline": string, "caption": string, "hashtags": string[], "cta": str
     
     // Parse JSON and strip emojis explicitly
     const parsed = JSON.parse(match[0])
-    const stripEmojis = str => str ? str.replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, '') : ''
+    const cleanText = str => str ? str
+      .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, '')
+      .replace(/[\r\n\t]+/g, ' ')
+      .trim() : ''
     
     return { copy: {
-      headline: stripEmojis(parsed.headline),
-      caption: stripEmojis(parsed.caption),
-      cta: stripEmojis(parsed.cta),
-      hashtags: (parsed.hashtags || []).map(stripEmojis)
+      headline: cleanText(parsed.headline),
+      caption: cleanText(parsed.caption),
+      cta: cleanText(parsed.cta),
+      hashtags: (parsed.hashtags || []).map(cleanText)
     } }
   } catch (err) {
     return { error: String(err) }
