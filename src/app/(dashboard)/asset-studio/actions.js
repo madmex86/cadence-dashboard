@@ -1,24 +1,52 @@
 'use server'
 
 import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas'
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs'
 import { createClient } from '@/lib/supabase/server'
 
-// Load fonts dynamically for Vercel
-let fontsLoaded = false
+// ─── Font loading ─────────────────────────────────────────────────────────────
+// Fonts are cached in /tmp so warm Lambda invocations skip the fetch.
+// Each font is loaded independently so one failure doesn't block the others.
+// Every ctx.font call also includes a system-font fallback so text is visible
+// even on a cold start before the first successful font registration.
+
+const FONT_TMP = '/tmp/cc-fonts'
+const FONT_DEFS = [
+  {
+    name: 'LoraBoldCustom',
+    path: `${FONT_TMP}/lora-bold.ttf`,
+    url: 'https://raw.githubusercontent.com/google/fonts/main/ofl/lora/static/Lora-Bold.ttf',
+  },
+  {
+    name: 'LoraRegCustom',
+    path: `${FONT_TMP}/lora-reg.ttf`,
+    url: 'https://raw.githubusercontent.com/google/fonts/main/ofl/lora/static/Lora-Regular.ttf',
+  },
+]
+
+let fontsAttempted = false
+
 async function ensureFonts() {
-  if (fontsLoaded) return
-  try {
-    const [loraReg, loraBold, interBold] = await Promise.all([
-      fetch('https://raw.githubusercontent.com/google/fonts/main/ofl/lora/static/Lora-Regular.ttf').then(r => r.arrayBuffer()),
-      fetch('https://raw.githubusercontent.com/google/fonts/main/ofl/lora/static/Lora-Bold.ttf').then(r => r.arrayBuffer()),
-      fetch('https://raw.githubusercontent.com/google/fonts/main/ofl/inter/static/Inter-Bold.ttf').then(r => r.arrayBuffer()),
-    ])
-    GlobalFonts.register(Buffer.from(loraReg), 'LoraRegCustom')
-    GlobalFonts.register(Buffer.from(loraBold), 'LoraBoldCustom')
-    GlobalFonts.register(Buffer.from(interBold), 'InterBoldCustom')
-    fontsLoaded = true
-  } catch (err) {
-    console.error('Failed to load fonts for canvas:', err)
+  if (fontsAttempted) return
+  fontsAttempted = true
+
+  try { mkdirSync(FONT_TMP, { recursive: true }) } catch {}
+
+  for (const font of FONT_DEFS) {
+    try {
+      let buf
+      if (existsSync(font.path)) {
+        buf = readFileSync(font.path)
+      } else {
+        const res = await fetch(font.url)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        buf = Buffer.from(await res.arrayBuffer())
+        writeFileSync(font.path, buf)
+      }
+      GlobalFonts.register(buf, font.name)
+    } catch (err) {
+      console.error(`Font load failed [${font.name}]:`, err.message)
+    }
   }
 }
 
@@ -223,12 +251,12 @@ export async function renderAsset({
 
     // Headline
     ctx.fillStyle = '#FAF6F0'
-    ctx.font = `${Math.round(w * 0.058)}px LoraBoldCustom`
+    ctx.font = `${Math.round(w * 0.058)}px LoraBoldCustom, serif`
     ctx.fillText(headline || 'New Post', textLeft, Math.round(h * 0.695))
 
     // Caption
     ctx.fillStyle = 'rgba(250,246,240,0.72)'
-    ctx.font = `${Math.round(w * 0.031)}px LoraRegCustom`
+    ctx.font = `${Math.round(w * 0.031)}px LoraRegCustom, serif`
     wrapText(ctx, caption || '', textLeft, Math.round(h * 0.765), textRight - textLeft, Math.round(w * 0.04))
 
     // CTA pill
@@ -244,7 +272,7 @@ export async function renderAsset({
     ctx.fill()
 
     ctx.fillStyle = '#0E0C09'
-    ctx.font = `${Math.round(w * 0.028)}px InterBoldCustom`
+    ctx.font = `${Math.round(w * 0.028)}px LoraBoldCustom, serif`
     ctx.fillText((cta || 'LEARN MORE').toUpperCase(), pillX + Math.round(pillW * 0.1), pillY + Math.round(pillH * 0.64))
 
     // Upload to Supabase Storage
