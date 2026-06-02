@@ -114,6 +114,11 @@ const TEMPLATE_TONE = {
     'Lean into the lore and worldbuilding. Could be a personality trait of the creature, a line from its Field Notes lore card, or something about the craft and care that goes into each one. Quotable and a little magical.',
 }
 
+const cleanText = str => str ? str
+  .replace(/[\r\n\t]+/g, ' ')
+  .replace(/[^\x20-\x7E\xA0-\xFF\u2010-\u2027]/g, '')
+  .trim() : ''
+
 // ─── GENERATE COPY ────────────────────────────────────────────────────────────
 export async function generateAssetCopy({ triggerType, sourceData, templateId }) {
   try {
@@ -173,10 +178,6 @@ Shape: { "headline": string, "caption": string, "hashtags": string[], "cta": str
     
     // Parse JSON and strip emojis explicitly
     const parsed = JSON.parse(match[0])
-    const cleanText = str => str ? str
-      .replace(/[\r\n\t]+/g, ' ')
-      .replace(/[^\x20-\x7E\xA0-\xFF\u2010-\u2027]/g, '')
-      .trim() : ''
     
     return { copy: {
       headline: cleanText(parsed.headline),
@@ -260,21 +261,26 @@ export async function renderAsset({
     const textRight = Math.round(w * 0.88)
     const maxTextWidth = textRight - textLeft
     const minDim = Math.min(w, h)
+    
+    // Sanitize text inputs in case they were loaded from dirty database rows
+    const cleanHeadline = cleanText(headline) || 'New Post'
+    const cleanCaption = cleanText(caption) || ''
+    const cleanCta = cleanText(cta) || 'LEARN MORE'
 
     // Headline
     ctx.fillStyle = '#FAF6F0'
     ctx.font = `${Math.round(minDim * 0.058)}px LoraBoldCustom, serif`
     let currentY = Math.round(h * 0.695)
-    currentY = wrapText(ctx, headline || 'New Post', textLeft, currentY, maxTextWidth, Math.round(minDim * 0.065))
+    currentY = wrapText(ctx, cleanHeadline, textLeft, currentY, maxTextWidth, Math.round(minDim * 0.065))
 
     // Caption
     currentY += Math.round(h * 0.03) // Space between headline and caption
     ctx.fillStyle = 'rgba(250,246,240,0.72)'
     ctx.font = `${Math.round(minDim * 0.031)}px LoraRegCustom, serif`
-    wrapText(ctx, caption || '', textLeft, currentY, maxTextWidth, Math.round(minDim * 0.04))
+    wrapText(ctx, cleanCaption, textLeft, currentY, maxTextWidth, Math.round(minDim * 0.04))
 
     // CTA pill
-    const ctaText = (cta || 'LEARN MORE').toUpperCase()
+    const ctaText = cleanCta.toUpperCase()
     ctx.font = `${Math.round(minDim * 0.028)}px InterBoldCustom, sans-serif`
     const ctaMetrics = ctx.measureText(ctaText)
     
