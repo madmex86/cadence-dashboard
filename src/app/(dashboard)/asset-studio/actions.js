@@ -174,8 +174,8 @@ Shape: { "headline": string, "caption": string, "hashtags": string[], "cta": str
     // Parse JSON and strip emojis explicitly
     const parsed = JSON.parse(match[0])
     const cleanText = str => str ? str
-      .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, '')
       .replace(/[\r\n\t]+/g, ' ')
+      .replace(/[^\x20-\x7E\xA0-\xFF\u2010-\u2027]/g, '')
       .trim() : ''
     
     return { copy: {
