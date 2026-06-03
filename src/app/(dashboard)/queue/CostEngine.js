@@ -78,9 +78,9 @@ export default function CostEngine({ creatures, inventory = [], globalSettings =
         loadedRecipe = loadedRecipe.map(row => ({
           label: row.label || "Part",
           filId: row.filId || "",
-          model: row.model || 0,
-          purged: row.purged || 0,
-          tower: row.tower || 0,
+          model: row.model ?? row.modelGrams ?? 0,
+          purged: row.purged ?? row.purgeGrams ?? 0,
+          tower: row.tower ?? row.towerGrams ?? 0,
         }));
       }
 
@@ -110,14 +110,14 @@ export default function CostEngine({ creatures, inventory = [], globalSettings =
 
   const creature = creatures.find(c => c.id === f.creatureId);
 
-  const totalGrams = f.recipe.reduce((acc, r) => acc + (parseFloat(r.model||0) + parseFloat(r.purged||0) + parseFloat(r.tower||0)), 0);
+  const totalGrams = f.recipe.reduce((acc, r) => acc + (parseFloat(r.model ?? r.modelGrams ?? 0) + parseFloat(r.purged ?? r.purgeGrams ?? 0) + parseFloat(r.tower ?? r.towerGrams ?? 0)), 0);
 
   // Calculate filament cost based on selected spools in the recipe
   const batchSize = Math.max(1, parseFloat(f.batch) || 1);
   
   let totalFilCostForPlate = 0;
   f.recipe.forEach(r => {
-    const rowGrams = (parseFloat(r.model||0) + parseFloat(r.purged||0) + parseFloat(r.tower||0));
+    const rowGrams = (parseFloat(r.model ?? r.modelGrams ?? 0) + parseFloat(r.purged ?? r.purgeGrams ?? 0) + parseFloat(r.tower ?? r.towerGrams ?? 0));
     const invSpool = inventory.find(i => i.id === r.filId);
     const spoolCost = invSpool ? parseFloat(invSpool.cost_per_spool || 25) : 25;
     const costPerGram = spoolCost / 1000;
