@@ -342,6 +342,25 @@ export default function AssetStudio() {
     setScreen('builder')
   }
 
+  const forceDownload = async (e, url, filename) => {
+    e.preventDefault()
+    try {
+      const res = await fetch(url)
+      const blob = await res.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = objectUrl
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(objectUrl)
+    } catch (err) {
+      console.error('Download failed', err)
+      window.open(url, '_blank')
+    }
+  }
+
   const resetBuilder = () => {
     setCopy(null); setRenderedImages([]); setPublishResults(null)
     setSelectedSuggestion(null); setSelectedPlatforms([]); setScheduleDate('')
@@ -796,9 +815,9 @@ export default function AssetStudio() {
                       {item.error ? (
                         <p style={{ margin:0, fontSize:11, color:'#e07070' }}>{item.error}</p>
                       ) : item.imageUrl ? (
-                        <a href={item.imageUrl} download={`${item.creature?.name ?? 'asset'}-${aspectRatio.replace(':','x')}.png`} className="as-btn-ghost" style={{ fontSize:11, padding:'4px 10px', width:'100%', justifyContent:'center', boxSizing:'border-box' }}>
+                        <button onClick={(e) => forceDownload(e, item.imageUrl, `${item.creature?.name ?? 'asset'}-${aspectRatio.replace(':','x')}.png`)} className="as-btn-ghost" style={{ fontSize:11, padding:'4px 10px', width:'100%', justifyContent:'center', boxSizing:'border-box' }}>
                           ↓ Download
-                        </a>
+                        </button>
                       ) : null}
                     </div>
                   </div>
@@ -848,7 +867,7 @@ export default function AssetStudio() {
                 )}
 
                 <div style={{ display:'flex', gap:10 }}>
-                  <a href={renderedImages[0].imageUrl} download={`cadence-asset-${aspectRatio.replace(':','x')}.png`} className="as-btn-ghost" style={{ flex:1, justifyContent:'center', padding:'10px' }}>↓ Download</a>
+                  <button onClick={(e) => forceDownload(e, renderedImages[0].imageUrl, `cadence-asset-${aspectRatio.replace(':','x')}.png`)} className="as-btn-ghost" style={{ flex:1, justifyContent:'center', padding:'10px' }}>↓ Download</button>
                   <button onClick={() => setScreen('builder')} className="as-btn-ghost" style={{ flex:1, justifyContent:'center', padding:'10px' }}>↺ Regenerate</button>
                 </div>
 
@@ -863,7 +882,7 @@ export default function AssetStudio() {
                         <div style={{ fontSize:10, color:'rgba(250,246,240,0.35)', marginTop:1 }}>{hint}</div>
                       </div>
                       {exportUrls[ratio] ? (
-                        <a href={exportUrls[ratio]} download={`cadence-asset-${ratio.replace(':','x')}.png`} className="as-btn-ghost" style={{ padding:'5px 12px', fontSize:11 }}>↓ Download</a>
+                        <button onClick={(e) => forceDownload(e, exportUrls[ratio], `cadence-asset-${ratio.replace(':','x')}.png`)} className="as-btn-ghost" style={{ padding:'5px 12px', fontSize:11 }}>↓ Download</button>
                       ) : (
                         <button onClick={() => renderForExport(ratio)} disabled={!!exportRendering[ratio]} className="as-btn-ghost" style={{ padding:'5px 12px', fontSize:11, opacity: exportRendering[ratio] ? .5 : 1 }}>
                           {exportRendering[ratio] ? <><Spin /> Rendering…</> : ratio === aspectRatio ? '✓ Ready' : 'Render'}
