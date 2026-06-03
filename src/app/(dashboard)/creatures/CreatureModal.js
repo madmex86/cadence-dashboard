@@ -294,9 +294,9 @@ export default function CreatureModal({ creature, onClose, onSave }) {
                             <strong style={{ color: "var(--dim)", fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase" }}>Filament Usage</strong>
                             <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
                               {rows.map((r, i) => {
-                                const modelVal = r.model ?? r.modelGrams ?? 0;
-                                const purgeVal = r.purged ?? r.purgeGrams ?? 0;
-                                const towerVal = r.tower ?? r.towerGrams ?? 0;
+                                const modelVal = r.model ?? r.modelGrams ?? r.model_grams ?? r.grams ?? r.weight ?? 0;
+                                const purgeVal = r.purged ?? r.purgeGrams ?? r.purge_grams ?? r.purged_grams ?? 0;
+                                const towerVal = r.tower ?? r.towerGrams ?? r.tower_grams ?? 0;
                                 const totalGrams = (parseFloat(modelVal) + parseFloat(purgeVal) + parseFloat(towerVal)).toFixed(1);
                                 return (
                                   <div key={i} style={{ display: "flex", justifyContent: "space-between", color: "var(--cream)" }}>
