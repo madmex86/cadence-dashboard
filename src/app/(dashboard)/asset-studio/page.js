@@ -4,16 +4,20 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   generateAssetCopy, renderAsset, saveGeneratedAsset,
   publishAsset, markAssetPosted, getSmartSuggestions, loadRecentAssets,
-  loadSocialConnections, deleteGeneratedAsset
+  loadSocialConnections, deleteGeneratedAsset,
+  loadHashtagSets, saveHashtagSet, deleteHashtagSet, loadScheduledPosts,
 } from './actions'
 
 const TEMPLATES = [
-  { id: 'product-card',      label: 'Product Card',      icon: '📦' },
-  { id: 'drop-announcement', label: 'Drop Announcement', icon: '⚡' },
-  { id: 'urgency',           label: 'Low Stock Urgency', icon: '⚠' },
-  { id: 'milestone',         label: 'Milestone',         icon: '📈' },
-  { id: 'new-arrival',       label: 'New Arrival',       icon: '✨' },
-  { id: 'quote-card',        label: 'Brand Post',        icon: '💬' },
+  { id: 'product-card',        label: 'Product Card',       icon: '📦' },
+  { id: 'drop-announcement',   label: 'Drop Announcement',  icon: '⚡' },
+  { id: 'urgency',             label: 'Low Stock Urgency',  icon: '⚠' },
+  { id: 'milestone',           label: 'Milestone',          icon: '📈' },
+  { id: 'new-arrival',         label: 'New Arrival',        icon: '✨' },
+  { id: 'quote-card',          label: 'Brand Post',         icon: '💬' },
+  { id: 'sold-out',            label: 'Sold Out',           icon: '🏠' },
+  { id: 'lore-reveal',         label: 'Lore Reveal',        icon: '📖' },
+  { id: 'collector-spotlight', label: 'Collector Spotlight',icon: '⭐' },
 ]
 
 const TRIGGER_LABELS = {
@@ -35,6 +39,7 @@ const PLATFORMS = [
   { id: 'instagram', label: 'Instagram', color: '#E1306C' },
   { id: 'facebook',  label: 'Facebook',  color: '#1877F2' },
   { id: 'pinterest', label: 'Pinterest', color: '#E60023' },
+  { id: 'tiktok',    label: 'TikTok',    color: '#69C9D0' },
 ]
 
 const EXPORT_SIZES = [
@@ -88,6 +93,17 @@ export default function AssetStudio() {
   const [exportUrls, setExportUrls] = useState({})
   const [exportRendering, setExportRendering] = useState({})
 
+  // Copy variants
+  const [variants, setVariants] = useState(null) // null | [{headline,caption,hashtags,cta}, ...]
+
+  // Hashtag sets
+  const [hashtagSets, setHashtagSets] = useState([])
+  const [savingSetName, setSavingSetName] = useState('') // '' = picker closed
+  const [showSaveSet, setShowSaveSet] = useState(false)
+
+  // Calendar
+  const [scheduledPosts, setScheduledPosts] = useState([])
+
   // ── Derived ────────────────────────────────────────────────────────────────
   const activeCreatures = (() => {
     if (creatureMode === 'all') return creatures
@@ -104,6 +120,8 @@ export default function AssetStudio() {
     loadRecentAssets().then(r => { if (r.assets) setAssets(r.assets) })
     getSmartSuggestions().then(r => { if (r.suggestions) setSuggestions(r.suggestions) })
     loadSocialConnections().then(r => { if (r.connections) setConnections(r.connections) })
+    loadHashtagSets().then(r => { if (r.sets) setHashtagSets(r.sets) })
+    loadScheduledPosts().then(r => { if (r.posts) setScheduledPosts(r.posts) })
     fetch('/api/creatures').then(r => r.json()).then(d => setCreatures(d.creatures || [])).catch(() => {})
   }, [])
 
@@ -139,6 +157,7 @@ export default function AssetStudio() {
   const handleGenerateCopy = async () => {
     setIsGeneratingCopy(true)
     setCopy(null)
+    setVariants(null)
     setActionError(null)
 
     let sourceData = selectedSuggestion?.sourceData ?? null
@@ -162,7 +181,7 @@ export default function AssetStudio() {
     const result = await generateAssetCopy({ triggerType: effectiveTrigger, sourceData, templateId })
     setIsGeneratingCopy(false)
     if (result.error) setActionError(`Copy generation failed: ${result.error}`)
-    else if (result.copy) setCopy(result.copy)
+    else if (result.variants) setVariants(result.variants)
   }
 
   // Single mode: user has already generated + edited copy, just render it
@@ -236,13 +255,13 @@ export default function AssetStudio() {
         templateId,
       })
 
-      if (!copyResult.copy) {
+      if (!copyResult.variants?.length) {
         results.push({ creature, imageUrl: null, assetId: null, error: `Copy failed: ${copyResult.error}`, copy: null })
         setRenderProgress({ done: i + 1, total: activeCreatures.length, stage: 'copy', name: creature.name })
         continue
       }
 
-      const renderCopy = copyResult.copy
+      const renderCopy = copyResult.variants[0]
 
       // Step 2: render with that creature's copy + photo
       setRenderProgress({ done: i, total: activeCreatures.length, stage: 'render', name: creature.name })
@@ -343,10 +362,11 @@ export default function AssetStudio() {
   }
 
   const resetBuilder = () => {
-    setCopy(null); setRenderedImages([]); setPublishResults(null)
+    setCopy(null); setVariants(null); setRenderedImages([]); setPublishResults(null)
     setSelectedSuggestion(null); setSelectedPlatforms([]); setScheduleDate('')
     setExportUrls({}); setExportRendering({}); setActionError(null)
     setRenderProgress(null); setScreen('home'); setEditingAssetId(null)
+    setShowSaveSet(false); setSavingSetName('')
   }
 
   const editAsset = (asset) => {
@@ -481,6 +501,16 @@ export default function AssetStudio() {
                   }
                   <div style={{ padding:'12px 14px' }}>
                     <p style={{ margin:'0 0 5px', fontWeight:600, fontSize:13, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{asset.headline ?? 'Untitled'}</p>
+                    {asset.hashtags && asset.hashtags.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+                        {asset.hashtags.slice(0, 3).map((h, idx) => (
+                          <span key={idx} style={{ fontSize: 10, color: 'var(--gold)', background: 'rgba(201,168,76,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                            #{h.replace(/^#/, '')}
+                          </span>
+                        ))}
+                        {asset.hashtags.length > 3 && <span style={{ fontSize: 10, color: 'rgba(250,246,240,0.4)', padding: '2px 4px' }}>+{asset.hashtags.length - 3}</span>}
+                      </div>
+                    )}
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                       <StatusPill status={asset.status} />
                       <div style={{ display:'flex', gap:8, alignItems:'center' }}>
@@ -501,6 +531,18 @@ export default function AssetStudio() {
             </div>
           )}
         </div>
+
+        {/* Post Calendar */}
+        <div style={{ marginTop: 40 }}>
+          <CalendarView
+            posts={scheduledPosts}
+            onOpenAsset={id => {
+              const asset = assets.find(a => a.id === id)
+              if (asset) editAsset(asset)
+            }}
+          />
+        </div>
+      </div>
       )}
 
       {/* ── BUILDER ──────────────────────────────────────────────────────── */}
@@ -793,6 +835,16 @@ export default function AssetStudio() {
                       <p style={{ margin:'0 0 6px', fontWeight:600, fontSize:12 }}>
                         {item.creature?.name ?? 'No creature'}
                       </p>
+                      {item.copy?.hashtags && item.copy.hashtags.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+                          {item.copy.hashtags.slice(0, 3).map((h, idx) => (
+                            <span key={idx} style={{ fontSize: 10, color: 'var(--gold)', background: 'rgba(201,168,76,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                              #{h.replace(/^#/, '')}
+                            </span>
+                          ))}
+                          {item.copy.hashtags.length > 3 && <span style={{ fontSize: 10, color: 'rgba(250,246,240,0.4)', padding: '2px 4px' }}>+{item.copy.hashtags.length - 3}</span>}
+                        </div>
+                      )}
                       {item.error ? (
                         <p style={{ margin:0, fontSize:11, color:'#e07070' }}>{item.error}</p>
                       ) : item.imageUrl ? (
@@ -844,6 +896,16 @@ export default function AssetStudio() {
                       {renderedImages[0].creature.name}
                       {renderedImages[0].creature.species ? ` · ${renderedImages[0].creature.species}` : ''}
                     </span>
+                  </div>
+                )}
+
+                {(renderedImages[0].copy?.hashtags || copy?.hashtags) && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {(renderedImages[0].copy?.hashtags || copy?.hashtags).map((h, idx) => (
+                      <span key={idx} style={{ fontSize: 11, color: 'var(--gold)', background: 'rgba(201,168,76,0.1)', padding: '3px 8px', borderRadius: 6 }}>
+                        #{h.replace(/^#/, '')}
+                      </span>
+                    ))}
                   </div>
                 )}
 

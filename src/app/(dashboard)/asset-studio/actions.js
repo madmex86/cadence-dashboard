@@ -112,6 +112,12 @@ const TEMPLATE_TONE = {
     'The excitement of a first sighting — like spotting a rare creature in the field. Curious, delighted, welcoming. A new entry in the bestiary.',
   'quote-card':
     'Lean into the lore and worldbuilding. Could be a personality trait of the creature, a line from its Field Notes lore card, or something about the craft and care that goes into each one. Quotable and a little magical.',
+  'sold-out':
+    'Warm and bittersweet — this creature found its forever home. Celebrate the collector without pitying those who missed it. Light FOMO from love, not pressure. "Gone to its forever home" energy. Implies more are possible someday.',
+  'lore-reveal':
+    'Mysterious and inviting — share a small glimpse into this creature\'s world from its Field Notes lore card. A whisper, not a monologue. Short, evocative, makes readers feel they\'ve discovered something rare. Could be a habitat note, a behavior, a strange fact.',
+  'collector-spotlight':
+    'Warm and community-first — celebrating a collector who welcomed a creature home. Personal and specific, never generic. Grateful, never promotional. Write as if thanking a friend, not an audience.',
 }
 
 const cleanText = str => str ? str
@@ -142,7 +148,7 @@ export async function generateAssetCopy({ triggerType, sourceData, templateId })
       },
       body: JSON.stringify({
         model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6',
-        max_tokens: 600,
+        max_tokens: 1800,
         system: `You are the voice of Cadence Creatures — a boutique 3D-printed flexi animal toy shop in Visalia, CA. Each creature is handcrafted, fully articulated, and ships with a hidden Field Notes lore card tucked inside a custom box.
 
 The brand voice is: warm, whimsical, lore-rich, and genuine. Like a cozy nature journal crossed with a fantasy field guide. We celebrate the creatures as characters, not products.
@@ -160,8 +166,9 @@ Rules:
 - CTA: a short, warm action phrase ("Meet them here", "Claim yours", "Add to your collection")
 - NO EMOJIS ANYWHERE.
 
-CRITICAL: Return ONLY a valid JSON object — no preamble, no markdown fences, no explanation.
-Shape: { "headline": string, "caption": string, "hashtags": string[], "cta": string }`,
+CRITICAL: Return ONLY a valid JSON array of exactly 3 variants — no preamble, no markdown fences, no explanation.
+Each variant takes a different angle (e.g. creature personality, lore/worldbuilding, collector community).
+Shape: [{ "headline": string, "caption": string, "hashtags": string[], "cta": string }, ...]`,
         messages: [{ role: 'user', content: context }],
       }),
     })
@@ -173,18 +180,17 @@ Shape: { "headline": string, "caption": string, "hashtags": string[], "cta": str
 
     const data = await res.json()
     const raw = data.content[0].text.trim().replace(/```json|```/g, '')
-    const match = raw.match(/\{[\s\S]*\}/)
-    if (!match) return { error: 'Claude returned no JSON' }
-    
-    // Parse JSON and strip emojis explicitly
+    const match = raw.match(/\[[\s\S]*\]/)
+    if (!match) return { error: 'Claude returned no JSON array' }
+
     const parsed = JSON.parse(match[0])
-    
-    return { copy: {
-      headline: cleanText(parsed.headline),
-      caption: cleanText(parsed.caption),
-      cta: cleanText(parsed.cta),
-      hashtags: (parsed.hashtags || []).map(cleanText)
-    } }
+    const variants = (Array.isArray(parsed) ? parsed : [parsed]).slice(0, 3).map(v => ({
+      headline: cleanText(v.headline),
+      caption: cleanText(v.caption),
+      cta: cleanText(v.cta),
+      hashtags: (v.hashtags || []).map(cleanText),
+    }))
+    return { variants }
   } catch (err) {
     return { error: String(err) }
   }
@@ -513,5 +519,86 @@ export async function loadSocialConnections() {
     return { connections: data ?? [] }
   } catch (err) {
     return { connections: [], error: String(err) }
+  }
+}
+
+// ─── HASHTAG SETS ─────────────────────────────────────────────────────────────
+export async function loadHashtagSets() {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return { sets: [], error: 'Unauthorized' }
+
+    const { data, error } = await supabase
+      .from('hashtag_sets')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return { sets: data ?? [] }
+  } catch (err) {
+    return { sets: [], error: String(err) }
+  }
+}
+
+export async function saveHashtagSet({ id, name, hashtags }) {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return { error: 'Unauthorized' }
+
+    const payload = { name, hashtags, created_by: user.id }
+    const query = id
+      ? supabase.from('hashtag_sets').update(payload).eq('id', id).eq('created_by', user.id)
+      : supabase.from('hashtag_sets').insert(payload)
+
+    const { data, error } = await query.select('id').single()
+    if (error) throw error
+    return { id: data.id }
+  } catch (err) {
+    return { error: String(err) }
+  }
+}
+
+export async function deleteHashtagSet(id) {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return { error: 'Unauthorized' }
+
+    const { error } = await supabase
+      .from('hashtag_sets')
+      .delete()
+      .eq('id', id)
+      .eq('created_by', user.id)
+    if (error) throw error
+    return { success: true }
+  } catch (err) {
+    return { error: String(err) }
+  }
+}
+
+// ─── SCHEDULED POSTS ─────────────────────────────────────────────────────────
+export async function loadScheduledPosts() {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return { posts: [], error: 'Unauthorized' }
+
+    const { data, error } = await supabase
+      .from('scheduled_posts')
+      .select('*, generated_assets(headline, image_url)')
+      .eq('publish_status', 'pending')
+      .order('scheduled_for', { ascending: true })
+    if (error) throw error
+
+    return {
+      posts: (data ?? []).map(p => ({
+        ...p,
+        headline: p.generated_assets?.headline ?? null,
+        image_url: p.generated_assets?.image_url ?? null,
+      })),
+    }
+  } catch (err) {
+    return { posts: [], error: String(err) }
   }
 }
