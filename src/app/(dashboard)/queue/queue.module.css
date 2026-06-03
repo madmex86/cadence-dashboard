@@ -185,6 +185,16 @@
   gap: 28px;
 }
 
+.ceInputs {
+  display: flex;
+  flex-direction: column;
+}
+
+.ceResults {
+  display: flex;
+  flex-direction: column;
+}
+
 @media (max-width: 768px) {
   .ceGrid { grid-template-columns: 1fr; }
 }
