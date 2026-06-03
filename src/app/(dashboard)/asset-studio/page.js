@@ -103,6 +103,34 @@ export default function AssetStudio() {
   const [savingSetName, setSavingSetName] = useState('') // '' = picker closed
   const [showSaveSet, setShowSaveSet] = useState(false)
 
+  // Prime Posting Times
+  const [currentDate, setCurrentDate] = useState(() => new Date())
+  useEffect(() => {
+    const t = setInterval(() => setCurrentDate(new Date()), 60000)
+    return () => clearInterval(t)
+  }, [])
+
+  const getActivePostingWindows = (date) => {
+    const day = date.getDay()
+    const hour = date.getHours()
+    const windows = []
+    
+    if ((hour >= 11 && hour < 13) || (hour >= 19 && hour < 21)) {
+      windows.push({ platform: 'Instagram', end: hour < 13 ? '1pm' : '9pm' })
+    }
+    if ((hour >= 6 && hour < 10) || (hour >= 19 && hour < 23)) {
+      windows.push({ platform: 'TikTok', end: hour < 10 ? '10am' : '11pm' })
+    }
+    if (hour >= 13 && hour < 15) {
+      windows.push({ platform: 'Facebook', end: '3pm' })
+    }
+    if ((day === 0 || day === 6) && hour >= 20 && hour < 23) {
+      windows.push({ platform: 'Pinterest', end: '11pm' })
+    }
+    return windows
+  }
+  const activeWindows = getActivePostingWindows(currentDate)
+
   // ── Derived ────────────────────────────────────────────────────────────────
   const activeCreatures = (() => {
     if (creatureMode === 'all') return creatures
@@ -467,6 +495,19 @@ export default function AssetStudio() {
       {/* ── HOME ─────────────────────────────────────────────────────────── */}
       {screen === 'home' && (
         <div>
+          {activeWindows.length > 0 && (
+            <div style={{ marginBottom: 24, padding: '16px 20px', background: 'rgba(125,201,148,0.1)', border: '1px solid rgba(125,201,148,0.3)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 24 }}>🚀</span>
+              <div>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#7dc994' }}>Prime Posting Time!</p>
+                <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(250,246,240,0.7)' }}>
+                  It's a best time to post on {activeWindows.map(w => `${w.platform} (until ${w.end})`).join(', ')}.
+                </p>
+              </div>
+              <button onClick={() => setScreen('builder')} className="as-btn-pri" style={{ marginLeft: 'auto', background: '#7dc994', color: '#0E0C09', border: 'none' }}>Create Post</button>
+            </div>
+          )}
+
           {duePosts.length > 0 && (
             <div style={{ marginBottom: 24, padding: '16px 20px', background: 'rgba(201,168,76,0.1)', border: '1px solid var(--gold)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -482,6 +523,17 @@ export default function AssetStudio() {
               }} className="as-btn-pri" style={{ padding: '8px 16px', fontSize: 12 }}>Review & Post</button>
             </div>
           )}
+
+          {/* Best Times to Post — always visible on home screen */}
+          <div style={{ marginBottom: 32, padding: '16px 20px', background: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gold)', letterSpacing: '.05em', textTransform: 'uppercase', display: 'block', marginBottom: 12 }}>💡 Best Times to Post</span>
+            <div style={{ fontSize: 13, color: 'rgba(250,246,240,0.7)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+              <div><strong>Instagram:</strong> <span style={{ color: 'rgba(250,246,240,0.5)' }}>11am – 1pm, 7pm – 9pm</span></div>
+              <div><strong>TikTok:</strong> <span style={{ color: 'rgba(250,246,240,0.5)' }}>6am – 10am, 7pm – 11pm</span></div>
+              <div><strong>Facebook:</strong> <span style={{ color: 'rgba(250,246,240,0.5)' }}>1pm – 3pm</span></div>
+              <div><strong>Pinterest:</strong> <span style={{ color: 'rgba(250,246,240,0.5)' }}>8pm – 11pm (Weekends)</span></div>
+            </div>
+          </div>
 
           {suggestions.length > 0 && (
             <div style={{ marginBottom:32 }}>
@@ -553,6 +605,14 @@ export default function AssetStudio() {
             onOpenAsset={id => {
               const asset = assets.find(a => a.id === id)
               if (asset) editAsset(asset)
+            }}
+            onAddPost={date => {
+              const d = new Date(date)
+              d.setHours(12, 0, 0, 0)
+              const tzoffset = d.getTimezoneOffset() * 60000
+              const localISOTime = (new Date(d.getTime() - tzoffset)).toISOString().slice(0, 16)
+              setScheduleDate(localISOTime)
+              setScreen('builder')
             }}
           />
         </div>
@@ -1114,17 +1174,6 @@ function PublishPanel({ copy, imageUrl, assetId, connectedPlatforms, selectedPla
         </div>
       )}
 
-      {/* Best Times to Post — always visible for manual posting reference */}
-      <div style={{ padding: '10px 12px', background: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: 6 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)', letterSpacing: '.05em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Best Times to Post</span>
-        <div style={{ fontSize: 11, color: 'rgba(250,246,240,0.6)', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Instagram</span><span style={{ color: 'rgba(250,246,240,0.4)' }}>11am – 1pm, 7pm – 9pm</span></div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>TikTok</span><span style={{ color: 'rgba(250,246,240,0.4)' }}>6am – 10am, 7pm – 11pm</span></div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Facebook</span><span style={{ color: 'rgba(250,246,240,0.4)' }}>1pm – 3pm</span></div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Pinterest</span><span style={{ color: 'rgba(250,246,240,0.4)' }}>8pm – 11pm (Weekends)</span></div>
-        </div>
-      </div>
-
       {publishResults && (
         <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
           {Object.entries(publishResults).map(([platform, result]) => (
@@ -1192,7 +1241,7 @@ function StatusPill({ status }) {
   )
 }
 
-function CalendarView({ posts, onOpenAsset }) {
+function CalendarView({ posts, onOpenAsset, onAddPost }) {
   const [viewDate, setViewDate] = useState(() => new Date())
 
   const year = viewDate.getFullYear()
@@ -1250,8 +1299,13 @@ function CalendarView({ posts, onOpenAsset }) {
             }}>
               {date && (
                 <>
-                  <div style={{ fontSize:10, fontWeight: isToday ? 700 : 400, color: isToday ? 'var(--gold)' : 'rgba(250,246,240,0.35)', marginBottom:3 }}>
-                    {date.getDate()}
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:3 }}>
+                    <div style={{ fontSize:10, fontWeight: isToday ? 700 : 400, color: isToday ? 'var(--gold)' : 'rgba(250,246,240,0.35)' }}>
+                      {date.getDate()}
+                    </div>
+                    {onAddPost && (
+                      <button onClick={() => onAddPost(date)} title="Schedule post on this day" style={{ background:'transparent', border:'none', color:'rgba(250,246,240,0.3)', cursor:'pointer', padding:0, fontSize:14, lineHeight:1, fontWeight:700 }}>+</button>
+                    )}
                   </div>
                   {dayPosts.map((p, pi) => (
                     <div key={pi} onClick={() => onOpenAsset?.(p.asset_id)} style={{
