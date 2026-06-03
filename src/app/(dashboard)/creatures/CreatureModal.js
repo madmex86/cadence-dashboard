@@ -273,28 +273,45 @@ export default function CreatureModal({ creature, onClose, onSave }) {
                         <div><span style={{ color: "var(--dim)" }}>Solar Offset:</span> <span style={{ color: "var(--goldl)" }}>{recipeData.solarOn ? "Yes" : "No"}</span></div>
                       </div>
                       
-                      {recipeData.recipe && recipeData.recipe.length > 0 && (
-                        <div style={{ borderTop: "1px dashed rgba(255,255,255,0.1)", paddingTop: 12 }}>
-                          <strong style={{ color: "var(--dim)", fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase" }}>Filament Usage</strong>
-                          <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-                            {recipeData.recipe.map((r, i) => {
-                              const totalGrams = (parseFloat(r.model||0) + parseFloat(r.purged||0) + parseFloat(r.tower||0)).toFixed(1);
-                              return (
-                                <div key={i} style={{ display: "flex", justifyContent: "space-between", color: "var(--cream)" }}>
-                                  <div>
-                                    <span>{r.label || "Part"}</span>
-                                    {r.filName && <div style={{ fontSize: 10, color: "var(--dim)", marginTop: 2 }}>{r.filName}</div>}
+                      {(() => {
+                        let rows = recipeData.recipe;
+                        if (!rows || !Array.isArray(rows)) {
+                          if (recipeData.modelGrams || recipeData.purgeGrams || recipeData.towerGrams) {
+                            rows = [{
+                              label: "Body",
+                              model: recipeData.modelGrams || 0,
+                              purged: recipeData.purgeGrams || 0,
+                              tower: recipeData.towerGrams || 0
+                            }];
+                          } else {
+                            return null;
+                          }
+                        }
+                        if (rows.length === 0) return null;
+                        
+                        return (
+                          <div style={{ borderTop: "1px dashed rgba(255,255,255,0.1)", paddingTop: 12 }}>
+                            <strong style={{ color: "var(--dim)", fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase" }}>Filament Usage</strong>
+                            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                              {rows.map((r, i) => {
+                                const totalGrams = (parseFloat(r.model||0) + parseFloat(r.purged||0) + parseFloat(r.tower||0)).toFixed(1);
+                                return (
+                                  <div key={i} style={{ display: "flex", justifyContent: "space-between", color: "var(--cream)" }}>
+                                    <div>
+                                      <span>{r.label || "Part"}</span>
+                                      {r.filName && <div style={{ fontSize: 10, color: "var(--dim)", marginTop: 2 }}>{r.filName}</div>}
+                                    </div>
+                                    <div style={{ textAlign: "right" }}>
+                                      <span>{totalGrams}g</span>
+                                      <div style={{ color: "var(--dim)", fontSize: 10, marginTop: 2 }}>(Model + Purge)</div>
+                                    </div>
                                   </div>
-                                  <div style={{ textAlign: "right" }}>
-                                    <span>{totalGrams}g</span>
-                                    <div style={{ color: "var(--dim)", fontSize: 10, marginTop: 2 }}>(Model + Purge)</div>
-                                  </div>
-                                </div>
-                              );
-                            })}
+                                );
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
                     </div>
                   );
                 })()}

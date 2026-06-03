@@ -113,7 +113,7 @@ export default function CostEngine({ creatures, inventory = [], globalSettings =
   const totalGrams = f.recipe.reduce((acc, r) => acc + (parseFloat(r.model||0) + parseFloat(r.purged||0) + parseFloat(r.tower||0)), 0);
 
   // Calculate filament cost based on selected spools in the recipe
-  const batchSize = Math.max(1, parseFloat(f.batch));
+  const batchSize = Math.max(1, parseFloat(f.batch) || 1);
   
   let totalFilCostForPlate = 0;
   f.recipe.forEach(r => {
@@ -127,13 +127,13 @@ export default function CostEngine({ creatures, inventory = [], globalSettings =
   // Apply a 5% buffer for failures to filament cost
   const filPerUnit = (totalFilCostForPlate * 1.05) / batchSize;
 
-  const hours = parseFloat(f.printHours);
-  const kwhRate = f.solarOn ? 0 : parseFloat(f.kwhRate);
-  const powerPerUnit = (parseFloat(f.printerKw) * hours * kwhRate) / batchSize;
-  const laborPerUnit = (hours * parseFloat(f.laborRate)) / batchSize;
-  const maintPerUnit = (hours * parseFloat(f.maintRate)) / batchSize;
+  const hours = parseFloat(f.printHours) || 0;
+  const kwhRate = f.solarOn ? 0 : (parseFloat(f.kwhRate) || 0);
+  const powerPerUnit = ((parseFloat(f.printerKw) || 0) * hours * kwhRate) / batchSize;
+  const laborPerUnit = (hours * (parseFloat(f.laborRate) || 0)) / batchSize;
+  const maintPerUnit = (hours * (parseFloat(f.maintRate) || 0)) / batchSize;
 
-  const totalCogs = filPerUnit + parseFloat(f.packaging) + powerPerUnit + laborPerUnit + maintPerUnit;
+  const totalCogs = (filPerUnit || 0) + (parseFloat(f.packaging) || 0) + powerPerUnit + laborPerUnit + maintPerUnit;
 
   const etsyPrice = creature?.price_etsy || 0;
   const etsyFee = etsyPrice * 0.065;
@@ -163,34 +163,34 @@ export default function CostEngine({ creatures, inventory = [], globalSettings =
     });
 
     const recipe = {
-      batch: parseInt(f.batch),
-      pkg: parseFloat(f.packaging),
-      printHours: parseFloat(f.printHours),
-      printerKw: parseFloat(f.printerKw),
+      batch: parseInt(f.batch) || 1,
+      pkg: parseFloat(f.packaging) || 0,
+      printHours: parseFloat(f.printHours) || 0,
+      printerKw: parseFloat(f.printerKw) || 0,
       solarOn: f.solarOn,
       recipe: recipeToSave,
       // Keep old fields for backward compatibility if needed by other components momentarily
       modelGrams: recipeToSave.reduce((acc, r) => acc + r.model, 0),
       purgeGrams: recipeToSave.reduce((acc, r) => acc + r.purged, 0),
       towerGrams: recipeToSave.reduce((acc, r) => acc + r.tower, 0),
-      kwhRate: parseFloat(f.kwhRate),
-      laborRate: parseFloat(f.laborRate),
-      maintRate: parseFloat(f.maintRate),
+      kwhRate: parseFloat(f.kwhRate) || 0,
+      laborRate: parseFloat(f.laborRate) || 0,
+      maintRate: parseFloat(f.maintRate) || 0,
     };
     
     await supabase.from("creatures").update({
-      cost_to_print: parseFloat(totalCogs.toFixed(4)),
+      cost_to_print: parseFloat(totalCogs.toFixed(4)) || 0,
       print_recipe: recipe,
-      price_retail: parseFloat(suggestedRetail.toFixed(2)),
-      price_etsy: parseFloat(suggestedEtsy.toFixed(2)),
+      price_retail: parseFloat(suggestedRetail.toFixed(2)) || 0,
+      price_etsy: parseFloat(suggestedEtsy.toFixed(2)) || 0,
     }).eq("id", f.creatureId);
 
     // Save rates to settings table if user changed them and has permissions
     try {
       await supabase.from("settings").upsert([
-        { key: "kwh_rate", value: String(f.kwhRate) },
-        { key: "labor_rate", value: String(f.laborRate) },
-        { key: "maintenance_fee", value: String(f.maintRate) }
+        { key: 'kwh_rate', value: String(f.kwhRate || 0) },
+        { key: 'labor_rate', value: String(f.laborRate || 0) },
+        { key: 'maintenance_fee', value: String(f.maintRate || 0) }
       ], { onConflict: "key" });
     } catch(err) {
       console.warn("Failed to update global settings, may not be an admin", err);
