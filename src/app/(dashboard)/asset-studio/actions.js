@@ -253,10 +253,6 @@ export async function renderAsset({
     ctx.fillStyle = `rgb(${r},${g},${b})`
     ctx.fillRect(0, h - Math.round(h * 0.007), w, Math.round(h * 0.007))
 
-    // Left accent line
-    ctx.fillStyle = `rgba(${r},${g},${b},0.6)`
-    ctx.fillRect(Math.round(w * 0.055), Math.round(h * 0.66), Math.round(w * 0.006), Math.round(h * 0.22))
-
     const textLeft = Math.round(w * 0.075)
     const textRight = Math.round(w * 0.88)
     const maxTextWidth = textRight - textLeft
@@ -270,14 +266,15 @@ export async function renderAsset({
     // Headline
     ctx.fillStyle = '#FAF6F0'
     ctx.font = `${Math.round(minDim * 0.058)}px LoraBoldCustom, serif`
-    let currentY = Math.round(h * 0.695)
+    const startY = Math.round(h * 0.67)
+    let currentY = startY
     currentY = wrapText(ctx, cleanHeadline, textLeft, currentY, maxTextWidth, Math.round(minDim * 0.065))
 
     // Caption
-    currentY += Math.round(h * 0.03) // Space between headline and caption
+    currentY += Math.round(h * 0.02) // Space between headline and caption
     ctx.fillStyle = 'rgba(250,246,240,0.72)'
     ctx.font = `${Math.round(minDim * 0.031)}px LoraRegCustom, serif`
-    wrapText(ctx, cleanCaption, textLeft, currentY, maxTextWidth, Math.round(minDim * 0.04))
+    currentY = wrapText(ctx, cleanCaption, textLeft, currentY, maxTextWidth, Math.round(minDim * 0.04))
 
     // CTA pill
     const ctaText = cleanCta.toUpperCase()
@@ -285,7 +282,7 @@ export async function renderAsset({
     const ctaMetrics = ctx.measureText(ctaText)
     
     const pillX = textLeft
-    const pillY = Math.round(h * 0.865)
+    const pillY = currentY + Math.round(h * 0.035) // dynamic spacing
     const pillH = Math.round(h * 0.055)
     const pillW = ctaMetrics.width + Math.round(minDim * 0.08) // 4% padding on left and right
     const radius = Math.round(pillH * 0.2)
@@ -297,6 +294,12 @@ export async function renderAsset({
 
     ctx.fillStyle = '#0E0C09'
     ctx.fillText(ctaText, pillX + Math.round(minDim * 0.04), pillY + Math.round(pillH * 0.64))
+
+    // Left accent line (dynamically sized)
+    ctx.fillStyle = `rgba(${r},${g},${b},0.6)`
+    const accentTop = startY - Math.round(h * 0.04)
+    const accentBottom = pillY + Math.round(pillH * 0.8)
+    ctx.fillRect(Math.round(w * 0.055), accentTop, Math.round(w * 0.006), accentBottom - accentTop)
 
     // Upload to Supabase Storage
     const buffer = canvas.toBuffer('image/png')
