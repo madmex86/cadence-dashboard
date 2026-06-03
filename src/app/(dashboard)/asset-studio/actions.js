@@ -257,6 +257,7 @@ export async function renderAsset({
     const textRight = Math.round(w * 0.88)
     const maxTextWidth = textRight - textLeft
     const minDim = Math.min(w, h)
+    const isSquare = aspectRatio === '1:1'
     
     // Sanitize text inputs in case they were loaded from dirty database rows
     const cleanHeadline = cleanText(headline) || 'New Post'
@@ -266,15 +267,15 @@ export async function renderAsset({
     // Headline
     ctx.fillStyle = '#FAF6F0'
     ctx.font = `${Math.round(minDim * 0.058)}px LoraBoldCustom, serif`
-    const startY = Math.round(h * 0.67)
+    const startY = Math.round(h * (isSquare ? 0.61 : 0.67))
     let currentY = startY
-    currentY = wrapText(ctx, cleanHeadline, textLeft, currentY, maxTextWidth, Math.round(minDim * 0.065))
+    currentY = wrapText(ctx, cleanHeadline, textLeft, currentY, maxTextWidth, Math.round(minDim * (isSquare ? 0.06 : 0.065)))
 
     // Caption
-    currentY += Math.round(h * 0.02) // Space between headline and caption
+    currentY += Math.round(h * (isSquare ? 0.015 : 0.02)) // Space between headline and caption
     ctx.fillStyle = 'rgba(250,246,240,0.72)'
     ctx.font = `${Math.round(minDim * 0.031)}px LoraRegCustom, serif`
-    currentY = wrapText(ctx, cleanCaption, textLeft, currentY, maxTextWidth, Math.round(minDim * 0.04))
+    currentY = wrapText(ctx, cleanCaption, textLeft, currentY, maxTextWidth, Math.round(minDim * (isSquare ? 0.038 : 0.04)))
 
     // CTA pill
     const ctaText = cleanCta.toUpperCase()
@@ -282,7 +283,7 @@ export async function renderAsset({
     const ctaMetrics = ctx.measureText(ctaText)
     
     const pillX = textLeft
-    const pillY = currentY + Math.round(h * 0.035) // dynamic spacing
+    const pillY = currentY + Math.round(h * (isSquare ? 0.025 : 0.035)) // dynamic spacing
     const pillH = Math.round(h * 0.055)
     const pillW = ctaMetrics.width + Math.round(minDim * 0.08) // 4% padding on left and right
     const radius = Math.round(pillH * 0.2)
