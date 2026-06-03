@@ -150,14 +150,14 @@ export default function QueuePage() {
       </div>
 
       <div className={styles.tabs}>
-        {["orders", "cost-engine"].map(t => (
+        {["orders", "shipments", "cost-engine"].map(t => (
           <button
             key={t}
             type="button"
             className={`${styles.tab} ${tab === t ? styles.tabActive : ""}`}
             onClick={() => setTab(t)}
           >
-            {t === "orders" ? "Orders" : "Cost Engine"}
+            {t === "orders" ? "Orders" : t === "shipments" ? "Shipments" : "Cost Engine"}
           </button>
         ))}
       </div>
@@ -209,6 +209,10 @@ export default function QueuePage() {
             </div>
           )}
         </>
+      )}
+
+      {tab === "shipments" && (
+        <ShipmentsTab orders={orders} />
       )}
 
       {tab === "cost-engine" && (
@@ -326,4 +330,152 @@ function OrderRow({ order, expanded, onToggle, onStatusChange, onTrackingUpdate 
       )}
     </div>
   );
+}
+
+// ── Shipments Tab ────────────────────────────────────────────────────────────
+
+const TRACKING_STATUS = {
+  DELIVERED:   { label: 'Delivered',   color: '#7dc994' },
+  TRANSIT:     { label: 'In Transit',  color: '#5BBFD4' },
+  PRE_TRANSIT: { label: 'Pre-Transit', color: '#C9A84C' },
+  RETURNED:    { label: 'Returned',    color: '#e07070' },
+  FAILURE:     { label: 'Failed',      color: '#e07070' },
+  UNKNOWN:     { label: 'Unknown',     color: 'rgba(250,246,240,0.3)' },
+}
+
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const h = Math.floor(diff / 3600000)
+  if (h < 1) return 'just now'
+  if (h < 24) return `${h}h ago`
+  const d = Math.floor(h / 24)
+  return `${d}d ago`
+}
+
+function ShipmentsTab({ orders }) {
+  const [trackingData, setTrackingData] = useState({})
+  const [loading, setLoading] = useState(false)
+  const [expandedId, setExpandedId] = useState(null)
+  const [error, setError] = useState(null)
+
+  const shipped = orders.filter(o => o.tracking_number)
+
+  useEffect(() => {
+    if (!shipped.length) return
+    setLoading(true)
+    setError(null)
+    Promise.all(
+      shipped.map(o =>
+        fetch(`/api/tracking?carrier=${encodeURIComponent(o.carrier || 'usps')}&tracking_number=${encodeURIComponent(o.tracking_number)}`)
+          .then(r => r.json())
+          .then(data => ({ id: o.id, data }))
+          .catch(() => ({ id: o.id, data: null }))
+      )
+    ).then(results => {
+      const map = {}
+      results.forEach(({ id, data }) => { map[id] = data })
+      setTrackingData(map)
+      setLoading(false)
+      if (results.every(r => r.data?.error)) setError('Could not reach Shippo — check SHIPPO_API_KEY in .env.local')
+    })
+  }, [])
+
+  if (!shipped.length) {
+    return <div className="empty-state">No orders with tracking numbers yet.</div>
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 16 }}>
+      {loading && (
+        <div style={{ fontSize: 12, color: 'var(--dim)', fontFamily: 'sans-serif', paddingBottom: 8 }}>
+          Fetching tracking data…
+        </div>
+      )}
+      {error && (
+        <div style={{ fontSize: 12, color: '#e07070', fontFamily: 'sans-serif', padding: '10px 14px', background: 'rgba(224,112,112,0.08)', borderRadius: 6, border: '1px solid rgba(224,112,112,0.2)', marginBottom: 4 }}>
+          {error}
+        </div>
+      )}
+      {shipped.map(order => {
+        const td = trackingData[order.id]
+        const ts = td?.tracking_status
+        const info = TRACKING_STATUS[ts?.status] ?? TRACKING_STATUS.UNKNOWN
+        const loc = ts?.location
+        const locStr = loc ? [loc.city, loc.state].filter(Boolean).join(', ') : null
+        const history = (td?.tracking_history ?? []).slice().reverse()
+        const isExpanded = expandedId === order.id
+
+        return (
+          <div key={order.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(201,168,76,0.12)', borderRadius: 8, overflow: 'hidden' }}>
+            <div
+              onClick={() => setExpandedId(isExpanded ? null : order.id)}
+              style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', cursor: 'pointer' }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>{order.buyer_name}</span>
+                  <span style={{ fontSize: 11, color: 'var(--dim)', fontFamily: 'sans-serif' }}>#{order.etsy_order_id}</span>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--dim)', fontFamily: 'monospace' }}>
+                  {(order.carrier || 'USPS').toUpperCase()} · {order.tracking_number}
+                </div>
+              </div>
+
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                {ts ? (
+                  <>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: info.color, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 2 }}>
+                      {info.label}
+                    </div>
+                    {locStr && <div style={{ fontSize: 11, color: 'rgba(250,246,240,0.5)', fontFamily: 'sans-serif' }}>{locStr}</div>}
+                    {ts.status_date && (
+                      <div style={{ fontSize: 10, color: 'rgba(250,246,240,0.3)', fontFamily: 'sans-serif' }}>
+                        {timeAgo(ts.status_date)}
+                      </div>
+                    )}
+                  </>
+                ) : loading ? (
+                  <div style={{ fontSize: 11, color: 'var(--dim)' }}>…</div>
+                ) : (
+                  <div style={{ fontSize: 11, color: 'rgba(250,246,240,0.25)' }}>No data</div>
+                )}
+              </div>
+
+              <span style={{ fontSize: 11, color: 'var(--dim)', marginLeft: 4 }}>{isExpanded ? '▲' : '▼'}</span>
+            </div>
+
+            {isExpanded && history.length > 0 && (
+              <div style={{ borderTop: '1px solid rgba(201,168,76,0.08)', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {history.map((h, i) => {
+                  const hInfo = TRACKING_STATUS[h.status] ?? TRACKING_STATUS.UNKNOWN
+                  const hLoc = h.location
+                  const hLocStr = hLoc ? [hLoc.city, hLoc.state].filter(Boolean).join(', ') : null
+                  return (
+                    <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: hInfo.color, marginTop: 4, flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, color: 'rgba(250,246,240,0.75)', fontFamily: 'sans-serif' }}>{h.status_details}</div>
+                        {hLocStr && <div style={{ fontSize: 11, color: 'rgba(250,246,240,0.4)', fontFamily: 'sans-serif' }}>{hLocStr}</div>}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'rgba(250,246,240,0.3)', flexShrink: 0, fontFamily: 'sans-serif', whiteSpace: 'nowrap' }}>
+                        {new Date(h.status_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {' '}
+                        {new Date(h.status_date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {isExpanded && !loading && history.length === 0 && (
+              <div style={{ borderTop: '1px solid rgba(201,168,76,0.08)', padding: '12px 16px', fontSize: 12, color: 'var(--dim)', fontFamily: 'sans-serif' }}>
+                No scan history available yet.
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
 }
