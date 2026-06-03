@@ -36,10 +36,10 @@ const ASPECT_RATIOS = [
 ]
 
 const PLATFORMS = [
-  { id: 'instagram', label: 'Instagram', color: '#E1306C' },
-  { id: 'facebook',  label: 'Facebook',  color: '#1877F2' },
+  { id: 'instagram', label: 'Instagram', color: '#E1306C', apiNote: 'Requires Meta App Review' },
+  { id: 'facebook',  label: 'Facebook',  color: '#1877F2', apiNote: 'Requires Meta App Review' },
   { id: 'pinterest', label: 'Pinterest', color: '#E60023' },
-  { id: 'tiktok',    label: 'TikTok',    color: '#69C9D0' },
+  { id: 'tiktok',    label: 'TikTok',    color: '#69C9D0', comingSoon: true },
 ]
 
 const EXPORT_SIZES = [
@@ -1060,15 +1060,12 @@ function PublishPanel({ copy, imageUrl, assetId, connectedPlatforms, selectedPla
 
       <div className="as-card">
         <span className="as-fl">Publish To</span>
-        {connectedPlatforms.length === 0 ? (
-          <div style={{ textAlign:'center', padding:'24px 0' }}>
-            <p style={{ fontSize:12, color:'rgba(250,246,240,0.4)', margin:'0 0 12px' }}>No social accounts connected yet.</p>
-            <a href="/asset-studio/settings" className="as-btn-pri" style={{ textDecoration:'none' }}>Connect Accounts</a>
-          </div>
-        ) : (
-          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-            {PLATFORMS.filter(p => connectedPlatforms.includes(p.id)).map(platform => {
-              const sel = selectedPlatforms.includes(platform.id)
+        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+          {PLATFORMS.map(platform => {
+            const isConnected = connectedPlatforms.includes(platform.id)
+            const sel = selectedPlatforms.includes(platform.id)
+
+            if (isConnected) {
               return (
                 <button key={platform.id} onClick={() => setSelectedPlatforms(prev => sel ? prev.filter(p => p !== platform.id) : [...prev, platform.id])} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderRadius:6, cursor:'pointer', textAlign:'left', width:'100%', fontFamily:'inherit', border:`1px solid ${sel ? platform.color : 'rgba(201,168,76,0.12)'}`, background: sel ? `${platform.color}15` : 'transparent', color: sel ? '#FAF6F0' : 'rgba(250,246,240,0.5)' }}>
                   <div style={{ width:8, height:8, borderRadius:'50%', background: sel ? platform.color : 'rgba(255,255,255,0.2)' }} />
@@ -1076,7 +1073,26 @@ function PublishPanel({ copy, imageUrl, assetId, connectedPlatforms, selectedPla
                   {sel && <span style={{ marginLeft:'auto', color: platform.color }}>✓</span>}
                 </button>
               )
-            })}
+            }
+
+            return (
+              <div key={platform.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderRadius:6, border:'1px solid rgba(201,168,76,0.07)', background:'transparent', opacity:.6 }}>
+                <div style={{ width:8, height:8, borderRadius:'50%', background:'rgba(255,255,255,0.15)' }} />
+                <span style={{ fontSize:13, color:'rgba(250,246,240,0.4)' }}>{platform.label}</span>
+                <span style={{ marginLeft:'auto', fontSize:10, fontWeight:700, letterSpacing:'.05em', textTransform:'uppercase',
+                  color: platform.comingSoon ? 'rgba(250,246,240,0.25)' : 'rgba(201,168,76,0.5)',
+                  background: platform.comingSoon ? 'rgba(255,255,255,0.04)' : 'rgba(201,168,76,0.08)',
+                  padding:'2px 7px', borderRadius:99,
+                }}>
+                  {platform.comingSoon ? 'Coming Soon' : platform.apiNote ?? 'Not connected'}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+        {connectedPlatforms.length === 0 && (
+          <div style={{ marginTop:12, paddingTop:12, borderTop:'1px solid rgba(201,168,76,0.08)' }}>
+            <a href="/asset-studio/settings" className="as-btn-ghost" style={{ fontSize:12, textDecoration:'none', display:'inline-flex' }}>⚙ Connect Accounts →</a>
           </div>
         )}
       </div>
@@ -1094,20 +1110,20 @@ function PublishPanel({ copy, imageUrl, assetId, connectedPlatforms, selectedPla
                 <input type="datetime-local" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} className="as-inp" style={{ flex:2, padding:'8px 10px', resize:'none' }} />
               )}
             </div>
-            {scheduleDate !== '' && (
-              <div style={{ marginTop: 8, padding: '10px 12px', background: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)', letterSpacing: '.05em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>💡 Best Times to Post</span>
-                <div style={{ fontSize: 11, color: 'rgba(250,246,240,0.6)', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Instagram</span><span style={{ color: 'rgba(250,246,240,0.4)' }}>11am - 1pm, 7pm - 9pm</span></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>TikTok</span><span style={{ color: 'rgba(250,246,240,0.4)' }}>6am - 10am, 7pm - 11pm</span></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Facebook</span><span style={{ color: 'rgba(250,246,240,0.4)' }}>1pm - 3pm</span></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Pinterest</span><span style={{ color: 'rgba(250,246,240,0.4)' }}>8pm - 11pm (Weekends)</span></div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
+
+      {/* Best Times to Post — always visible for manual posting reference */}
+      <div style={{ padding: '10px 12px', background: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: 6 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)', letterSpacing: '.05em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Best Times to Post</span>
+        <div style={{ fontSize: 11, color: 'rgba(250,246,240,0.6)', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Instagram</span><span style={{ color: 'rgba(250,246,240,0.4)' }}>11am – 1pm, 7pm – 9pm</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>TikTok</span><span style={{ color: 'rgba(250,246,240,0.4)' }}>6am – 10am, 7pm – 11pm</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Facebook</span><span style={{ color: 'rgba(250,246,240,0.4)' }}>1pm – 3pm</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Pinterest</span><span style={{ color: 'rgba(250,246,240,0.4)' }}>8pm – 11pm (Weekends)</span></div>
+        </div>
+      </div>
 
       {publishResults && (
         <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
