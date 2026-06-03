@@ -530,7 +530,6 @@ export default function AssetStudio() {
               ))}
             </div>
           )}
-        </div>
 
         {/* Post Calendar */}
         <div style={{ marginTop: 40 }}>
@@ -750,25 +749,98 @@ export default function AssetStudio() {
                 </div>
               </div>
             ) : (
-              /* SINGLE — copy editor */
-              !copy ? (
+              /* SINGLE — variant picker → copy editor */
+              !copy && !variants ? (
                 <div className="as-card" style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:400, gap:12 }}>
                   <div style={{ fontSize:32, opacity:.2 }}>✦</div>
                   <p style={{ color:'rgba(250,246,240,0.4)', fontSize:13, margin:0, textAlign:'center' }}>
                     Configure your post on the left,<br />then generate copy to see it here.
                   </p>
                 </div>
+              ) : !copy && variants ? (
+                /* Variant picker */
+                <div className="as-card">
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+                    <span className="as-fl" style={{ margin:0 }}>Choose a variant</span>
+                    <button onClick={handleGenerateCopy} disabled={isGeneratingCopy} className="as-btn-ghost" style={{ padding:'3px 8px', fontSize:11 }}>
+                      {isGeneratingCopy ? <><Spin /> Generating…</> : '↺ Regenerate'}
+                    </button>
+                  </div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                    {variants.map((v, i) => (
+                      <button key={i} onClick={() => setCopy(v)} style={{
+                        textAlign:'left', padding:'12px 14px', borderRadius:8, cursor:'pointer', width:'100%',
+                        background:'rgba(201,168,76,0.03)', border:'1px solid rgba(201,168,76,0.14)',
+                        color:'rgba(250,246,240,0.85)', fontFamily:'inherit', transition:'border-color .12s',
+                      }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor='rgba(201,168,76,0.4)'}
+                        onMouseLeave={e => e.currentTarget.style.borderColor='rgba(201,168,76,0.14)'}
+                      >
+                        <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.07em', textTransform:'uppercase', color:'var(--gold)', marginBottom:5, opacity:.7 }}>Option {i + 1}</div>
+                        <div style={{ fontSize:13, fontWeight:700, marginBottom:4 }}>{v.headline}</div>
+                        <div style={{ fontSize:11, color:'rgba(250,246,240,0.5)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{v.caption}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ) : (
+                /* Copy editor */
                 <>
+                  {variants && (
+                    <button onClick={() => setCopy(null)} className="as-btn-ghost" style={{ fontSize:11, padding:'3px 8px', alignSelf:'flex-start' }}>
+                      ◁ Variants
+                    </button>
+                  )}
+
                   <CopyField label="Headline" value={copy.headline} onChange={v => setCopy({...copy, headline: v})} copiedField={copiedField} onCopy={copyToClipboard} rows={2} />
                   <CopyField label="Caption" value={copy.caption} onChange={v => setCopy({...copy, caption: v})} copiedField={copiedField} onCopy={copyToClipboard} rows={4} />
 
                   <div className="as-card">
-                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
                       <span className="as-fl" style={{ margin:0 }}>Hashtags</span>
-                      <button onClick={() => copyToClipboard(copy.hashtags.map(h => `#${h.replace(/^#/,'')}`).join(' '), 'hashtags')} className="as-btn-ghost" style={{ padding:'3px 8px', fontSize:11 }}>
-                        {copiedField === 'hashtags' ? '✓' : '⎘'}
-                      </button>
+                      <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                        {hashtagSets.length > 0 && (
+                          <select
+                            defaultValue=""
+                            onChange={e => {
+                              const s = hashtagSets.find(hs => hs.id === e.target.value)
+                              if (s) setCopy({...copy, hashtags: s.hashtags})
+                              e.target.value = ''
+                            }}
+                            style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(201,168,76,0.15)', borderRadius:5, color:'rgba(250,246,240,0.6)', fontSize:11, padding:'3px 6px', fontFamily:'inherit', cursor:'pointer' }}
+                          >
+                            <option value="">Load set…</option>
+                            {hashtagSets.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                          </select>
+                        )}
+                        {!showSaveSet ? (
+                          <button onClick={() => setShowSaveSet(true)} className="as-btn-ghost" style={{ padding:'3px 8px', fontSize:11 }}>Save set</button>
+                        ) : (
+                          <form onSubmit={async e => {
+                            e.preventDefault()
+                            if (!savingSetName.trim()) return
+                            const res = await saveHashtagSet({ name: savingSetName.trim(), hashtags: copy.hashtags })
+                            if (res.id) {
+                              setHashtagSets(prev => [{ id: res.id, name: savingSetName.trim(), hashtags: copy.hashtags }, ...prev])
+                              setShowSaveSet(false); setSavingSetName('')
+                            }
+                          }} style={{ display:'flex', gap:4 }}>
+                            <input
+                              autoFocus
+                              value={savingSetName}
+                              onChange={e => setSavingSetName(e.target.value)}
+                              placeholder="Set name…"
+                              className="as-inp"
+                              style={{ padding:'3px 7px', fontSize:11, resize:'none', width:100 }}
+                            />
+                            <button type="submit" className="as-btn-pri" style={{ padding:'3px 8px', fontSize:11 }}>✓</button>
+                            <button type="button" onClick={() => { setShowSaveSet(false); setSavingSetName('') }} className="as-btn-ghost" style={{ padding:'3px 6px', fontSize:11 }}>✕</button>
+                          </form>
+                        )}
+                        <button onClick={() => copyToClipboard(copy.hashtags.map(h => `#${h.replace(/^#/,'')}`).join(' '), 'hashtags')} className="as-btn-ghost" style={{ padding:'3px 8px', fontSize:11 }}>
+                          {copiedField === 'hashtags' ? '✓' : '⎘'}
+                        </button>
+                      </div>
                     </div>
                     <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
                       {copy.hashtags.map((tag, i) => (
@@ -792,7 +864,7 @@ export default function AssetStudio() {
 
                   <div style={{ display:'flex', gap:10 }}>
                     <button onClick={handleGenerateCopy} disabled={isGeneratingCopy} className="as-btn-ghost" style={{ flex:1, justifyContent:'center', padding:'10px' }}>
-                      ↺ Regenerate
+                      ↺ New variants
                     </button>
                     <button onClick={handleRenderPreview} disabled={isRendering} className="as-btn-pri" style={{ flex:2, justifyContent:'center', padding:'10px' }}>
                       {isRendering ? <><Spin /> Rendering…</> : <>🖼 Render Preview</>}
@@ -1075,5 +1147,92 @@ function StatusPill({ status }) {
     <span style={{ padding:'2px 8px', borderRadius:99, fontSize:10, fontWeight:600, letterSpacing:'.04em', textTransform:'uppercase', color, background:bg }}>
       {status}
     </span>
+  )
+}
+
+function CalendarView({ posts, onOpenAsset }) {
+  const [viewDate, setViewDate] = useState(() => new Date())
+
+  const year = viewDate.getFullYear()
+  const month = viewDate.getMonth()
+  const firstDow = new Date(year, month, 1).getDay()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+
+  const cells = []
+  for (let i = 0; i < firstDow; i++) cells.push(null)
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d))
+  while (cells.length % 7 !== 0) cells.push(null)
+
+  const monthLabel = viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  const todayStr = new Date().toDateString()
+
+  const postsForDay = (date) => {
+    if (!date) return []
+    return posts.filter(p => {
+      const d = new Date(p.scheduled_for)
+      return d.getFullYear() === year && d.getMonth() === month && d.getDate() === date.getDate()
+    })
+  }
+
+  return (
+    <div>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+        <p style={{ fontSize:10, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase', color:'rgba(250,246,240,0.35)', margin:0 }}>
+          Post Calendar
+        </p>
+        <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+          <button onClick={() => setViewDate(new Date(year, month - 1, 1))} className="as-btn-ghost" style={{ padding:'3px 8px' }}>‹</button>
+          <span style={{ fontSize:12, fontWeight:600, minWidth:140, textAlign:'center', color:'rgba(250,246,240,0.7)' }}>{monthLabel}</span>
+          <button onClick={() => setViewDate(new Date(year, month + 1, 1))} className="as-btn-ghost" style={{ padding:'3px 8px' }}>›</button>
+        </div>
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2, marginBottom:2 }}>
+        {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
+          <div key={d} style={{ textAlign:'center', fontSize:9, fontWeight:700, letterSpacing:'.07em', textTransform:'uppercase', color:'rgba(250,246,240,0.25)', padding:'3px 0' }}>{d}</div>
+        ))}
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2 }}>
+        {cells.map((date, i) => {
+          const dayPosts = postsForDay(date)
+          const isToday = date && date.toDateString() === todayStr
+          return (
+            <div key={i} style={{
+              minHeight:52,
+              padding:'4px 5px',
+              borderRadius:5,
+              background: isToday ? 'rgba(201,168,76,0.06)' : 'rgba(255,255,255,0.01)',
+              border:`1px solid ${isToday ? 'rgba(201,168,76,0.3)' : 'rgba(201,168,76,0.06)'}`,
+              opacity: date ? 1 : 0.2,
+            }}>
+              {date && (
+                <>
+                  <div style={{ fontSize:10, fontWeight: isToday ? 700 : 400, color: isToday ? 'var(--gold)' : 'rgba(250,246,240,0.35)', marginBottom:3 }}>
+                    {date.getDate()}
+                  </div>
+                  {dayPosts.map((p, pi) => (
+                    <div key={pi} onClick={() => onOpenAsset?.(p.asset_id)} style={{
+                      fontSize:9, fontWeight:600, padding:'2px 4px', borderRadius:3,
+                      background:'rgba(201,168,76,0.15)', color:'var(--gold)',
+                      marginBottom:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                      cursor:'pointer',
+                    }}>
+                      {p.headline || (p.platforms ?? []).join(', ') || 'Post'}
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {posts.length === 0 && (
+        <p style={{ textAlign:'center', fontSize:12, color:'rgba(250,246,240,0.25)', marginTop:14, marginBottom:0 }}>
+          No scheduled posts yet — schedule one from the preview screen.
+        </p>
+      )}
+    </div>
   )
 }

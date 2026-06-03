@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { loadSocialConnections } from '../actions'
+import { loadSocialConnections, loadHashtagSets, saveHashtagSet, deleteHashtagSet } from '../actions'
 
 const PLATFORM_CONFIG = {
   instagram: {
@@ -38,6 +38,12 @@ export default function SocialSettings() {
   const [connections, setConnections] = useState([])
   const [loading, setLoading] = useState(true)
 
+  const [hashtagSets, setHashtagSets] = useState([])
+  const [newSetName, setNewSetName] = useState('')
+  const [newSetTags, setNewSetTags] = useState('')
+  const [savingSet, setSavingSet] = useState(false)
+  const [setError, setSetError] = useState(null)
+
   const statusParam = typeof window !== 'undefined'
     ? new URLSearchParams(window.location.search).get('connected')
     : null
@@ -47,7 +53,26 @@ export default function SocialSettings() {
       if (r.connections) setConnections(r.connections)
       setLoading(false)
     })
+    loadHashtagSets().then(r => { if (r.sets) setHashtagSets(r.sets) })
   }, [])
+
+  const handleSaveSet = async (e) => {
+    e.preventDefault()
+    const name = newSetName.trim()
+    const hashtags = newSetTags.split(/[\s,]+/).map(t => t.replace(/^#/, '').trim()).filter(Boolean)
+    if (!name || !hashtags.length) return
+    setSavingSet(true); setSetError(null)
+    const res = await saveHashtagSet({ name, hashtags })
+    setSavingSet(false)
+    if (res.error) { setSetError(res.error); return }
+    setHashtagSets(prev => [{ id: res.id, name, hashtags }, ...prev])
+    setNewSetName(''); setNewSetTags('')
+  }
+
+  const handleDeleteSet = async (id) => {
+    const res = await deleteHashtagSet(id)
+    if (res.success) setHashtagSets(prev => prev.filter(s => s.id !== id))
+  }
 
   const getConnection = (platform) =>
     connections.find(c => c.platform === platform && c.is_active)
@@ -179,6 +204,57 @@ export default function SocialSettings() {
           })}
         </div>
       )}
+
+      {/* ── Hashtag Sets ── */}
+      <div style={{ marginTop:40 }}>
+        <h2 style={{ fontFamily:'var(--font-caveat,cursive)', fontSize:'1.5rem', color:'var(--gold)', margin:'0 0 6px' }}>Hashtag Sets</h2>
+        <p style={{ color:'rgba(250,246,240,0.45)', fontSize:13, margin:'0 0 20px' }}>
+          Save named groups of hashtags to load instantly in the builder.
+        </p>
+
+        {/* Existing sets */}
+        {hashtagSets.length > 0 && (
+          <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:20 }}>
+            {hashtagSets.map(s => (
+              <div key={s.id} style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(201,168,76,0.12)', borderRadius:10, padding:'14px 16px' }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+                  <span style={{ fontWeight:600, fontSize:14 }}>{s.name}</span>
+                  <button onClick={() => handleDeleteSet(s.id)} style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(250,246,240,0.35)', fontSize:13, fontFamily:'inherit', padding:0 }} title="Delete">✕</button>
+                </div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
+                  {s.hashtags.map((tag, i) => (
+                    <span key={i} style={{ padding:'2px 8px', background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:99, fontSize:11, color:'var(--gold)' }}>
+                      #{tag.replace(/^#/, '')}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* New set form */}
+        <form onSubmit={handleSaveSet} style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(201,168,76,0.12)', borderRadius:10, padding:'18px 20px', display:'flex', flexDirection:'column', gap:12 }}>
+          <p style={{ margin:0, fontSize:10, fontWeight:700, letterSpacing:'.07em', textTransform:'uppercase', color:'rgba(250,246,240,0.35)' }}>New Set</p>
+          <input
+            value={newSetName}
+            onChange={e => setNewSetName(e.target.value)}
+            placeholder="Set name (e.g. Collectibles drop)"
+            style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(201,168,76,0.15)', borderRadius:6, color:'#FAF6F0', fontSize:13, padding:'9px 12px', fontFamily:'inherit', outline:'none' }}
+          />
+          <textarea
+            value={newSetTags}
+            onChange={e => setNewSetTags(e.target.value)}
+            placeholder="Hashtags — space or comma separated, # optional&#10;e.g. flexianimals 3dprinted toyart collectibles"
+            rows={3}
+            style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(201,168,76,0.15)', borderRadius:6, color:'#FAF6F0', fontSize:13, padding:'9px 12px', fontFamily:'inherit', outline:'none', resize:'vertical' }}
+          />
+          {setError && <p style={{ margin:0, fontSize:12, color:'#e07070' }}>{setError}</p>}
+          <button type="submit" disabled={savingSet || !newSetName.trim() || !newSetTags.trim()} style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'9px 18px', borderRadius:6, background:'var(--gold)', color:'#0E0C09', fontWeight:700, fontSize:13, border:'none', cursor:'pointer', fontFamily:'inherit', opacity: (!newSetName.trim() || !newSetTags.trim()) ? .4 : 1, alignSelf:'flex-start' }}>
+            {savingSet ? 'Saving…' : '+ Save Set'}
+          </button>
+        </form>
+      </div>
 
       <div style={{ marginTop:24, padding:'14px 16px', borderRadius:8, background:'rgba(255,255,255,0.02)', border:'1px solid rgba(201,168,76,0.08)' }}>
         <p style={{ margin:'0 0 5px', fontSize:10, fontWeight:700, letterSpacing:'.06em', textTransform:'uppercase', color:'rgba(250,246,240,0.3)' }}>About Access Tokens</p>
