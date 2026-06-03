@@ -461,22 +461,109 @@ export async function getSmartSuggestions() {
       })
     }
 
-    // Active creatures — suggest product card posts
+    // Load active creatures for advanced suggestions
     const { data: active } = await supabase
       .from('creatures')
-      .select('id, name, species, filament_color, image_url')
+      .select('id, name, species, filament_color, image_url, qty_on_hand')
       .eq('active', true)
-      .limit(3)
 
-    for (const c of active ?? []) {
-      suggestions.push({
-        id: `product-${c.id}`,
-        triggerType: 'new_product',
-        title: c.name,
-        description: `${c.species}${c.filament_color ? ` · ${c.filament_color}` : ''} — create a product post`,
-        sourceData: { name: c.name, price: null, description: `${c.species}, ${c.filament_color ?? ''}`, image_url: c.image_url },
-        urgency: 'low',
-      })
+    if (active && active.length > 0) {
+      const suggestedIds = new Set()
+
+      // 1. Low Inventory Scarcity
+      const lowStock = active.filter(c => c.qty_on_hand > 0 && c.qty_on_hand <= 5).sort((a,b) => a.qty_on_hand - b.qty_on_hand)
+      if (lowStock.length > 0) {
+        const c = lowStock[0]
+        suggestions.push({
+          id: `scarcity-${c.id}`,
+          triggerType: 'new_product',
+          title: `Low Stock: ${c.name}`,
+          description: `Only ${c.qty_on_hand} left! Run a scarcity post to drive urgency.`,
+          sourceData: { name: c.name, price: null, description: `${c.species}, ${c.filament_color ?? ''}`, image_url: c.image_url },
+          urgency: 'high',
+        })
+        suggestedIds.add(c.id)
+      }
+
+      // 2. Best Seller Momentum
+      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+      const { data: recentOrders } = await supabase
+        .from('orders')
+        .select('items')
+        .gt('created_at', oneWeekAgo)
+        .neq('status', 'cancelled')
+
+      if (recentOrders && recentOrders.length > 0) {
+        const itemCounts = {}
+        for (const o of recentOrders) {
+          const items = Array.isArray(o.items) ? o.items : []
+          for (const item of items) {
+            const key = typeof item === 'string' ? item : (item.name || item.creature_name || JSON.stringify(item))
+            itemCounts[key] = (itemCounts[key] || 0) + 1
+          }
+        }
+        
+        const topSellers = Object.entries(itemCounts).sort((a, b) => b[1] - a[1])
+        let bestSellerCreature = null
+        for (const [name] of topSellers) {
+          const matched = active.find(c => c.name === name && !suggestedIds.has(c.id))
+          if (matched) {
+            bestSellerCreature = matched
+            break
+          }
+        }
+
+        if (bestSellerCreature) {
+          suggestions.push({
+            id: `momentum-${bestSellerCreature.id}`,
+            triggerType: 'new_product',
+            title: `Hot Seller: ${bestSellerCreature.name}`,
+            description: `Your best seller this week. Ride the wave with a new post!`,
+            sourceData: { name: bestSellerCreature.name, price: null, description: `${bestSellerCreature.species}, ${bestSellerCreature.filament_color ?? ''}`, image_url: bestSellerCreature.image_url },
+            urgency: 'medium',
+          })
+          suggestedIds.add(bestSellerCreature.id)
+        }
+      }
+
+      // 3. Stale Product Revival
+      const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+      const { data: recentAssets } = await supabase
+        .from('generated_assets')
+        .select('source_data')
+        .gt('created_at', twoWeeksAgo)
+      
+      const recentlyPostedNames = new Set((recentAssets || []).map(a => a.source_data?.name).filter(Boolean))
+      
+      const staleCreature = active.find(c => !recentlyPostedNames.has(c.name) && !suggestedIds.has(c.id))
+      
+      if (staleCreature) {
+        suggestions.push({
+          id: `revival-${staleCreature.id}`,
+          triggerType: 'new_product',
+          title: `Needs Love: ${staleCreature.name}`,
+          description: `You haven't posted about this in over 14 days. Bring it back to the feed.`,
+          sourceData: { name: staleCreature.name, price: null, description: `${staleCreature.species}, ${staleCreature.filament_color ?? ''}`, image_url: staleCreature.image_url },
+          urgency: 'medium',
+        })
+        suggestedIds.add(staleCreature.id)
+      }
+
+      // 4. Fallback Active Creatures
+      for (const c of active) {
+        if (suggestions.length >= 4) break
+        if (suggestedIds.has(c.id)) continue
+
+        suggestions.push({
+          id: `product-${c.id}`,
+          triggerType: 'new_product',
+          title: c.name,
+          description: `${c.species}${c.filament_color ? ` · ${c.filament_color}` : ''} — create a product post`,
+          sourceData: { name: c.name, price: null, description: `${c.species}, ${c.filament_color ?? ''}`, image_url: c.image_url },
+          urgency: 'low',
+        })
+        suggestedIds.add(c.id)
+      }
     }
 
     return { suggestions, error: null }
