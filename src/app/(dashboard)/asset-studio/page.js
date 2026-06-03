@@ -98,11 +98,10 @@ export default function AssetStudio() {
 
   // Hashtag sets
   const [hashtagSets, setHashtagSets] = useState([])
+  const [scheduledPosts, setScheduledPosts] = useState([])
+  const duePosts = scheduledPosts.filter(p => p.publish_status === 'pending' && new Date(p.scheduled_for) <= new Date())
   const [savingSetName, setSavingSetName] = useState('') // '' = picker closed
   const [showSaveSet, setShowSaveSet] = useState(false)
-
-  // Calendar
-  const [scheduledPosts, setScheduledPosts] = useState([])
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const activeCreatures = (() => {
@@ -468,6 +467,22 @@ export default function AssetStudio() {
       {/* ── HOME ─────────────────────────────────────────────────────────── */}
       {screen === 'home' && (
         <div>
+          {duePosts.length > 0 && (
+            <div style={{ marginBottom: 24, padding: '16px 20px', background: 'rgba(201,168,76,0.1)', border: '1px solid var(--gold)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 24 }}>⚠️</span>
+                <div>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--goldl)' }}>{duePosts.length} Scheduled Post{duePosts.length === 1 ? '' : 's'} Due</p>
+                  <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(250,246,240,0.7)' }}>You have posts scheduled for today or earlier that need to be manually published.</p>
+                </div>
+              </div>
+              <button onClick={() => {
+                 const assetToEdit = assets.find(a => a.id === duePosts[0].asset_id)
+                 if (assetToEdit) editAsset(assetToEdit)
+              }} className="as-btn-pri" style={{ padding: '8px 16px', fontSize: 12 }}>Review & Post</button>
+            </div>
+          )}
+
           {suggestions.length > 0 && (
             <div style={{ marginBottom:32 }}>
               <p style={{ fontSize:10, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase', color:'rgba(250,246,240,0.35)', margin:'0 0 12px' }}>Smart Suggestions</p>
@@ -1079,6 +1094,17 @@ function PublishPanel({ copy, imageUrl, assetId, connectedPlatforms, selectedPla
                 <input type="datetime-local" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} className="as-inp" style={{ flex:2, padding:'8px 10px', resize:'none' }} />
               )}
             </div>
+            {scheduleDate !== '' && (
+              <div style={{ marginTop: 8, padding: '10px 12px', background: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)', letterSpacing: '.05em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>💡 Best Times to Post</span>
+                <div style={{ fontSize: 11, color: 'rgba(250,246,240,0.6)', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Instagram</span><span style={{ color: 'rgba(250,246,240,0.4)' }}>11am - 1pm, 7pm - 9pm</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>TikTok</span><span style={{ color: 'rgba(250,246,240,0.4)' }}>6am - 10am, 7pm - 11pm</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Facebook</span><span style={{ color: 'rgba(250,246,240,0.4)' }}>1pm - 3pm</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Pinterest</span><span style={{ color: 'rgba(250,246,240,0.4)' }}>8pm - 11pm (Weekends)</span></div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
