@@ -208,6 +208,8 @@ export default function PLPage() {
   const [finModal, setFinModal] = useState({ open: false, entry: null, type: "income" });
   const [mileModal, setMileModal] = useState(false);
   const [year, setYear] = useState(new Date().getFullYear());
+  const [deleteFinConfirmId, setDeleteFinConfirmId] = useState(null);
+  const [deleteMileConfirmId, setDeleteMileConfirmId] = useState(null);
 
   const loadFin = useCallback(async () => {
     const supabase = createClient();
