@@ -175,7 +175,7 @@ function SparkChart({ fin }) {
     const b = buckets.find(b => b.date === (f.entry_date || "").slice(0, 10));
     if (!b) return;
     const amt = Math.abs(parseFloat(f.amount) || 0);
-    if (f.entry_type && f.entry_type.toLowerCase() === "income") b.rev += amt;
+    if (f.entry_type && String(f.entry_type).toLowerCase() === "income") b.rev += amt;
     else b.exp += amt;
   });
   const maxVal = Math.max(...buckets.map(b => Math.max(b.rev, b.exp)), 1);
@@ -278,7 +278,7 @@ export default function PLPage() {
   const finY = year === "All" ? fin : fin.filter(f => f.entry_date && parseInt(f.entry_date.slice(0, 4)) === year);
   const miY  = year === "All" ? miles : miles.filter(m => m.trip_date && parseInt(m.trip_date.slice(0, 4)) === year);
 
-  const sumType = type => finY.filter(e => e.entry_type && e.entry_type.toLowerCase() === type).reduce((s, e) => s + Math.abs(parseFloat(e.amount) || 0), 0);
+  const sumType = type => finY.filter(e => e.entry_type && String(e.entry_type).toLowerCase() === type).reduce((s, e) => s + Math.abs(parseFloat(e.amount) || 0), 0);
 
   const rev = sumType("income");
   const exp = sumType("expense");
@@ -292,7 +292,7 @@ export default function PLPage() {
     const y = parseInt(e.entry_date.slice(0, 4));
     const m = parseInt(e.entry_date.slice(5, 7)) - 1;
     return m === now.getMonth() && y === targetYear;
-  }).reduce((s, e) => s + (e.entry_type && e.entry_type.toLowerCase() === "income" ? 1 : -1) * Math.abs(parseFloat(e.amount) || 0), 0);
+  }).reduce((s, e) => s + (e.entry_type && String(e.entry_type).toLowerCase() === "income" ? 1 : -1) * Math.abs(parseFloat(e.amount) || 0), 0);
 
   const qtr = Math.floor(now.getMonth() / 3);
   const qtrNet = finY.filter(e => {
@@ -300,7 +300,7 @@ export default function PLPage() {
     const y = parseInt(e.entry_date.slice(0, 4));
     const m = parseInt(e.entry_date.slice(5, 7)) - 1;
     return Math.floor(m / 3) === qtr && y === targetYear;
-  }).reduce((s, e) => s + (e.entry_type && e.entry_type.toLowerCase() === "income" ? 1 : -1) * Math.abs(parseFloat(e.amount) || 0), 0);
+  }).reduce((s, e) => s + (e.entry_type && String(e.entry_type).toLowerCase() === "income" ? 1 : -1) * Math.abs(parseFloat(e.amount) || 0), 0);
 
   const totalMiles = miY.reduce((s, m) => s + (parseFloat(m.miles) || 0), 0);
 
@@ -394,7 +394,7 @@ export default function PLPage() {
         const cat = `"${(e.category || "").replace(/"/g, '""')}"`;
         const desc = `"${(e.description || "").replace(/"/g, '""')}"`;
         const inv = `"${(e.invoice_number || "").replace(/"/g, '""')}"`;
-        const amt = (e.entry_type && e.entry_type.toLowerCase() === "income" ? 1 : -1) * Math.abs(parseFloat(e.amount) || 0);
+        const amt = (e.entry_type && String(e.entry_type).toLowerCase() === "income" ? 1 : -1) * Math.abs(parseFloat(e.amount) || 0);
         
         return [date, yrVal, type, cat, desc, inv, amt].join(",");
       });
@@ -438,8 +438,8 @@ export default function PLPage() {
   const withMargin = creatureRows.filter(r => r.margin !== null);
   const avgMargin = withMargin.length ? withMargin.reduce((s, r) => s + r.margin, 0) / withMargin.length : null;
 
-  const incomeEntries = finY.filter(e => e.entry_type && e.entry_type.toLowerCase() === "income");
-  const expEntries = finY.filter(e => e.entry_type && e.entry_type.toLowerCase() === "expense");
+  const incomeEntries = finY.filter(e => e.entry_type && String(e.entry_type).toLowerCase() === "income");
+  const expEntries = finY.filter(e => e.entry_type && String(e.entry_type).toLowerCase() === "expense");
 
   const dateCell = d => {
     if (!d) return "—";
@@ -467,7 +467,7 @@ export default function PLPage() {
                 <td>{e.description || "—"}</td>
                 <td style={{ color: "var(--dim)", fontSize: 11 }}>{e.invoice_number || ""}</td>
                 <td style={{ fontWeight: 500, color: type === "income" ? "#7dc994" : "#e09090" }}>
-                  {type === "income" ? "+" : "−"}{fmt(Math.abs(e.amount))}
+                  {type === "income" ? "+" : "−"}{fmt(Math.abs(parseFloat(e.amount) || 0))}
                 </td>
                 <td>
                   {!e.isVirtual && (
@@ -641,7 +641,7 @@ export default function PLPage() {
               <div className={styles.qGrid}>
                 {QUARTERS.map(q => {
                   const qNet = fin.filter(e => e.entry_date && e.entry_date >= q.start && e.entry_date <= q.end)
-                    .reduce((s, e) => s + (e.entry_type && e.entry_type.toLowerCase() === "income" ? 1 : -1) * Math.abs(parseFloat(e.amount) || 0), 0);
+                    .reduce((s, e) => s + (e.entry_type && String(e.entry_type).toLowerCase() === "income" ? 1 : -1) * Math.abs(parseFloat(e.amount) || 0), 0);
                   const est = Math.max(0, qNet * 0.153 * 0.9);
                   return (
                     <div key={q.label} className={styles.qCard}>
