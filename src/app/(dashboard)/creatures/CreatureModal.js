@@ -11,6 +11,7 @@ const BLANK = {
   lore_location: "", lore_entry_date: "", lore_story: ["", "", ""], lore_observations: "",
   active: true, is_featured: false, in_launch_queue: false, is_cami_edition: false,
   is_revealed: true, reveal_date: "", print_recipe: null, filament_color: "",
+  is_mini: false, keychain_qty: 0, keychain_price: "", images: [],
 };
 
 const DEFAULT_TAGLINES = {
@@ -113,6 +114,9 @@ export default function CreatureModal({ creature, onClose, onSave }) {
       price_ask: form.price_ask ? parseFloat(form.price_ask) : null,
       cost_to_print: form.cost_to_print ? parseFloat(form.cost_to_print) : null,
       qty_on_hand: parseInt(form.qty_on_hand) || 0,
+      keychain_qty: hasKch ? (parseInt(form.keychain_qty) || 0) : 0,
+      keychain_price: hasKch && form.keychain_price ? parseFloat(form.keychain_price) : null,
+      images: form.images || [],
       lore_story: form.lore_story.filter(Boolean),
       lore_observations: form.lore_observations || null,
       reveal_date: form.reveal_date || null,
@@ -169,6 +173,18 @@ export default function CreatureModal({ creature, onClose, onSave }) {
                     <input className="fi" maxLength={3} value={kchSuffix} onChange={e => setKchSuffix(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))} style={{ width: 60, fontFamily: "monospace", letterSpacing: "0.08em", padding: "5px 8px" }} placeholder="KCH" />
                   )}
                 </div>
+                {hasKch && (
+                  <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <label className="fl">Keychain Stock</label>
+                      <input className="fi" type="number" min="0" value={form.keychain_qty} onChange={e => set("keychain_qty", e.target.value)} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label className="fl">Keychain Price ($)</label>
+                      <input className="fi" type="number" step="0.01" min="0" value={form.keychain_price} onChange={e => set("keychain_price", e.target.value)} placeholder="e.g. 12.99" />
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="fl">Log #</label>
@@ -215,6 +231,18 @@ export default function CreatureModal({ creature, onClose, onSave }) {
                   </label>
                   {form.image_url && <img src={form.image_url} alt="" style={{ height: 48, width: 48, objectFit: "cover", borderRadius: 3 }} />}
                 </div>
+              </div>
+              <div className="form-full">
+                <label className="fl">Additional Gallery Images (one URL per line, up to 5)</label>
+                <textarea
+                  className="fi"
+                  rows={3}
+                  value={(form.images || []).join("\n")}
+                  onChange={e => set("images", e.target.value.split("\n").map(s => s.trim()).filter(Boolean).slice(0, 5))}
+                  style={{ resize: "vertical", fontFamily: "monospace", fontSize: 12 }}
+                  placeholder="https://.../image2.jpg"
+                />
+                <p style={{ fontSize: 11, color: "rgba(196,188,178,0.5)", marginTop: 6 }}>Shown in the gallery thumbnails on the creature's detail page, in addition to the main Image URL above.</p>
               </div>
               <div className="form-full">
                 <label className="fl">3D Model URL (GLB)</label>
@@ -375,6 +403,7 @@ export default function CreatureModal({ creature, onClose, onSave }) {
                 { field: "in_launch_queue", label: "In Launch Queue", desc: "Part of the next drop" },
                 { field: "is_cami_edition", label: "Cami Edition", desc: "Rainbow / Cami's Secret Garden exclusive" },
                 { field: "is_revealed", label: "Revealed", desc: "Publicly revealed (uncheck for teaser mode)" },
+                { field: "is_mini", label: "Mini Creature", desc: "Eligible for the Build Your Pack bundle builder (/minis.html)" },
               ].map(({ field, label, desc }) => (
                 <label key={field} className={styles.flagRow}>
                   <input

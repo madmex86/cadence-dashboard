@@ -427,13 +427,30 @@ export default function FulfillmentPage() {
                     >
                       <div className={styles.cardTop}>
                         <div>
-                          <div className={styles.cardId}>#{order.etsy_order_id || order.id.slice(0, 8)}</div>
+                          <div className={styles.cardId}>
+                            #{order.etsy_order_id || order.id.slice(0, 8)}
+                            {order.source === "stripe" && (
+                              <span style={{ marginLeft: 6, fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--gold)", border: "1px solid rgba(201,168,76,0.3)", borderRadius: 3, padding: "1px 5px" }}>Direct</span>
+                            )}
+                          </div>
                           <div className={styles.cardBuyer}>{order.buyer_name || "No Name"}</div>
                         </div>
                         <div className={styles.cardDate}>
                           {order.order_date ? new Date(order.order_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ""}
                         </div>
                       </div>
+
+                      {order.gift_message && (
+                        <div style={{ fontSize: 11, fontStyle: "italic", color: "var(--petal)", background: "rgba(232,160,176,0.07)", border: "1px solid rgba(232,160,176,0.15)", borderRadius: 3, padding: "5px 8px", marginBottom: 6 }}>
+                          🎁 "{order.gift_message}"
+                        </div>
+                      )}
+
+                      {order.shipping_address && (
+                        <div style={{ fontSize: 10, color: "var(--dim)", marginBottom: 6 }}>
+                          {[order.shipping_address.line1, order.shipping_address.city, order.shipping_address.state, order.shipping_address.postal_code].filter(Boolean).join(", ")}
+                        </div>
+                      )}
 
                       <div className={styles.checklist}>
                         {(Array.isArray(order.items) ? order.items : []).map((itm, i) => {
