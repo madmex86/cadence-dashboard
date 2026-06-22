@@ -321,17 +321,21 @@ input[type="time"]::-webkit-calendar-picker-indicator {
    ============================================================ */
 
 .dash-shell {
-  display: flex;
-  flex-direction: column;
   min-height: 100vh;
 }
 
+/* Sidebar is position:fixed at 220px — offset main content to match */
 .dash-main {
-  flex: 1;
+  margin-left: 220px;
   padding: 28px 24px;
-  max-width: 1400px;
-  margin: 0 auto;
-  width: 100%;
+  min-height: 100vh;
+}
+
+@media (max-width: 767px) {
+  .dash-main {
+    margin-left: 0;
+    padding-top: 58px; /* clear the mobile hamburger button */
+  }
 }
 
 .topbar {

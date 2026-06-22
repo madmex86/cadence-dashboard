@@ -1,9 +1,9 @@
-import Topbar from "./Topbar";
+import Sidebar from "./Sidebar";
 
 export default function DashboardLayout({ children }) {
   return (
     <div className="dash-shell">
-      <Topbar />
+      <Sidebar />
       <main className="dash-main">{children}</main>
     </div>
   );

@@ -1,0 +1,495 @@
+/* ============================================================
+   SIDEBAR SHELL — glass/frosted dark
+   ============================================================ */
+
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 220px;
+  height: 100vh;
+  background: rgba(10, 14, 20, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(201, 168, 76, 0.10);
+  box-shadow: inset -1px 0 0 rgba(201, 168, 76, 0.06), 4px 0 28px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  z-index: 200;
+  overflow: hidden;
+}
+
+/* Noise texture overlay (4% opacity, sits beneath inner content) */
+.noise {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.04;
+}
+
+/* Scrollable inner column — sits above noise layer */
+.inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 168, 76, 0.12) transparent;
+}
+
+.inner::-webkit-scrollbar { width: 3px; }
+.inner::-webkit-scrollbar-thumb { background: rgba(201, 168, 76, 0.15); border-radius: 2px; }
+.inner::-webkit-scrollbar-track { background: transparent; }
+
+/* ============================================================
+   BRAND HEADER
+   ============================================================ */
+
+.brand {
+  padding: 22px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.crown {
+  filter: drop-shadow(0 0 8px rgba(201, 168, 76, 0.35));
+  margin-bottom: 2px;
+  display: block;
+}
+
+.brandName {
+  font-family: var(--font-lora), Georgia, serif;
+  font-style: italic;
+  font-size: 13px;
+  color: #E8D08A;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.brandSub {
+  font-family: 'SF Mono', ui-monospace, 'Courier New', monospace;
+  font-size: 8px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(201, 168, 76, 0.35);
+  line-height: 1;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.pulsingDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #5BBFD4;
+  flex-shrink: 0;
+  animation: pulseDot 2.6s ease-in-out infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(91, 191, 212, 0.5); }
+  50%       { opacity: 0.55; box-shadow: 0 0 0 4px rgba(91, 191, 212, 0); }
+}
+
+.statusLabel {
+  font-family: 'SF Mono', ui-monospace, 'Courier New', monospace;
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(91, 191, 212, 0.55);
+}
+
+/* ============================================================
+   SHARED DIVIDER
+   ============================================================ */
+
+.divider {
+  height: 1px;
+  background: rgba(201, 168, 76, 0.08);
+  margin: 0 12px;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   HUD STRIP — three stacked micro-pills
+   ============================================================ */
+
+.hud {
+  padding: 10px 14px;
+  flex-shrink: 0;
+}
+
+.hudPill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+
+.hudPill + .hudPill {
+  border-top: 1px solid rgba(201, 168, 76, 0.06);
+}
+
+.hudLabel {
+  font-family: 'SF Mono', ui-monospace, 'Courier New', monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(196, 188, 178, 0.28);
+}
+
+.hudVal {
+  font-family: 'SF Mono', ui-monospace, 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+
+.nav {
+  padding: 6px 0 0;
+}
+
+.navLoading {
+  font-family: 'SF Mono', ui-monospace, 'Courier New', monospace;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: rgba(196, 188, 178, 0.25);
+  padding: 14px 16px;
+  text-transform: uppercase;
+}
+
+.navGroup {
+  margin-bottom: 1px;
+}
+
+.navGroupHeader {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 9px 14px 4px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+
+.navGroupLabel {
+  font-family: 'SF Mono', ui-monospace, 'Courier New', monospace;
+  font-size: 8px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(201, 168, 76, 0.38);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.navGroupRule {
+  flex: 1;
+  height: 1px;
+  background: rgba(201, 168, 76, 0.07);
+  margin: 0 7px;
+}
+
+.navChevron {
+  font-size: 7px;
+  color: rgba(201, 168, 76, 0.28);
+  transition: transform 0.18s ease;
+  line-height: 1;
+  display: block;
+}
+
+.navChevronOpen  { transform: rotate(0deg); }
+.navChevronClosed { transform: rotate(-90deg); }
+
+.navLinks {
+  padding: 2px 0 5px;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 12px 6px 14px;
+  width: 100%;
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  transition: background 0.14s ease, border-color 0.14s ease;
+  position: relative;
+  color: inherit;
+}
+
+.navLink:hover {
+  border-left-color: rgba(201, 168, 76, 0.45);
+  background: rgba(201, 168, 76, 0.04);
+}
+
+.navLink:hover .navLabel {
+  color: rgba(196, 188, 178, 0.9);
+}
+
+.navLink:hover .navIcon {
+  opacity: 0.9;
+}
+
+.navIcon {
+  font-size: 10px;
+  width: 13px;
+  text-align: center;
+  flex-shrink: 0;
+  opacity: 0.55;
+  font-style: normal;
+  color: rgba(201, 168, 76, 0.7);
+  transition: opacity 0.14s;
+}
+
+.navLabel {
+  font-family: 'SF Mono', ui-monospace, 'Courier New', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(196, 188, 178, 0.44);
+  transition: color 0.14s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Active state */
+.navLinkActive {
+  border-left-color: #C9A84C !important;
+  background: rgba(201, 168, 76, 0.08) !important;
+}
+
+.navLinkActive .navLabel {
+  color: #FAF6F0 !important;
+}
+
+.navLinkActive .navIcon {
+  opacity: 1 !important;
+  color: #C9A84C !important;
+}
+
+.navLinkActive::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  box-shadow: 2px 0 10px rgba(201, 168, 76, 0.35);
+  pointer-events: none;
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+
+.footer {
+  margin-top: auto;
+  padding: 12px 14px 18px;
+  border-top: 1px solid rgba(201, 168, 76, 0.08);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.footerUser {
+  font-family: var(--font-lora), Georgia, serif;
+  font-style: italic;
+  font-size: 11.5px;
+  color: rgba(196, 188, 178, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.roleBadge {
+  display: inline-block;
+  align-self: flex-start;
+  font-family: 'SF Mono', ui-monospace, 'Courier New', monospace;
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(201, 168, 76, 0.65);
+  border: 1px solid rgba(201, 168, 76, 0.2);
+  padding: 2px 7px;
+  border-radius: 2px;
+}
+
+.footerExtLinks {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.footerExtLink {
+  font-family: 'SF Mono', ui-monospace, 'Courier New', monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(196, 188, 178, 0.32);
+  text-decoration: none;
+  transition: color 0.18s;
+}
+
+.footerExtLink:hover {
+  color: rgba(201, 168, 76, 0.75);
+}
+
+/* Services status */
+.services {
+  position: relative;
+}
+
+.servicesBtn {
+  font-family: 'SF Mono', ui-monospace, 'Courier New', monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(196, 188, 178, 0.28);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: color 0.18s;
+  white-space: nowrap;
+}
+
+.servicesBtn:hover {
+  color: rgba(196, 188, 178, 0.55);
+}
+
+.connDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #4a8c5c;
+  box-shadow: 0 0 5px rgba(74, 140, 92, 0.45);
+  flex-shrink: 0;
+}
+
+.servicesExpanded {
+  padding: 7px 0 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.serviceRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'SF Mono', ui-monospace, 'Courier New', monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(196, 188, 178, 0.28);
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.signOut {
+  font-family: 'SF Mono', ui-monospace, 'Courier New', monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(196, 188, 178, 0.28);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  transition: color 0.18s;
+}
+
+.signOut:hover {
+  color: rgba(201, 168, 76, 0.8);
+}
+
+.version {
+  font-family: 'SF Mono', ui-monospace, 'Courier New', monospace;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: rgba(196, 188, 178, 0.18);
+}
+
+/* ============================================================
+   MOBILE — hamburger + slide-in drawer
+   ============================================================ */
+
+.hamburger {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 300;
+  background: rgba(10, 14, 20, 0.92);
+  border: 1px solid rgba(201, 168, 76, 0.18);
+  border-radius: 4px;
+  padding: 9px 11px;
+  cursor: pointer;
+  flex-direction: column;
+  gap: 4px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.hamburger span {
+  display: block;
+  width: 18px;
+  height: 1.5px;
+  background: rgba(201, 168, 76, 0.7);
+  border-radius: 1px;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.58);
+  z-index: 199;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+@media (max-width: 767px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.26s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .sidebarOpen {
+    transform: translateX(0);
+  }
+
+  .hamburger {
+    display: flex;
+  }
+}
