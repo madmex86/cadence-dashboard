@@ -59,6 +59,7 @@ export default function Sidebar() {
   const [userRole, setUserRole] = useState('user');
   const [loadingRole, setLoadingRole] = useState(true);
   const [hudData, setHudData] = useState({ visitors: 0, profit: 0, printersActive: 0 });
+  const [customRolePaths, setCustomRolePaths] = useState(null); // null = built-in role; string[] = custom
   const [mobileOpen, setMobileOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
   const [collapsed, setCollapsed] = useState({});
@@ -103,6 +104,13 @@ export default function Sidebar() {
       setLoadingRole(false);
       if (!name) name = user.email.split('@')[0];
       setUserName(name.charAt(0).toUpperCase() + name.slice(1));
+
+      // Load custom role permissions if needed
+      const BUILTIN = ['admin', 'fulfillment', 'finance', 'user'];
+      if (!BUILTIN.includes(role)) {
+        const { data: roleData } = await supabase.from('roles').select('allowed_paths').eq('name', role).maybeSingle();
+        setCustomRolePaths(roleData?.allowed_paths || []);
+      }
     });
 
     async function loadHud() {
@@ -143,12 +151,20 @@ export default function Sidebar() {
     router.push('/login');
   }
 
-  // Copied exactly from Topbar.js — do not simplify
   function isLinkAllowed(href) {
     if (!user) return false;
     const isOwner = user.email === 'stevenportugal86@gmail.com';
     const isAdmin = isOwner || userRole === 'admin';
 
+    // Custom role: only show pages explicitly granted
+    const BUILTIN = ['admin', 'fulfillment', 'finance', 'user'];
+    if (!BUILTIN.includes(userRole) && !isAdmin) {
+      if (customRolePaths === null) return false; // still loading
+      const base = href.split('?')[0];
+      return customRolePaths.some(p => base === p || base.startsWith(p + '/'));
+    }
+
+    // Built-in role logic (copied from Topbar.js — do not simplify)
     const adminOnlyPaths = ['/admin', '/activity', '/cami', '/launch', '/email', '/site', '/links', '/lure-forge', '/reviews', '/asset-studio'];
     if (adminOnlyPaths.some(p => href.startsWith(p))) return isAdmin;
 

@@ -73,6 +73,27 @@ export async function proxy(request) {
     }
 
     const isAdmin = isOwner || role === 'admin';
+    const BUILTIN_ROLES = ['admin', 'fulfillment', 'finance', 'user'];
+
+    if (!isAdmin && !BUILTIN_ROLES.includes(role)) {
+      // Custom role: fetch allowed_paths and enforce them
+      try {
+        const { data: roleData } = await supabase.from('roles').select('allowed_paths').eq('name', role).maybeSingle();
+        const allowedPaths = roleData?.allowed_paths || [];
+        const pathAllowed = pathname === '/' || allowedPaths.some(p => pathname === p || pathname.startsWith(p + '/'));
+        if (!pathAllowed) {
+          const url = request.nextUrl.clone();
+          url.pathname = '/';
+          return NextResponse.redirect(url);
+        }
+      } catch {
+        // On error, fall back to home for safety
+        const url = request.nextUrl.clone();
+        url.pathname = '/';
+        return NextResponse.redirect(url);
+      }
+      return supabaseResponse; // custom role passed — skip built-in guards
+    }
 
     // 3. Finance role constraints: no production, queue, or fulfillment access
     if (role === 'finance' && (pathname.startsWith('/queue') || pathname.startsWith('/fulfillment'))) {
