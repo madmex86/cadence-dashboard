@@ -27,7 +27,7 @@ export async function proxy(request) {
   const { pathname } = request.nextUrl;
 
   // 1. Unauthenticated users must log in (except for API routes, which handle their own auth)
-  if (!user && pathname !== '/login' && !pathname.startsWith('/api')) {
+  if (!user && pathname !== '/login' && pathname !== '/set-password' && !pathname.startsWith('/api')) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);

@@ -34,7 +34,7 @@ export async function POST(req) {
     );
 
     const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "https://dash.cadencecreatures.com"}/`,
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "https://dash.cadencecreatures.com"}/set-password`,
     });
 
     if (inviteError) {
