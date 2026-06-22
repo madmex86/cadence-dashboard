@@ -16,6 +16,7 @@ const NAV_GROUPS = [
   ]},
   { label: 'CATALOG', children: [
     { label: 'Creatures',    href: '/creatures',    icon: '◈' },
+    { label: 'Bundles',      href: '/bundles',      icon: '⊛' },
     { label: 'Components',   href: '/components',   icon: '⊞' },
     { label: 'Lure Forge',   href: '/lure-forge',   icon: '◬' },
     { label: 'Asset Studio', href: '/asset-studio', icon: '◫' },
@@ -175,7 +176,7 @@ export default function Sidebar() {
     }
 
     // Built-in role logic (copied from Topbar.js — do not simplify)
-    const adminOnlyPaths = ['/admin', '/activity', '/cami', '/launch', '/email', '/site', '/links', '/lure-forge', '/reviews', '/asset-studio'];
+    const adminOnlyPaths = ['/admin', '/activity', '/bundles', '/cami', '/launch', '/email', '/site', '/links', '/lure-forge', '/reviews', '/asset-studio'];
     if (adminOnlyPaths.some(p => href.startsWith(p))) return isAdmin;
 
     const productionPaths = ['/queue', '/live', '/components', '/inventory', '/printers', '/fulfillment'];

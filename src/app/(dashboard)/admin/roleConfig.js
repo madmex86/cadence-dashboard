@@ -10,6 +10,7 @@ export const ALL_PAGES = [
   ]},
   { group: "CATALOG", pages: [
     { label: "Creatures",    path: "/creatures" },
+    { label: "Bundles",      path: "/bundles" },
     { label: "Components",   path: "/components" },
     { label: "Lure Forge",   path: "/lure-forge" },
     { label: "Asset Studio", path: "/asset-studio" },

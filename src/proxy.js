@@ -129,7 +129,7 @@ export async function proxy(request) {
     }
 
     // 6. Non-admin general folder constraints
-    if (!isAdmin && ['/admin', '/activity', '/cami', '/launch', '/email', '/site', '/links', '/lure-forge', '/reviews'].some(p => pathname.startsWith(p))) {
+    if (!isAdmin && ['/admin', '/activity', '/bundles', '/cami', '/launch', '/email', '/site', '/links', '/lure-forge', '/reviews'].some(p => pathname.startsWith(p))) {
       const url = request.nextUrl.clone();
       url.pathname = '/';
       return NextResponse.redirect(url);
