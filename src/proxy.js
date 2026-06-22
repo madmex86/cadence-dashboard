@@ -48,7 +48,7 @@ export async function proxy(request) {
       // Look up current role in profiles database table
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, custom_paths')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -74,6 +74,18 @@ export async function proxy(request) {
 
     const isAdmin = isOwner || role === 'admin';
     const BUILTIN_ROLES = ['admin', 'fulfillment', 'finance', 'user'];
+
+    // Per-user custom_paths override: takes priority over all role-based guards
+    if (!isAdmin && Array.isArray(profile?.custom_paths)) {
+      const allowedPaths = profile.custom_paths;
+      const pathAllowed = pathname === '/' || allowedPaths.some(p => pathname === p || pathname.startsWith(p + '/'));
+      if (!pathAllowed) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/';
+        return NextResponse.redirect(url);
+      }
+      return supabaseResponse; // per-user override passed — skip role guards
+    }
 
     if (!isAdmin && !BUILTIN_ROLES.includes(role)) {
       // Custom role: fetch allowed_paths and enforce them

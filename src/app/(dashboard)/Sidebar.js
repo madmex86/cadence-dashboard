@@ -59,7 +59,8 @@ export default function Sidebar() {
   const [userRole, setUserRole] = useState('user');
   const [loadingRole, setLoadingRole] = useState(true);
   const [hudData, setHudData] = useState({ visitors: 0, profit: 0, printersActive: 0 });
-  const [customRolePaths, setCustomRolePaths] = useState(null); // null = built-in role; string[] = custom
+  const [customRolePaths,  setCustomRolePaths]  = useState(null); // null = built-in role; string[] = custom role
+  const [userCustomPaths,  setUserCustomPaths]  = useState(null); // null = use role; string[] = per-user override
   const [mobileOpen, setMobileOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
   const [collapsed, setCollapsed] = useState({});
@@ -80,13 +81,16 @@ export default function Sidebar() {
       try {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role, full_name')
+          .select('role, full_name, custom_paths')
           .eq('id', user.id)
           .maybeSingle();
 
         if (profile) {
           role = profile.role || 'user';
           if (profile.full_name) name = profile.full_name;
+          if (Array.isArray(profile.custom_paths)) {
+            setUserCustomPaths(profile.custom_paths);
+          }
         } else {
           const isOwner = user.email === 'stevenportugal86@gmail.com';
           role = isOwner ? 'admin' : 'user';
@@ -155,6 +159,12 @@ export default function Sidebar() {
     if (!user) return false;
     const isOwner = user.email === 'stevenportugal86@gmail.com';
     const isAdmin = isOwner || userRole === 'admin';
+
+    // Per-user override takes highest priority
+    if (userCustomPaths !== null) {
+      const base = href.split('?')[0];
+      return userCustomPaths.some(p => base === p || base.startsWith(p + '/'));
+    }
 
     // Custom role: only show pages explicitly granted
     const BUILTIN = ['admin', 'fulfillment', 'finance', 'user'];

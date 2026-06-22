@@ -4,44 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../../lib/supabase/client";
 import styles from "./admin.module.css";
-
-const BUILTIN_ROLES = ["user", "fulfillment", "finance", "admin"];
-
-const ALL_PAGES = [
-  { group: "PRODUCTION", pages: [
-    { label: "Queue & Cost Engine", path: "/queue" },
-    { label: "Live",                path: "/live" },
-    { label: "Fulfillment",         path: "/fulfillment" },
-    { label: "Printers",            path: "/printers" },
-    { label: "Filament",            path: "/inventory" },
-  ]},
-  { group: "CATALOG", pages: [
-    { label: "Creatures",    path: "/creatures" },
-    { label: "Components",   path: "/components" },
-    { label: "Lure Forge",   path: "/lure-forge" },
-    { label: "Asset Studio", path: "/asset-studio" },
-    { label: "Review Forge", path: "/reviews" },
-    { label: "Cami Edition", path: "/cami" },
-  ]},
-  { group: "COMMERCE", pages: [
-    { label: "Sales Intel", path: "/sales" },
-    { label: "P&L",         path: "/pl" },
-    { label: "Analytics",   path: "/analytics" },
-    { label: "Launch",      path: "/launch" },
-  ]},
-  { group: "CUSTOMERS", pages: [
-    { label: "Customers",   path: "/customers" },
-    { label: "Email Blast", path: "/email-blast" },
-  ]},
-  { group: "OPS", pages: [
-    { label: "Site",     path: "/site" },
-    { label: "Links",    path: "/links" },
-    { label: "Activity", path: "/activity" },
-    { label: "Admin",    path: "/admin" },
-  ]},
-];
-
-const TOTAL_PAGES = ALL_PAGES.reduce((sum, g) => sum + g.pages.length, 0);
+import { BUILTIN_ROLES, ALL_PAGES, TOTAL_PAGES } from "./roleConfig";
+import EditUserModal from "./EditUserModal";
 
 const BLANK_ROLE = { id: null, name: "", description: "", allowed_paths: [] };
 
@@ -61,6 +25,9 @@ export default function AdminPage() {
   const [inviteRole,  setInviteRole]  = useState("user");
   const [inviting,    setInviting]    = useState(false);
   const [inviteMsg,   setInviteMsg]   = useState(null);
+
+  // user edit modal state
+  const [editingUser, setEditingUser] = useState(null); // null | user object
 
   // role-builder state
   const [editingRole, setEditingRole] = useState(null); // null | BLANK_ROLE shape
@@ -84,7 +51,7 @@ export default function AdminPage() {
       setAuthorized(true);
 
       const [usersRes, rolesRes] = await Promise.all([
-        supabase.from("profiles").select("id, email, role, full_name, last_seen, deactivated").order("email"),
+        supabase.from("profiles").select("id, email, role, full_name, last_seen, deactivated, custom_paths").order("email"),
         supabase.from("roles").select("*").order("name"),
       ]);
       setUsers(usersRes.data || []);
@@ -147,7 +114,7 @@ export default function AdminPage() {
       setInviteEmail("");
       setInviteRole("user");
       const supabase = createClient();
-      const { data: updated } = await supabase.from("profiles").select("id, email, role, full_name, last_seen, deactivated").order("email");
+      const { data: updated } = await supabase.from("profiles").select("id, email, role, full_name, last_seen, deactivated, custom_paths").order("email");
       setUsers(updated || []);
     } catch (err) {
       setInviteMsg({ ok: false, text: err.message });
@@ -200,7 +167,7 @@ export default function AdminPage() {
     setDeleteRoleConfirmId(null);
     await refreshRoles();
     // Re-fetch users in case any still carry the deleted role name
-    const { data } = await supabase.from("profiles").select("id, email, role, full_name, last_seen, deactivated").order("email");
+    const { data } = await supabase.from("profiles").select("id, email, role, full_name, last_seen, deactivated, custom_paths").order("email");
     setUsers(data || []);
   }
 
@@ -294,6 +261,7 @@ export default function AdminPage() {
                   ? new Date(u.last_seen).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })
                   : "Never";
                 const isCustomRole = !BUILTIN_ROLES.includes(u.role);
+                const hasCustomPaths = Array.isArray(u.custom_paths);
                 return (
                   <tr key={u.id} style={{ opacity: u.deactivated ? 0.6 : 1 }}>
                     <td>
@@ -333,6 +301,11 @@ export default function AdminPage() {
                           custom role
                         </div>
                       )}
+                      {hasCustomPaths && (
+                        <div style={{ fontSize: 10, color: "var(--gold)", fontFamily: "sans-serif", marginTop: 3, letterSpacing: "0.06em" }}>
+                          custom access
+                        </div>
+                      )}
                     </td>
                     <td style={{ fontSize: 12, fontFamily: "sans-serif", color: "var(--dim)" }}>{lastSeenLabel}</td>
                     <td>
@@ -347,14 +320,23 @@ export default function AdminPage() {
                           <button className="btn sm" style={{ color: "#e87070", borderColor: "rgba(232,112,112,0.3)" }} onClick={() => toggleDeactivate(u.id, u.deactivated)}>Confirm</button>
                         </div>
                       ) : (
-                        <button
-                          className="btn sm"
-                          style={{ borderColor: u.deactivated ? "var(--gold-border)" : "rgba(232,112,112,0.3)", color: u.deactivated ? "var(--gold)" : "#e87070", background: "none" }}
-                          onClick={() => setDeactivateConfirmId(u.id)}
-                          disabled={saving === u.id}
-                        >
-                          {u.deactivated ? "Activate" : "Deactivate"}
-                        </button>
+                        <div style={{ display: "flex", gap: 5 }}>
+                          <button
+                            className="btn sm"
+                            onClick={() => { setEditingUser(u); setDeactivateConfirmId(null); }}
+                            disabled={saving === u.id}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="btn sm"
+                            style={{ borderColor: u.deactivated ? "var(--gold-border)" : "rgba(232,112,112,0.3)", color: u.deactivated ? "var(--gold)" : "#e87070", background: "none" }}
+                            onClick={() => setDeactivateConfirmId(u.id)}
+                            disabled={saving === u.id}
+                          >
+                            {u.deactivated ? "Activate" : "Deactivate"}
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -508,6 +490,16 @@ export default function AdminPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* ── Edit User Modal ────────────────────────────────── */}
+      {editingUser && (
+        <EditUserModal
+          user={editingUser}
+          roles={roles}
+          onSave={updated => setUsers(prev => prev.map(u => u.id === updated.id ? updated : u))}
+          onClose={() => setEditingUser(null)}
+        />
       )}
 
       {/* ── Built-in role reference ─────────────────────── */}
