@@ -11,7 +11,11 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(null);
   const [deactivateConfirmId, setDeactivateConfirmId] = useState(null);
-  const [authorized, setAuthorized] = useState(null); // null = checking, true = authorized, false = unauthorized
+  const [authorized, setAuthorized] = useState(null);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("user");
+  const [inviting, setInviting] = useState(false);
+  const [inviteMsg, setInviteMsg] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -72,6 +76,32 @@ export default function AdminPage() {
     setDeactivateConfirmId(null);
   }
 
+  async function sendInvite(e) {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+    setInviting(true);
+    setInviteMsg(null);
+    try {
+      const res = await fetch("/api/admin/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Invite failed");
+      setInviteMsg({ ok: true, text: data.existing ? `${inviteEmail} already exists — role updated.` : `Invite sent to ${inviteEmail}.` });
+      setInviteEmail("");
+      setInviteRole("user");
+      // Refresh list
+      const supabase = createClient();
+      const { data: updated } = await supabase.from("profiles").select("id, email, role, full_name, last_seen, deactivated").order("email");
+      setUsers(updated || []);
+    } catch (err) {
+      setInviteMsg({ ok: false, text: err.message });
+    }
+    setInviting(false);
+  }
+
   async function updateFullName(id, fullName) {
     setSaving(id);
     const supabase = createClient();
@@ -113,6 +143,42 @@ export default function AdminPage() {
       <div className="sec-hdr">
         <h1 className={styles.title}>Admin Settings</h1>
       </div>
+
+      <div className="sec-hdr" style={{ marginTop: 8 }}>
+        <span className="sec-title">Invite Team Member</span>
+      </div>
+
+      <form onSubmit={sendInvite} style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap", marginBottom: 24 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--dim)" }}>Email</label>
+          <input
+            type="email"
+            className="fi"
+            placeholder="teammate@email.com"
+            value={inviteEmail}
+            onChange={e => setInviteEmail(e.target.value)}
+            style={{ minWidth: 240 }}
+            required
+          />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--dim)" }}>Role</label>
+          <select className="fi" value={inviteRole} onChange={e => setInviteRole(e.target.value)} style={{ minWidth: 140 }}>
+            <option value="user">User</option>
+            <option value="fulfillment">Fulfillment</option>
+            <option value="finance">Finance</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <button type="submit" className="btn" disabled={inviting} style={{ alignSelf: "flex-end" }}>
+          {inviting ? "Sending…" : "Send Invite"}
+        </button>
+        {inviteMsg && (
+          <span style={{ alignSelf: "flex-end", fontSize: 12, fontFamily: "sans-serif", color: inviteMsg.ok ? "var(--gold)" : "#e87070" }}>
+            {inviteMsg.text}
+          </span>
+        )}
+      </form>
 
       <div className="sec-hdr" style={{ marginTop: 8 }}>
         <span className="sec-title">Team Access & Roles</span>
